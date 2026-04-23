@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>🌿 PlantAI · Offline + Online (iNaturalist)</title>
+  <!-- TensorFlow.js (offline fallback) -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #c8e0bc;
+      font-family: system-ui, 'Segoe UI', sans-serif;
+      padding: 16px;
+    }
+    .app {
+      max-width: 700px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 2rem;
+      overflow: hidden;
+      box-shadow: 0 20px 35px rgba(0,0,0,0.2);
+    }
+    header {
+      background: #1a3c2a;
+      color: white;
+      padding: 1rem;
+      text-align: center;
+    }
+    header h1 { display: flex; justify-content: center; gap: 10px; font-size: 1.5rem; }
+    .mode-selector {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 10px;
+    }
+    .mode-btn {
+      background: #2d6a4f;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 40px;
+      font-size: 0.7rem;
+      font-weight: bold;
+      cursor: pointer;
+      color: white;
+    }
+    .mode-btn.active {
+      background: #f4a261;
+      color: #1a3c2a;
+    }
+    .camera-area {
+      background: #1e3323;
+      padding: 14px;
+    }
+    .video-box {
+      position: relative;
+      background: #0f1f12;
+      border-radius: 28px;
+      overflow: hidden;
+      aspect-ratio: 4 / 3;
+    }
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .placeholder {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #172e1a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #b8daa4;
+      gap: 8px;
+      text-align: center;
+    }
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      padding: 15px;
+      background: white;
+    }
+    button, .file-label {
+      background: #eef5ea;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 60px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+    button.primary { background: #2f6b47; color: white; }
+    button.danger { background: #b1624b; color: white; }
+    .file-label { background: #e2eed9; }
+    .status {
+      background: #eef3e8;
+      padding: 8px 16px;
+      font-size: 0.8rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .result {
+      padding: 20px;
+      background: #fffef7;
+    }
+    .plant-card {
+      background: #fefbe6;
+      border-radius: 24px;
+      padding: 18px;
+      border-left: 6px solid #3b8b5a;
+    }
+    .error-msg {
+      background: #ffe5d9;
+      border-radius: 20px;
+      padding: 16px;
+      text-align: center;
+    }
+    .loader {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #2f6b47;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .hidden { display: none; }
+    .confidence { background: #e3f1db; display: inline-block; padding: 4px 12px; border-radius: 40px; font-size: 0.7rem; margin: 8px 0; }
+    footer {
+      font-size: 0.65rem;
+      text-align: center;
+      padding: 12px;
+      background: #f0f7eb;
+      color: #4a6e3c;
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1><i class="fas fa-leaf"></i> PlantAI <i class="fas fa-cloud-sun"></i></h1>
+    <div class="mode-selector">
+      <button id="modeAuto" class="mode-btn active">🔄 Auto (Online + Offline)</button>
+      <button id="modeOnline" class="mode-btn">🌐 Online Only (iNaturalist)</button>
+      <button id="modeOffline" class="mode-btn">📴 Offline Only (MobileNet)</button>
+    </div>
+  </header>
+
+  <div class="camera-area">
+    <div class="video-box">
+      <video id="video" autoplay playsinline muted></video>
+      <div id="placeholder" class="placeholder">
+        <i class="fas fa-camera-slash"></i> Camera off<br>
+        <span style="font-size:0.7rem;">Use upload or start camera</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="buttons">
+    <button id="startCam" class="primary"><i class="fas fa-play"></i> Start Camera</button>
+    <button id="stopCam" disabled><i class="fas fa-stop"></i> Stop</button>
+    <button id="snapBtn" disabled><i class="fas fa-camera"></i> Identify</button>
+    <label class="file-label" id="uploadLabel"><i class="fas fa-upload"></i> Upload Image</label>
+    <input type="file" id="fileInput" accept="image/*" style="display:none">
+  </div>
+
+  <div class="status">
+    <span id="statusMsg">🌱 Ready. Choose mode or use Auto.</span>
+    <span id="spinner" class="loader hidden"></span>
+  </div>
+
+  <div class="result" id="resultArea">
+    <div id="defaultMsg" class="error-msg">
+      <i class="fas fa-seedling"></i> Upload or take a photo of a plant.<br>
+      Auto mode uses online AI (iNaturalist) then falls back offline.
+    </div>
+    <div id="aiOutput"></div>
+  </div>
+  <footer>
+    🔬 Online: iNaturalist (no key, high accuracy) · Offline: MobileNet (cached after first load)<br>
+    📸 Camera works on HTTPS (GitHub Pages recommended).
+  </footer>
+</div>
+
+<script>
+  (function() {
+    // ------------------- DOM elements -------------------
+    const video = document.getElementById('video');
+    const startCam = document.getElementById('startCam');
+    const stopCam = document.getElementById('stopCam');
+    const snapBtn = document.getElementById('snapBtn');
+    const fileInput = document.getElementById('fileInput');
+    const uploadLabel = document.getElementById('uploadLabel');
+    const statusSpan = document.getElementById('statusMsg');
+    const spinner = document.getElementById('spinner');
+    const defaultMsg = document.getElementById('defaultMsg');
+    const aiOutput = document.getElementById('aiOutput');
+    const placeholder = document.getElementById('placeholder');
+
+    // ------------------- State -------------------
+    let currentStream = null;
+    let cameraActive = false;
+    let offlineModel = null;          // MobileNet
+    let offlineReady = false;
+    let currentMode = 'auto';         // 'auto', 'online', 'offline'
+
+    // Mode buttons
+    const modeAuto = document.getElementById('modeAuto');
+    const modeOnline = document.getElementById('modeOnline');
+    const modeOffline = document.getElementById('modeOffline');
+
+    // Helper to update UI active class
+    function setActiveMode(mode) {
+      modeAuto.classList.remove('active');
+      modeOnline.classList.remove('active');
+      modeOffline.classList.remove('active');
+      if (mode === 'auto') modeAuto.classList.add('active');
+      else if (mode === 'online') modeOnline.classList.add('active');
+      else if (mode === 'offline') modeOffline.classList.add('active');
+      currentMode = mode;
+      setStatus(`Mode: ${mode === 'auto' ? 'Auto (online → offline)' : mode === 'online' ? 'Online (iNaturalist)' : 'Offline (MobileNet)'}`, false);
+    }
+
+    modeAuto.addEventListener('click', () => setActiveMode('auto'));
+    modeOnline.addEventListener('click', () => setActiveMode('online'));
+    modeOffline.addEventListener('click', () => setActiveMode('offline'));
+
+    // Status helper
+    function setStatus(msg, loading = false) {
+      statusSpan.innerText = msg;
+      if (loading) spinner.classList.remove('hidden');
+      else spinner.classList.add('hidden');
+    }
+
+    function updateUICamera() {
+      if (cameraActive && currentStream && video.srcObject) {
+        video.classList.remove('hidden');
+        placeholder.classList.add('hidden');
+        startCam.disabled = true;
+        stopCam.disabled = false;
+        snapBtn.disabled = false;
+      } else {
+        video.classList.add('hidden');
+        placeholder.classList.remove('hidden');
+        startCam.disabled = false;
+        stopCam.disabled = true;
+        snapBtn.disabled = true;
+      }
+    }
+
+    // ------------------- Camera -------------------
+    async function startCamera() {
+      if (currentStream) await stopCamera();
+      setStatus("Requesting camera...", true);
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        currentStream = stream;
+        video.srcObject = stream;
+        await video.play();
+        await new Promise(r => video.videoWidth > 0 ? r() : (video.onloadedmetadata = r));
+        cameraActive = true;
+        updateUICamera();
+        setStatus(`Camera ready. Mode: ${currentMode}`, false);
+      } catch (err) {
+        cameraActive = false;
+        updateUICamera();
+        setStatus("Camera permission denied. Use upload.", false);
+      }
+    }
+
+    async function stopCamera() {
+      if (currentStream) {
+        currentStream.getTracks().forEach(t => t.stop());
+        currentStream = null;
+      }
+      video.srcObject = null;
+      cameraActive = false;
+      updateUICamera();
+      setStatus("Camera stopped.", false);
+    }
+
+    // ------------------- Plant name mapping for offline fallback -------------------
+    const offlinePlantMap = [
+      { patterns: ['mango', 'mangifera', '07747607'], name: 'Mango Tree', scientific: 'Mangifera indica', family: 'Anacardiaceae' },
+      { patterns: ['oak', 'quercus', '07844045'], name: 'Oak Tree', scientific: 'Quercus', family: 'Fagaceae' },
+      { patterns: ['maple', 'acer', '07842855'], name: 'Maple Tree', scientific: 'Acer', family: 'Sapindaceae' },
+      { patterns: ['pine', 'pinus', '07844838'], name: 'Pine Tree', scientific: 'Pinus', family: 'Pinaceae' },
+      { patterns: ['sunflower', 'helianthus', '07744591'], name: 'Sunflower', scientific: 'Helianthus annuus', family: 'Asteraceae' },
+      { patterns: ['rose', 'rosa', '07710403'], name: 'Rose', scientific: 'Rosa', family: 'Rosaceae' },
+      { patterns: ['tulip', '07783194'], name: 'Tulip', scientific: 'Tulipa', family: 'Liliaceae' },
+      { patterns: ['orchid', '07742840'], name: 'Orchid', scientific: 'Orchidaceae', family: 'Orchidaceae' },
+      { patterns: ['fern', '07715354'], name: 'Fern', scientific: 'Polypodiopsida', family: 'Pteridophyta' },
+      { patterns: ['cactus', '07739149'], name: 'Cactus', scientific: 'Cactaceae', family: 'Cactaceae' },
+      { patterns: ['bamboo', '07718784'], name: 'Bamboo', scientific: 'Bambusoideae', family: 'Poaceae' },
+      { patterns: ['lavender', '07737634'], name: 'Lavender', scientific: 'Lavandula', family: 'Lamiaceae' }
+    ];
+
+    function matchOfflinePlant(label) {
+      const lower = label.toLowerCase();
+      for (let plant of offlinePlantMap) {
+        for (let p of plant.patterns) {
+          if (lower.includes(p)) return plant;
+        }
+      }
+      let generic = label.split(',')[0].replace(/_/g, ' ');
+      generic = generic.replace(/(^\w|\s\w)/g, c => c.toUpperCase());
+      return {
+        name: generic,
+        scientific: '—',
+        family: 'Plantae'
+      };
+    }
+
+    // ------------------- Online: iNaturalist API (CORS-friendly, no key) -------------------
+    async function identifyOnline(imageBlob) {
+      setStatus("🌐 Online AI (iNaturalist) analyzing...", true);
+      const formData = new FormData();
+      formData.append('image', imageBlob, 'plant.jpg');
+      try {
+        const response = await fetch('https://api.inaturalist.org/v1/computervision/identify', {
+          method: 'POST',
+          body: formData
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        if (data.results && data.results.length > 0) {
+          // Filter for plants (kingdom Plantae)
+          const plantResults = data.results.filter(r => 
+            r.taxon && (r.taxon.kingdom?.toLowerCase() === 'plantae' || 
+                        r.taxon.preferred_common_name?.match(/tree|plant|leaf|flower/i))
+          );
+          const best = plantResults[0] || data.results[0];
+          const taxon = best.taxon;
+          if (!taxon) return null;
+          const confidence = (best.score * 100).toFixed(1);
+          if (confidence < 10) return null;
+          const commonName = taxon.preferred_common_name || '';
+          const scientificName = taxon.name || taxon.scientific_name || '';
+          return {
+            name: commonName || scientificName.split(' ').slice(0,2).join(' '),
+            scientific: scientificName,
+            common: commonName,
+            confidence: confidence,
+            family: taxon.rank ? taxon.ancestors?.find(a => a.rank === 'family')?.name : 'Unknown',
+            source: 'iNaturalist (online)'
+          };
+        }
+        return null;
+      } catch (err) {
+        console.error("iNaturalist error:", err);
+        setStatus(`Online error: ${err.message}`, false);
+        return null;
+      }
+    }
+
+    // ------------------- Offline classification (MobileNet) -------------------
+    async function classifyOffline(imgElement) {
+      if (!offlineModel) return null;
+      setStatus("📴 Offline AI (MobileNet) analyzing...", true);
+      try {
+        const tensor = tf.browser.fromPixels(imgElement).resizeNearestNeighbor([224,224]).toFloat();
+        const expanded = tensor.expandDims(0);
+        const predictions = await offlineModel.classify(expanded);
+        tensor.dispose(); expanded.dispose();
+        if (predictions && predictions[0]) {
+          const plant = matchOfflinePlant(predictions[0].className);
+          const confidence = (predictions[0].probability * 100).toFixed(1);
+          return {
+            name: plant.name,
+            scientific: plant.scientific,
+            confidence: confidence,
+            family: plant.family,
+            raw: predictions[0].className,
+            source: 'MobileNet (offline)'
+          };
+        }
+        return null;
+      } catch (err) {
+        console.error(err);
+        return null;
+      }
+    }
+
+    // ------------------- Main identification orchestrator -------------------
+    async function identifyImage(imageBlob, elementOnly = false) {
+      // If we already have an HTMLImageElement (for offline fallback), we can use it directly.
+      // For consistent handling, we always accept blob.
+      let result = null;
+      if (currentMode === 'online') {
+        result = await identifyOnline(imageBlob);
+        if (!result) setStatus("Online identification failed. Try offline mode.", false);
+      } else if (currentMode === 'offline') {
+        // Convert blob to image element for offline model
+        const img = await blobToImage(imageBlob);
+        result = await classifyOffline(img);
+      } else { // auto mode: try online first, fallback to offline
+        result = await identifyOnline(imageBlob);
+        if (!result && offlineReady) {
+          setStatus("Online failed, falling back to offline AI...", false);
+          const img = await blobToImage(imageBlob);
+          result = await classifyOffline(img);
+        }
+      }
+      if (result) {
+        defaultMsg.classList.add('hidden');
+        aiOutput.innerHTML = `
+          <div class="plant-card">
+            <div><strong><i class="fas fa-leaf"></i> ${result.name}</strong></div>
+            <div class="sci-name">${result.scientific || ''}</div>
+            <div class="confidence">🎯 Confidence: ${result.confidence}%</div>
+            <div>🌿 Family: ${result.family || 'Unknown'}</div>
+            <div style="font-size:0.7rem; margin-top:6px;">🔍 Source: ${result.source}</div>
+            ${result.raw ? `<div style="font-size:0.65rem; color:#5c7e4a;">Raw: ${result.raw.substring(0,70)}</div>` : ''}
+          </div>
+        `;
+        setStatus(`✅ ${result.name} (${result.confidence}%)`, false);
+      } else {
+        defaultMsg.classList.remove('hidden');
+        aiOutput.innerHTML = '';
+        setStatus("Could not identify. Use a clearer, well-lit photo.", false);
+      }
+    }
+
+    // Helper: blob to HTMLImageElement
+    function blobToImage(blob) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = URL.createObjectURL(blob);
+      });
+    }
+
+    // Capture from camera
+    async function captureFromCamera() {
+      if (!cameraActive || !video.videoWidth) {
+        setStatus("Start camera first", false);
+        return;
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video, 0, 0);
+      const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.9));
+      await identifyImage(blob);
+    }
+
+    // Upload handler
+    async function handleUpload(file) {
+      if (!file) return;
+      await identifyImage(file);
+    }
+
+    // Load offline model (MobileNet)
+    async function loadOfflineModel() {
+      setStatus("Loading offline AI (MobileNet)...", true);
+      try {
+        offlineModel = await mobilenet.load({ version: 2, alpha: 1.0 });
+        offlineReady = true;
+        setStatus(`Offline AI ready. Mode: ${currentMode}`, false);
+        if (cameraActive) snapBtn.disabled = false;
+      } catch (e) {
+        console.error(e);
+        offlineReady = false;
+        setStatus("Offline model failed to load. Online only.", false);
+      }
+    }
+
+    // ------------------- Event bindings -------------------
+    startCam.addEventListener('click', startCamera);
+    stopCam.addEventListener('click', stopCamera);
+    snapBtn.addEventListener('click', captureFromCamera);
+    uploadLabel.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files[0]) handleUpload(e.target.files[0]);
+      fileInput.value = '';
+    });
+
+    // Start loading offline model (async)
+    loadOfflineModel();
+    setStatus("Ready. Auto mode uses iNaturalist then MobileNet.", false);
+  })();
+</script>
+</body>
+</html>
