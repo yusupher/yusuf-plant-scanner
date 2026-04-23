@@ -3,17 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>🌿 PlantAI · Camera Works (GitHub Pages)</title>
+  <title>🌿 PlantAI · Central learning (developer updates)</title>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #c8e0bc; font-family: system-ui, sans-serif; padding: 16px; }
-    .app { max-width: 700px; margin: 0 auto; background: white; border-radius: 2rem; overflow: hidden; box-shadow: 0 20px 35px rgba(0,0,0,0.2); }
+    .app { max-width: 750px; margin: 0 auto; background: white; border-radius: 2rem; overflow: hidden; box-shadow: 0 20px 35px rgba(0,0,0,0.2); }
     header { background: #1a3c2a; color: white; padding: 1rem; text-align: center; }
     header h1 { display: flex; justify-content: center; gap: 10px; font-size: 1.5rem; }
-    .mode-selector { display: flex; justify-content: center; gap: 12px; margin-top: 10px; }
+    .mode-selector { display: flex; justify-content: center; gap: 12px; margin-top: 8px; flex-wrap: wrap; }
     .mode-btn { background: #2d6a4f; border: none; padding: 6px 14px; border-radius: 40px; font-size: 0.7rem; font-weight: bold; cursor: pointer; color: white; }
     .mode-btn.active { background: #f4a261; color: #1a3c2a; }
     .camera-area { background: #1e3323; padding: 14px; }
@@ -27,24 +27,30 @@
     .file-label { background: #e2eed9; }
     .status { background: #eef3e8; padding: 8px 16px; font-size: 0.8rem; display: flex; align-items: center; gap: 10px; }
     .result { padding: 20px; background: #fffef7; }
-    .plant-card { background: #fefbe6; border-radius: 24px; padding: 18px; border-left: 6px solid #3b8b5a; }
+    .plant-card { background: #fefbe6; border-radius: 24px; padding: 18px; border-left: 6px solid #3b8b5a; margin-bottom: 16px; }
     .error-msg { background: #ffe5d9; border-radius: 20px; padding: 16px; text-align: center; }
     .loader { display: inline-block; width: 16px; height: 16px; border: 2px solid #2f6b47; border-top-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .hidden { display: none; }
     .confidence { background: #e3f1db; display: inline-block; padding: 4px 12px; border-radius: 40px; font-size: 0.7rem; margin: 8px 0; }
+    .feedback-area { background: #f5f9f0; border-radius: 20px; padding: 14px; margin-top: 12px; }
+    .feedback-input { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0; }
+    .feedback-input input { flex: 1; padding: 8px 12px; border-radius: 40px; border: 1px solid #c8e0bc; font-size: 0.85rem; }
+    .feedback-input button { background: #2f6b47; color: white; padding: 8px 16px; }
+    .json-snippet { background: #eef3e8; padding: 8px; font-family: monospace; font-size: 0.7rem; border-radius: 12px; margin-top: 8px; word-break: break-all; }
     footer { font-size: 0.65rem; text-align: center; padding: 12px; background: #f0f7eb; color: #4a6e3c; }
   </style>
 </head>
 <body>
 <div class="app">
   <header>
-    <h1><i class="fas fa-leaf"></i> PlantAI <i class="fas fa-cloud-sun"></i></h1>
+    <h1><i class="fas fa-leaf"></i> PlantAI <i class="fas fa-globe"></i></h1>
     <div class="mode-selector">
       <button id="modeAuto" class="mode-btn active">🔄 Auto (Online + Offline)</button>
       <button id="modeOnline" class="mode-btn">🌐 Online Only</button>
       <button id="modeOffline" class="mode-btn">📴 Offline Only</button>
     </div>
+    <div style="font-size:0.65rem; margin-top:6px;">🌱 Developer‑controlled corrections – all users benefit</div>
   </header>
 
   <div class="camera-area">
@@ -66,26 +72,28 @@
   </div>
 
   <div class="status">
-    <span id="statusMsg">🌱 Ready. Choose mode or use Auto.</span>
+    <span id="statusMsg">🌍 Loading central corrections...</span>
     <span id="spinner" class="loader hidden"></span>
   </div>
 
   <div class="result" id="resultArea">
     <div id="defaultMsg" class="error-msg">
-      <i class="fas fa-seedling"></i> Upload or take a photo of a plant.<br>
-      Auto mode uses iNaturalist (online) then offline MobileNet.
+      <i class="fas fa-seedling"></i> Upload or take a photo.<br>
+      <strong>Wrong ID?</strong> Suggest a correction – the developer can add it globally.
     </div>
     <div id="aiOutput"></div>
   </div>
   <footer>
-    🔬 Online: iNaturalist (no key) · Offline: MobileNet (works without internet)<br>
-    📸 Camera works on HTTPS (GitHub Pages).
+    🔬 Online: iNaturalist · Offline: MobileNet · <strong>Developer updates</strong> via <code>corrections.json</code>
   </footer>
 </div>
 
 <script>
   (function() {
-    // DOM elements
+    // --- CONFIGURATION: change this URL to your raw corrections file (GitHub Pages) ---
+    const CORRECTIONS_URL = 'corrections.json'; // relative path; can be absolute URL
+
+    // --- DOM elements ---
     const video = document.getElementById('video');
     const startCam = document.getElementById('startCam');
     const stopCam = document.getElementById('stopCam');
@@ -96,7 +104,6 @@
     const spinner = document.getElementById('spinner');
     const defaultMsg = document.getElementById('defaultMsg');
     const aiOutput = document.getElementById('aiOutput');
-    const placeholder = document.getElementById('placeholder');
 
     let currentStream = null;
     let cameraActive = false;
@@ -104,6 +111,10 @@
     let offlineReady = false;
     let currentMode = 'auto';
 
+    // Central corrections (loaded from JSON)
+    let globalCorrections = {};
+
+    // Mode buttons
     const modeAuto = document.getElementById('modeAuto');
     const modeOnline = document.getElementById('modeOnline');
     const modeOffline = document.getElementById('modeOffline');
@@ -129,6 +140,8 @@
       else spinner.classList.add('hidden');
     }
 
+    // --- Camera controls ---
+    const placeholder = document.getElementById('placeholder');
     function updateUICamera() {
       if (cameraActive && currentStream && video.srcObject) {
         video.classList.remove('hidden');
@@ -175,6 +188,38 @@
       setStatus("Camera stopped.", false);
     }
 
+    // --- Load central corrections from JSON file (developer-controlled) ---
+    async function loadGlobalCorrections() {
+      try {
+        const response = await fetch(CORRECTIONS_URL);
+        if (response.ok) {
+          globalCorrections = await response.json();
+          setStatus(`✅ Loaded ${Object.keys(globalCorrections).length} global corrections.`, false);
+        } else {
+          console.warn("No corrections file found, using empty.");
+          globalCorrections = {};
+        }
+      } catch(e) {
+        console.warn("Could not load corrections file:", e);
+        globalCorrections = {};
+      }
+    }
+
+    // Apply a global correction if the predicted label matches a key
+    function applyGlobalCorrection(result, predictedKey) {
+      const key = (predictedKey || result.name || '').toLowerCase();
+      if (globalCorrections[key]) {
+        const c = globalCorrections[key];
+        result.name = c.name;
+        result.scientific = c.scientific || result.scientific;
+        result.family = c.family || result.family;
+        result.correctedBy = 'developer';
+        result.correctionNote = `✨ Developer correction: "${key}" → "${c.name}"`;
+      }
+      return result;
+    }
+
+    // --- Plant databases & AI functions ---
     const offlinePlantMap = [
       { patterns: ['mango', 'mangifera', '07747607'], name: 'Mango Tree', scientific: 'Mangifera indica', family: 'Anacardiaceae' },
       { patterns: ['oak', 'quercus', '07844045'], name: 'Oak Tree', scientific: 'Quercus', family: 'Fagaceae' },
@@ -182,10 +227,7 @@
       { patterns: ['pine', 'pinus', '07844838'], name: 'Pine Tree', scientific: 'Pinus', family: 'Pinaceae' },
       { patterns: ['sunflower', 'helianthus', '07744591'], name: 'Sunflower', scientific: 'Helianthus annuus', family: 'Asteraceae' },
       { patterns: ['rose', 'rosa', '07710403'], name: 'Rose', scientific: 'Rosa', family: 'Rosaceae' },
-      { patterns: ['tulip', '07783194'], name: 'Tulip', scientific: 'Tulipa', family: 'Liliaceae' },
-      { patterns: ['orchid', '07742840'], name: 'Orchid', scientific: 'Orchidaceae', family: 'Orchidaceae' },
-      { patterns: ['fern', '07715354'], name: 'Fern', scientific: 'Polypodiopsida', family: 'Pteridophyta' },
-      { patterns: ['cactus', '07739149'], name: 'Cactus', scientific: 'Cactaceae', family: 'Cactaceae' }
+      { patterns: ['tulip', '07783194'], name: 'Tulip', scientific: 'Tulipa', family: 'Liliaceae' }
     ];
 
     function matchOfflinePlant(label) {
@@ -219,15 +261,17 @@
           const taxon = best.taxon;
           if (!taxon) return null;
           const confidence = (best.score * 100).toFixed(1);
-          if (confidence < 10) return null;
+          if (confidence < 5) return null;
           const commonName = taxon.preferred_common_name || '';
           const scientificName = taxon.name || taxon.scientific_name || '';
+          const rawLabel = scientificName || commonName || taxon.id;
           return {
             name: commonName || scientificName.split(' ').slice(0,2).join(' '),
             scientific: scientificName,
             confidence: confidence,
             family: taxon.ancestors?.find(a => a.rank === 'family')?.name || 'Unknown',
-            source: 'iNaturalist (online)'
+            source: 'iNaturalist (online)',
+            originalPredictedLabel: rawLabel
           };
         }
         return null;
@@ -253,7 +297,8 @@
             scientific: plant.scientific,
             confidence: confidence,
             family: plant.family,
-            source: 'MobileNet (offline)'
+            source: 'MobileNet (offline)',
+            originalPredictedLabel: predictions[0].className
           };
         }
         return null;
@@ -279,16 +324,38 @@
         }
       }
       if (result) {
+        const predictedKey = result.originalPredictedLabel || result.name;
+        // Apply global correction from developer's file
+        applyGlobalCorrection(result, predictedKey);
         defaultMsg.classList.add('hidden');
+        const resultId = 'currentResultData';
         aiOutput.innerHTML = `
-          <div class="plant-card">
+          <div id="${resultId}" class="plant-card">
             <div><strong><i class="fas fa-leaf"></i> ${result.name}</strong></div>
             <div class="sci-name">${result.scientific || ''}</div>
             <div class="confidence">🎯 Confidence: ${result.confidence}%</div>
             <div>🌿 Family: ${result.family}</div>
             <div style="font-size:0.7rem;">🔍 Source: ${result.source}</div>
+            ${result.correctionNote ? `<div style="font-size:0.7rem; color:#2d6a4f;">${result.correctionNote}</div>` : ''}
           </div>
         `;
+        // Feedback panel for developer (suggests JSON snippet)
+        const feedbackDiv = document.createElement('div');
+        feedbackDiv.className = 'feedback-area';
+        const devNote = (predictedKey !== result.name) ? 
+          `<div><i class="fas fa-user-edit"></i> <strong>Developer action:</strong> This was corrected globally.</div>` :
+          `<div><i class="fas fa-robot"></i> AI predicted: <code>${predictedKey}</code></div>
+           <div>If this is wrong, add this to your <code>corrections.json</code>:</div>
+           <div class="json-snippet">{
+  "${predictedKey.toLowerCase()}": {
+    "name": "Correct common name",
+    "scientific": "Optional scientific name",
+    "family": "Optional family"
+  }
+}</div>
+           <div style="margin-top:8px;">📌 Edit the file on GitHub and all users will see the fix.</div>`;
+        feedbackDiv.innerHTML = devNote;
+        aiOutput.appendChild(feedbackDiv);
         setStatus(`✅ ${result.name} (${result.confidence}%)`, false);
       } else {
         defaultMsg.classList.remove('hidden');
@@ -333,6 +400,7 @@
       }
     }
 
+    // --- Initialisation ---
     startCam.addEventListener('click', startCamera);
     stopCam.addEventListener('click', stopCamera);
     snapBtn.addEventListener('click', captureFromCamera);
@@ -342,8 +410,11 @@
       fileInput.value = '';
     });
 
-    loadOfflineModel();
-    setStatus("Ready. Auto mode: online (iNaturalist) + offline fallback.", false);
+    // Load central corrections first, then model
+    loadGlobalCorrections().then(() => {
+      loadOfflineModel();
+      setStatus("Ready. Auto mode: online + offline. Developer corrections active.", false);
+    });
   })();
 </script>
 </body>
