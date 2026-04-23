@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>🌿 PlantAI · Central learning (developer updates)</title>
+  <title>🌿 PlantAI · Live Correction Manager</title>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
@@ -13,9 +13,10 @@
     .app { max-width: 750px; margin: 0 auto; background: white; border-radius: 2rem; overflow: hidden; box-shadow: 0 20px 35px rgba(0,0,0,0.2); }
     header { background: #1a3c2a; color: white; padding: 1rem; text-align: center; }
     header h1 { display: flex; justify-content: center; gap: 10px; font-size: 1.5rem; }
-    .mode-selector { display: flex; justify-content: center; gap: 12px; margin-top: 8px; flex-wrap: wrap; }
+    .mode-selector { display: flex; justify-content: center; gap: 12px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
     .mode-btn { background: #2d6a4f; border: none; padding: 6px 14px; border-radius: 40px; font-size: 0.7rem; font-weight: bold; cursor: pointer; color: white; }
     .mode-btn.active { background: #f4a261; color: #1a3c2a; }
+    .refresh-btn, .dev-btn { background: #1b5e3f; color: white; border: none; padding: 6px 14px; border-radius: 40px; font-size: 0.7rem; cursor: pointer; }
     .camera-area { background: #1e3323; padding: 14px; }
     .video-box { position: relative; background: #0f1f12; border-radius: 28px; overflow: hidden; aspect-ratio: 4 / 3; }
     video { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -25,7 +26,7 @@
     button.primary { background: #2f6b47; color: white; }
     button.danger { background: #b1624b; color: white; }
     .file-label { background: #e2eed9; }
-    .status { background: #eef3e8; padding: 8px 16px; font-size: 0.8rem; display: flex; align-items: center; gap: 10px; }
+    .status { background: #eef3e8; padding: 8px 16px; font-size: 0.8rem; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     .result { padding: 20px; background: #fffef7; }
     .plant-card { background: #fefbe6; border-radius: 24px; padding: 18px; border-left: 6px solid #3b8b5a; margin-bottom: 16px; }
     .error-msg { background: #ffe5d9; border-radius: 20px; padding: 16px; text-align: center; }
@@ -37,20 +38,28 @@
     .feedback-input { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0; }
     .feedback-input input { flex: 1; padding: 8px 12px; border-radius: 40px; border: 1px solid #c8e0bc; font-size: 0.85rem; }
     .feedback-input button { background: #2f6b47; color: white; padding: 8px 16px; }
-    .json-snippet { background: #eef3e8; padding: 8px; font-family: monospace; font-size: 0.7rem; border-radius: 12px; margin-top: 8px; word-break: break-all; }
+    .json-snippet { background: #eef3e8; padding: 8px; font-family: monospace; font-size: 0.7rem; border-radius: 12px; margin-top: 8px; word-break: break-all; white-space: pre-wrap; }
+    .copy-btn { background: #2f6b47; color: white; border: none; border-radius: 40px; padding: 4px 10px; font-size: 0.6rem; margin-left: 8px; cursor: pointer; }
+    .dev-panel { background: #f0ebe0; border-radius: 20px; padding: 12px; margin-top: 12px; display: none; }
+    .dev-panel.visible { display: block; }
+    .correction-item { background: white; border-radius: 16px; padding: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+    .correction-key { font-family: monospace; font-size: 0.8rem; font-weight: bold; }
+    .correction-value { font-size: 0.8rem; color: #2f6b47; }
+    .delete-correction { background: #b1624b; color: white; border: none; border-radius: 30px; padding: 2px 12px; cursor: pointer; }
     footer { font-size: 0.65rem; text-align: center; padding: 12px; background: #f0f7eb; color: #4a6e3c; }
   </style>
 </head>
 <body>
 <div class="app">
   <header>
-    <h1><i class="fas fa-leaf"></i> PlantAI <i class="fas fa-globe"></i></h1>
+    <h1><i class="fas fa-leaf"></i> PlantAI <i class="fas fa-edit"></i></h1>
     <div class="mode-selector">
-      <button id="modeAuto" class="mode-btn active">🔄 Auto (Online + Offline)</button>
-      <button id="modeOnline" class="mode-btn">🌐 Online Only</button>
-      <button id="modeOffline" class="mode-btn">📴 Offline Only</button>
+      <button id="modeAuto" class="mode-btn active">🔄 Auto</button>
+      <button id="modeOnline" class="mode-btn">🌐 Online</button>
+      <button id="modeOffline" class="mode-btn">📴 Offline</button>
+      <button id="refreshCorrectionsBtn" class="refresh-btn"><i class="fas fa-sync-alt"></i> Reload JSON</button>
+      <button id="devModeBtn" class="dev-btn"><i class="fas fa-user-secret"></i> Dev Mode</button>
     </div>
-    <div style="font-size:0.65rem; margin-top:6px;">🌱 Developer‑controlled corrections – all users benefit</div>
   </header>
 
   <div class="camera-area">
@@ -72,26 +81,43 @@
   </div>
 
   <div class="status">
-    <span id="statusMsg">🌍 Loading central corrections...</span>
+    <span id="statusMsg">🌍 Loading corrections...</span>
     <span id="spinner" class="loader hidden"></span>
+    <span id="correctionStats" style="font-size:0.7rem; margin-left:auto;">—</span>
   </div>
 
   <div class="result" id="resultArea">
     <div id="defaultMsg" class="error-msg">
       <i class="fas fa-seedling"></i> Upload or take a photo.<br>
-      <strong>Wrong ID?</strong> Suggest a correction – the developer can add it globally.
+      <strong>Wrong ID?</strong> Use Dev Mode to add corrections instantly.
     </div>
     <div id="aiOutput"></div>
   </div>
+
+  <!-- Developer Panel (hidden by default) -->
+  <div id="devPanel" class="dev-panel">
+    <h4><i class="fas fa-tools"></i> Developer Correction Manager</h4>
+    <div style="margin: 8px 0;">
+      <input type="text" id="newKey" placeholder="AI predicted text (e.g. oak)" style="padding:6px; width:40%;">
+      <input type="text" id="newName" placeholder="Correct name" style="padding:6px; width:40%;">
+      <button id="addCorrectionBtn" class="primary" style="padding:6px 12px;">+ Add / Update</button>
+    </div>
+    <div id="correctionsList"></div>
+    <div style="margin-top:12px;">
+      <button id="downloadCorrectionsBtn" style="background:#2f6b47; color:white;"><i class="fas fa-download"></i> Download corrections.json</button>
+      <span style="font-size:0.7rem; margin-left:8px;">Upload this file to GitHub → all users get updates after Reload.</span>
+    </div>
+  </div>
+
   <footer>
-    🔬 Online: iNaturalist · Offline: MobileNet · <strong>Developer updates</strong> via <code>corrections.json</code>
+    🔬 Online: iNaturalist · Offline: MobileNet · <strong>Dev Mode</strong> lets you edit corrections and download the JSON file.
   </footer>
 </div>
 
 <script>
   (function() {
-    // --- CONFIGURATION: change this URL to your raw corrections file (GitHub Pages) ---
-    const CORRECTIONS_URL = 'corrections.json'; // relative path; can be absolute URL
+    // --- CONFIGURATION ---
+    const CORRECTIONS_URL = 'corrections.json';
 
     // --- DOM elements ---
     const video = document.getElementById('video');
@@ -104,15 +130,21 @@
     const spinner = document.getElementById('spinner');
     const defaultMsg = document.getElementById('defaultMsg');
     const aiOutput = document.getElementById('aiOutput');
+    const correctionStatsSpan = document.getElementById('correctionStats');
+    const refreshBtn = document.getElementById('refreshCorrectionsBtn');
+    const devModeBtn = document.getElementById('devModeBtn');
+    const devPanel = document.getElementById('devPanel');
+    const addCorrectionBtn = document.getElementById('addCorrectionBtn');
+    const downloadBtn = document.getElementById('downloadCorrectionsBtn');
+    const correctionsListDiv = document.getElementById('correctionsList');
 
     let currentStream = null;
     let cameraActive = false;
     let offlineModel = null;
     let offlineReady = false;
     let currentMode = 'auto';
-
-    // Central corrections (loaded from JSON)
     let globalCorrections = {};
+    let lastRefresh = null;
 
     // Mode buttons
     const modeAuto = document.getElementById('modeAuto');
@@ -140,86 +172,116 @@
       else spinner.classList.add('hidden');
     }
 
-    // --- Camera controls ---
-    const placeholder = document.getElementById('placeholder');
-    function updateUICamera() {
-      if (cameraActive && currentStream && video.srcObject) {
-        video.classList.remove('hidden');
-        placeholder.classList.add('hidden');
-        startCam.disabled = true;
-        stopCam.disabled = false;
-        snapBtn.disabled = false;
+    function updateCorrectionStats() {
+      const count = Object.keys(globalCorrections).length;
+      if (lastRefresh) {
+        correctionStatsSpan.innerHTML = `${count} corrections (${lastRefresh.toLocaleTimeString()})`;
       } else {
-        video.classList.add('hidden');
-        placeholder.classList.remove('hidden');
-        startCam.disabled = false;
-        stopCam.disabled = true;
-        snapBtn.disabled = true;
+        correctionStatsSpan.innerHTML = count ? `${count} corrections` : 'No corrections';
       }
+      renderCorrectionsList();
     }
 
-    async function startCamera() {
-      if (currentStream) await stopCamera();
-      setStatus("Requesting camera...", true);
+    // --- Load central corrections from JSON file ---
+    async function loadGlobalCorrections(showMessage = true) {
+      setStatus("🔄 Fetching latest corrections...", true);
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-        currentStream = stream;
-        video.srcObject = stream;
-        await video.play();
-        await new Promise(r => video.videoWidth > 0 ? r() : (video.onloadedmetadata = r));
-        cameraActive = true;
-        updateUICamera();
-        setStatus(`Camera ready. Mode: ${currentMode}`, false);
-      } catch (err) {
-        cameraActive = false;
-        updateUICamera();
-        setStatus("Camera permission denied. Use upload.", false);
-      }
-    }
-
-    async function stopCamera() {
-      if (currentStream) {
-        currentStream.getTracks().forEach(t => t.stop());
-        currentStream = null;
-      }
-      video.srcObject = null;
-      cameraActive = false;
-      updateUICamera();
-      setStatus("Camera stopped.", false);
-    }
-
-    // --- Load central corrections from JSON file (developer-controlled) ---
-    async function loadGlobalCorrections() {
-      try {
-        const response = await fetch(CORRECTIONS_URL);
+        const response = await fetch(CORRECTIONS_URL + '?t=' + Date.now());
         if (response.ok) {
-          globalCorrections = await response.json();
-          setStatus(`✅ Loaded ${Object.keys(globalCorrections).length} global corrections.`, false);
+          const data = await response.json();
+          if (typeof data === 'object' && data !== null) {
+            globalCorrections = data;
+            lastRefresh = new Date();
+            if (showMessage) setStatus(`✅ Loaded ${Object.keys(globalCorrections).length} corrections.`, false);
+            else setStatus(`Corrections updated (${Object.keys(globalCorrections).length})`, false);
+          } else {
+            throw new Error('Invalid JSON');
+          }
         } else {
-          console.warn("No corrections file found, using empty.");
-          globalCorrections = {};
+          throw new Error(`HTTP ${response.status}`);
         }
       } catch(e) {
         console.warn("Could not load corrections file:", e);
         globalCorrections = {};
+        if (showMessage) setStatus(`⚠️ No corrections file. Create corrections.json in same folder.`, false);
+        else setStatus("Failed to load corrections", false);
+      } finally {
+        updateCorrectionStats();
       }
     }
 
-    // Apply a global correction if the predicted label matches a key
+    // Apply correction
     function applyGlobalCorrection(result, predictedKey) {
-      const key = (predictedKey || result.name || '').toLowerCase();
+      const key = (predictedKey || result.name || '').toLowerCase().trim();
       if (globalCorrections[key]) {
         const c = globalCorrections[key];
-        result.name = c.name;
+        result.name = c.name || result.name;
         result.scientific = c.scientific || result.scientific;
         result.family = c.family || result.family;
-        result.correctedBy = 'developer';
-        result.correctionNote = `✨ Developer correction: "${key}" → "${c.name}"`;
+        result.correctionNote = `✨ Developer: "${key}" → "${c.name}"`;
       }
       return result;
     }
 
-    // --- Plant databases & AI functions ---
+    // --- Developer Panel: add/remove corrections locally ---
+    function addCorrection(key, name, scientific = '', family = '') {
+      if (!key || !name) return false;
+      const normalizedKey = key.toLowerCase().trim();
+      globalCorrections[normalizedKey] = {
+        name: name.trim(),
+        scientific: scientific.trim() || '',
+        family: family.trim() || ''
+      };
+      updateCorrectionStats();
+      setStatus(`✅ Correction added: "${normalizedKey}" → "${name}"`, false);
+      return true;
+    }
+
+    function removeCorrection(key) {
+      const normalizedKey = key.toLowerCase().trim();
+      if (globalCorrections[normalizedKey]) {
+        delete globalCorrections[normalizedKey];
+        updateCorrectionStats();
+        setStatus(`🗑️ Removed correction for "${normalizedKey}"`, false);
+        return true;
+      }
+      return false;
+    }
+
+    function renderCorrectionsList() {
+      if (!correctionsListDiv) return;
+      const entries = Object.entries(globalCorrections);
+      if (entries.length === 0) {
+        correctionsListDiv.innerHTML = '<i>No corrections yet. Add one above.</i>';
+        return;
+      }
+      correctionsListDiv.innerHTML = '';
+      for (const [key, val] of entries) {
+        const div = document.createElement('div');
+        div.className = 'correction-item';
+        div.innerHTML = `
+          <div><span class="correction-key">${escapeHtml(key)}</span> → <span class="correction-value">${escapeHtml(val.name)}</span></div>
+          <button class="delete-correction" data-key="${escapeHtml(key)}"><i class="fas fa-trash"></i> Delete</button>
+        `;
+        const delBtn = div.querySelector('.delete-correction');
+        delBtn.addEventListener('click', () => removeCorrection(key));
+        correctionsListDiv.appendChild(div);
+      }
+    }
+
+    function downloadCorrectionsFile() {
+      const dataStr = JSON.stringify(globalCorrections, null, 2);
+      const blob = new Blob([dataStr], {type: 'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'corrections.json';
+      a.click();
+      URL.revokeObjectURL(url);
+      setStatus("Downloaded corrections.json – upload to GitHub.", false);
+    }
+
+    // --- AI functions (same as before, but shortened for brevity) ---
     const offlinePlantMap = [
       { patterns: ['mango', 'mangifera', '07747607'], name: 'Mango Tree', scientific: 'Mangifera indica', family: 'Anacardiaceae' },
       { patterns: ['oak', 'quercus', '07844045'], name: 'Oak Tree', scientific: 'Quercus', family: 'Fagaceae' },
@@ -311,7 +373,6 @@
       let result = null;
       if (currentMode === 'online') {
         result = await identifyOnline(imageBlob);
-        if (!result) setStatus("Online failed.", false);
       } else if (currentMode === 'offline') {
         const img = await blobToImage(imageBlob);
         result = await classifyOffline(img);
@@ -325,36 +386,45 @@
       }
       if (result) {
         const predictedKey = result.originalPredictedLabel || result.name;
-        // Apply global correction from developer's file
         applyGlobalCorrection(result, predictedKey);
         defaultMsg.classList.add('hidden');
-        const resultId = 'currentResultData';
         aiOutput.innerHTML = `
-          <div id="${resultId}" class="plant-card">
-            <div><strong><i class="fas fa-leaf"></i> ${result.name}</strong></div>
-            <div class="sci-name">${result.scientific || ''}</div>
+          <div class="plant-card">
+            <div><strong><i class="fas fa-leaf"></i> ${escapeHtml(result.name)}</strong></div>
+            <div class="sci-name">${escapeHtml(result.scientific || '')}</div>
             <div class="confidence">🎯 Confidence: ${result.confidence}%</div>
-            <div>🌿 Family: ${result.family}</div>
+            <div>🌿 Family: ${escapeHtml(result.family)}</div>
             <div style="font-size:0.7rem;">🔍 Source: ${result.source}</div>
-            ${result.correctionNote ? `<div style="font-size:0.7rem; color:#2d6a4f;">${result.correctionNote}</div>` : ''}
+            ${result.correctionNote ? `<div style="font-size:0.7rem; color:#2d6a4f;">${escapeHtml(result.correctionNote)}</div>` : ''}
           </div>
         `;
-        // Feedback panel for developer (suggests JSON snippet)
+        // Provide quick-add buttons in feedback
         const feedbackDiv = document.createElement('div');
         feedbackDiv.className = 'feedback-area';
-        const devNote = (predictedKey !== result.name) ? 
-          `<div><i class="fas fa-user-edit"></i> <strong>Developer action:</strong> This was corrected globally.</div>` :
-          `<div><i class="fas fa-robot"></i> AI predicted: <code>${predictedKey}</code></div>
-           <div>If this is wrong, add this to your <code>corrections.json</code>:</div>
-           <div class="json-snippet">{
-  "${predictedKey.toLowerCase()}": {
-    "name": "Correct common name",
-    "scientific": "Optional scientific name",
-    "family": "Optional family"
-  }
-}</div>
-           <div style="margin-top:8px;">📌 Edit the file on GitHub and all users will see the fix.</div>`;
-        feedbackDiv.innerHTML = devNote;
+        if (!globalCorrections[predictedKey.toLowerCase()]) {
+          feedbackDiv.innerHTML = `
+            <div><i class="fas fa-robot"></i> AI predicted: <code>${escapeHtml(predictedKey)}</code></div>
+            <div class="feedback-input">
+              <input type="text" id="quickCorrectName" placeholder="Correct name (e.g. Mango)" />
+              <button id="quickAddBtn" class="primary">➕ Add Correction (Local)</button>
+            </div>
+            <div style="font-size:0.7rem;">After adding, use "Download corrections.json" to share with all users.</div>
+          `;
+          const quickAddBtn = feedbackDiv.querySelector('#quickAddBtn');
+          const quickInput = feedbackDiv.querySelector('#quickCorrectName');
+          quickAddBtn.addEventListener('click', () => {
+            const correctName = quickInput.value.trim();
+            if (correctName) {
+              addCorrection(predictedKey, correctName);
+              quickInput.value = '';
+              feedbackDiv.innerHTML = `<div style="color:green;">✅ Correction added locally. Download JSON and upload to GitHub.</div>`;
+            } else {
+              alert("Please enter a correct name.");
+            }
+          });
+        } else {
+          feedbackDiv.innerHTML = `<div><i class="fas fa-check-circle"></i> This prediction is already corrected in local corrections.</div>`;
+        }
         aiOutput.appendChild(feedbackDiv);
         setStatus(`✅ ${result.name} (${result.confidence}%)`, false);
       } else {
@@ -400,7 +470,84 @@
       }
     }
 
-    // --- Initialisation ---
+    // --- Camera UI ---
+    const placeholder = document.getElementById('placeholder');
+    function updateUICamera() {
+      if (cameraActive && currentStream && video.srcObject) {
+        video.classList.remove('hidden');
+        placeholder.classList.add('hidden');
+        startCam.disabled = true;
+        stopCam.disabled = false;
+        snapBtn.disabled = false;
+      } else {
+        video.classList.add('hidden');
+        placeholder.classList.remove('hidden');
+        startCam.disabled = false;
+        stopCam.disabled = true;
+        snapBtn.disabled = true;
+      }
+    }
+
+    async function startCamera() {
+      if (currentStream) await stopCamera();
+      setStatus("Requesting camera...", true);
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        currentStream = stream;
+        video.srcObject = stream;
+        await video.play();
+        await new Promise(r => video.videoWidth > 0 ? r() : (video.onloadedmetadata = r));
+        cameraActive = true;
+        updateUICamera();
+        setStatus(`Camera ready. Mode: ${currentMode}`, false);
+      } catch (err) {
+        cameraActive = false;
+        updateUICamera();
+        setStatus("Camera permission denied. Use upload.", false);
+      }
+    }
+
+    async function stopCamera() {
+      if (currentStream) {
+        currentStream.getTracks().forEach(t => t.stop());
+        currentStream = null;
+      }
+      video.srcObject = null;
+      cameraActive = false;
+      updateUICamera();
+      setStatus("Camera stopped.", false);
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/[&<>]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        return m;
+      });
+    }
+
+    // Developer Mode toggle
+    devModeBtn.addEventListener('click', () => {
+      devPanel.classList.toggle('visible');
+    });
+
+    addCorrectionBtn.addEventListener('click', () => {
+      const key = document.getElementById('newKey').value.trim();
+      const name = document.getElementById('newName').value.trim();
+      if (key && name) {
+        addCorrection(key, name);
+        document.getElementById('newKey').value = '';
+        document.getElementById('newName').value = '';
+      } else {
+        alert("Please enter both AI predicted text and correct name.");
+      }
+    });
+
+    downloadBtn.addEventListener('click', downloadCorrectionsFile);
+
+    // Initialise
     startCam.addEventListener('click', startCamera);
     stopCam.addEventListener('click', stopCamera);
     snapBtn.addEventListener('click', captureFromCamera);
@@ -409,11 +556,11 @@
       if (e.target.files[0]) handleUpload(e.target.files[0]);
       fileInput.value = '';
     });
+    refreshBtn.addEventListener('click', () => loadGlobalCorrections(true));
 
-    // Load central corrections first, then model
-    loadGlobalCorrections().then(() => {
+    loadGlobalCorrections(true).then(() => {
       loadOfflineModel();
-      setStatus("Ready. Auto mode: online + offline. Developer corrections active.", false);
+      setStatus("Ready. Dev Mode lets you add corrections instantly.", false);
     });
   })();
 </script>
