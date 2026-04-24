@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>🌿 PlantAI · Your Backend + Owner Corrections</title>
+  <title>🌿 PlantAI · Plant Identifier</title>
   <!-- TensorFlow.js (offline fallback) -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
@@ -28,6 +28,8 @@
     button.primary { background: #2f6b47; color: white; }
     button.danger { background: #b1624b; color: white; }
     .file-label { background: #e2eed9; }
+    .preview-area { text-align: center; margin-top: 6px; }
+    #preview { max-width: 100%; max-height: 200px; border-radius: 20px; display: none; margin-top: 8px; border: 2px solid #b8daa4; }
     .status { background: #eef3e8; padding: 8px 16px; font-size: 0.8rem; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     .result { padding: 20px; background: #fffef7; }
     .plant-card { background: #fefbe6; border-radius: 24px; padding: 18px; border-left: 6px solid #3b8b5a; margin-bottom: 16px; }
@@ -47,20 +49,19 @@
     footer { font-size: 0.65rem; text-align: center; padding: 12px; background: #f0f7eb; color: #4a6e3c; }
     .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 1000; }
     .modal-content { background: white; padding: 24px; border-radius: 32px; max-width: 300px; text-align: center; }
-    .info-note { background: #d9f0da; border-radius: 20px; padding: 6px 12px; font-size: 0.7rem; margin-top: 8px; }
   </style>
 </head>
 <body>
 <div class="app">
   <header>
-    <h1><i class="fas fa-leaf"></i> PlantAI <i class="fas fa-cloud-upload-alt"></i></h1>
+    <h1><i class="fas fa-leaf"></i> PlantAI <i class="fas fa-camera-retro"></i></h1>
     <div class="mode-selector">
-      <button id="modeAuto" class="mode-btn active">🔄 Auto (Backend → Offline)</button>
-      <button id="modeOnline" class="mode-btn">🌐 Backend Only</button>
-      <button id="modeOffline" class="mode-btn">📴 Offline Only</button>
-      <button id="refreshCorrectionsBtn" class="refresh-btn"><i class="fas fa-sync-alt"></i> Reload JSON</button>
-      <button id="ownerLoginBtn" class="owner-btn"><i class="fas fa-lock"></i> Owner Login</button>
-      <button id="logoutBtn" class="logout-btn" style="display:none;"><i class="fas fa-sign-out-alt"></i> Exit Owner Mode</button>
+      <button id="modeAuto" class="mode-btn active">🔄 Auto</button>
+      <button id="modeOnline" class="mode-btn">🌐 Online</button>
+      <button id="modeOffline" class="mode-btn">📴 Offline</button>
+      <button id="refreshCorrectionsBtn" class="refresh-btn"><i class="fas fa-sync-alt"></i> Reload</button>
+      <button id="ownerLoginBtn" class="owner-btn"><i class="fas fa-lock"></i> Owner</button>
+      <button id="logoutBtn" class="logout-btn" style="display:none;"><i class="fas fa-sign-out-alt"></i> Exit</button>
     </div>
   </header>
 
@@ -82,29 +83,34 @@
     <input type="file" id="fileInput" accept="image/*" style="display:none">
   </div>
 
+  <!-- Image preview (like the simple working code) -->
+  <div class="preview-area">
+    <img id="preview">
+  </div>
+
   <div class="status">
-    <span id="statusMsg">🌐 Ready – using your backend</span>
+    <span id="statusMsg">📸 Ready</span>
     <span id="spinner" class="loader hidden"></span>
     <span id="correctionStats" style="font-size:0.7rem; margin-left:auto;">—</span>
   </div>
 
   <div class="result" id="resultArea">
     <div id="defaultMsg" class="error-msg">
-      <i class="fas fa-seedling"></i> Upload or take a photo. Results from your backend appear here.
+      <i class="fas fa-seedling"></i> Upload or take a photo of a plant.
     </div>
     <div id="aiOutput"></div>
   </div>
 
   <div id="ownerPanel" class="owner-panel">
-    <h4><i class="fas fa-crown"></i> Owner Correction Manager</h4>
+    <h4><i class="fas fa-crown"></i> Owner Correction</h4>
     <div class="owner-field">
-      <label>AI predicted key (read‑only):</label>
+      <label>AI predicted key:</label>
       <input type="text" id="correctionKey" readonly>
     </div>
     <div class="owner-field">
       <label>Correct common name:</label>
       <input type="text" id="commonName" placeholder="e.g. Cowpea">
-      <button id="autoFillBtn" class="primary" style="margin-top:5px;"><i class="fas fa-magic"></i> Auto‑fill from DB</button>
+      <button id="autoFillBtn" class="primary" style="margin-top:5px;"><i class="fas fa-magic"></i> Auto‑fill</button>
     </div>
     <div class="owner-field">
       <label>Scientific name:</label>
@@ -119,18 +125,16 @@
       <textarea id="description" rows="2" placeholder="Legume crop, rich in protein."></textarea>
     </div>
     <div class="owner-field">
-      <label><input type="checkbox" id="ownerSure"> ✅ I am sure (confidence 100%)</label>
+      <label><input type="checkbox" id="ownerSure"> ✅ I am sure (100% confidence)</label>
     </div>
-    <button id="saveCorrectionBtn" class="primary"><i class="fas fa-save"></i> Save Correction (temporary)</button>
-    <div class="info-note">⚠️ Corrections are saved locally until you download and upload the JSON file to GitHub.</div>
+    <button id="saveCorrectionBtn" class="primary"><i class="fas fa-save"></i> Save Correction</button>
     <hr>
     <button id="downloadCorrectionsBtn" style="background:#2f6b47; color:white;"><i class="fas fa-download"></i> Download corrections.json</button>
     <div id="correctionsList"></div>
   </div>
 
   <footer>
-    🔒 Owner password: <strong>yusupher01</strong><br>
-    🧠 <strong>How to correct:</strong> After identification, click "Owner: Correct this label" → edit → Save. Then download JSON and upload to GitHub.
+    📸 Take a photo or upload · Powered by Plant AI
   </footer>
 </div>
 
@@ -155,6 +159,7 @@
     const snapBtn = document.getElementById('snapBtn');
     const fileInput = document.getElementById('fileInput');
     const uploadLabel = document.getElementById('uploadLabel');
+    const previewImg = document.getElementById('preview');
     const statusSpan = document.getElementById('statusMsg');
     const spinner = document.getElementById('spinner');
     const defaultMsg = document.getElementById('defaultMsg');
@@ -186,10 +191,9 @@
     let lastResult = null;
     let lastPredictedKey = '';
 
-    // ----- YOUR BACKEND URL (exactly as in your working test) -----
     const BACKEND_URL = 'https://plant-backend-avof.onrender.com/identify';
 
-    // ----- Local plant database for auto‑fill -----
+    // Local plant database for auto‑fill
     const plantDatabase = {
       "cowpea": { common: "Cowpea", scientific: "Vigna unguiculata", family: "Fabaceae", description: "Legume crop, rich in protein, drought-tolerant." },
       "mango": { common: "Mango", scientific: "Mangifera indica", family: "Anacardiaceae", description: "Tropical fruit tree, sweet fruit." },
@@ -230,7 +234,7 @@
       else if (mode === 'online') modeOnline.classList.add('active');
       else if (mode === 'offline') modeOffline.classList.add('active');
       currentMode = mode;
-      setStatus(`Mode: ${mode === 'auto' ? 'Auto (Backend → offline)' : mode === 'online' ? 'Backend only' : 'Offline only'}`, false);
+      setStatus(`Mode: ${mode === 'auto' ? 'Auto' : mode === 'online' ? 'Online' : 'Offline'}`, false);
     }
     modeAuto.addEventListener('click', () => setActiveMode('auto'));
     modeOnline.addEventListener('click', () => setActiveMode('online'));
@@ -242,7 +246,7 @@
       else spinner.classList.add('hidden');
     }
 
-    // ---------- Correction storage (same as before) ----------
+    // Correction storage
     function getAllCorrections() { return { ...globalCorrections, ...pendingCorrections }; }
     function addPendingCorrection(key, common, scientific, family, description, ownerSure) {
       if (!key || !common) return false;
@@ -254,7 +258,7 @@
         description: description.trim() || '',
         ownerSure: ownerSure || false
       };
-      setStatus(`✅ Correction added (pending upload): "${normalizedKey}" → "${common.trim()}"`, false);
+      setStatus(`✅ Correction added (pending)`, false);
       updateCorrectionUI();
       return true;
     }
@@ -262,7 +266,7 @@
       const normalizedKey = key.toLowerCase().trim();
       if (pendingCorrections[normalizedKey]) {
         delete pendingCorrections[normalizedKey];
-        setStatus(`🗑️ Removed pending correction for "${normalizedKey}"`, false);
+        setStatus(`🗑️ Removed pending correction`, false);
         updateCorrectionUI();
         return true;
       }
@@ -285,7 +289,7 @@
       return result;
     }
     async function loadGlobalCorrections(showMessage = true) {
-      setStatus("📡 Fetching corrections from GitHub...", true);
+      setStatus("Fetching corrections...", true);
       try {
         const response = await fetch(CORRECTIONS_URL + '?t=' + Date.now());
         if (response.ok) {
@@ -296,12 +300,11 @@
             if (showMessage) setStatus(`✅ Loaded ${Object.keys(globalCorrections).length} corrections.`, false);
             updateCorrectionUI();
             return true;
-          } else throw new Error('Invalid JSON');
-        } else throw new Error(`HTTP ${response.status}`);
-      } catch(err) {
-        console.error(err);
+          } else throw new Error();
+        } else throw new Error();
+      } catch(e) {
         globalCorrections = {};
-        if (showMessage) setStatus(`⚠️ No corrections.json file. Create one to store corrections.`, false);
+        if (showMessage) setStatus(`⚠️ No corrections file.`, false);
         updateCorrectionUI();
         return false;
       }
@@ -315,12 +318,12 @@
       a.download = 'corrections.json';
       a.click();
       URL.revokeObjectURL(blob);
-      setStatus("Downloaded corrections.json – upload to GitHub, then click Reload JSON.", false);
+      setStatus("Downloaded corrections.json", false);
     }
     function updateCorrectionUI() {
       const pendingCount = Object.keys(pendingCorrections).length;
       const globalCount = Object.keys(globalCorrections).length;
-      correctionStatsSpan.innerHTML = `${globalCount} global, ${pendingCount} pending`;
+      correctionStatsSpan.innerHTML = `${globalCount + pendingCount} total`;
       renderCorrectionsList();
     }
     function renderCorrectionsList() {
@@ -337,30 +340,27 @@
         const div = document.createElement('div');
         div.className = 'correction-item';
         div.innerHTML = `
-          <div><span class="correction-key">${escapeHtml(key)}</span> → <span class="correction-value">${escapeHtml(val.name)}</span> ${isPending ? '<span style="background:#f4a261; color:black; padding:2px 6px; border-radius:40px;">pending</span>' : '<span style="background:#2d6a4f; color:white; padding:2px 6px; border-radius:40px;">global</span>'}</div>
-          ${ownerAuthenticated ? `<button class="delete-correction" data-key="${escapeHtml(key)}"><i class="fas fa-trash"></i> Delete${isPending ? ' pending' : ''}</button>` : ''}
+          <div><span class="correction-key">${escapeHtml(key)}</span> → <span class="correction-value">${escapeHtml(val.name)}</span> ${isPending ? '<span style="background:#f4a261; color:black; padding:2px 6px; border-radius:40px;">pending</span>' : ''}</div>
+          ${ownerAuthenticated ? `<button class="delete-correction" data-key="${escapeHtml(key)}"><i class="fas fa-trash"></i> Delete</button>` : ''}
         `;
         if (ownerAuthenticated) {
           const delBtn = div.querySelector('.delete-correction');
           delBtn.addEventListener('click', () => {
             if (pendingCorrections[key]) removePendingCorrection(key);
-            else setStatus(`Global correction "${key}" can only be removed by editing corrections.json.`, false);
+            else setStatus(`Global correction can only be removed by editing corrections.json.`, false);
           });
         }
         correctionsListDiv.appendChild(div);
       }
     }
 
-    // ---------- IDENTIFICATION (exactly like your working test) ----------
+    // Identification
     async function identifyWithBackend(imageBlob) {
       const formData = new FormData();
       formData.append('image', imageBlob);
       try {
-        const response = await fetch(BACKEND_URL, {
-          method: 'POST',
-          body: formData
-        });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const response = await fetch(BACKEND_URL, { method: 'POST', body: formData });
+        if (!response.ok) throw new Error();
         const data = await response.json();
         if (data.results && data.results.length > 0) {
           const best = data.results[0];
@@ -372,20 +372,16 @@
             name: commonName || scientificName,
             scientific: scientificName,
             confidence: confidence,
-            family: '?', // backend does not return family; will be auto‑filled later if correction applied
+            family: '?',
             description: '',
-            source: 'Your Backend',
+            source: 'Backend',
             originalPredictedLabel: rawLabel
           };
         }
         return null;
-      } catch(err) {
-        console.error("Backend error:", err);
-        return null;
-      }
+      } catch(e) { return null; }
     }
 
-    // Offline fallback (MobileNet) – only used if backend fails and mode allows it
     const offlinePlantMap = [
       { patterns: ['mango', 'mangifera'], name: 'Mango', scientific: 'Mangifera indica', family: 'Anacardiaceae' },
       { patterns: ['oak', 'quercus'], name: 'Oak', scientific: 'Quercus', family: 'Fagaceae' },
@@ -413,7 +409,7 @@
             scientific: plant.scientific,
             confidence: (preds[0].probability*100).toFixed(1),
             family: plant.family,
-            source: 'Offline MobileNet',
+            source: 'Offline',
             originalPredictedLabel: preds[0].className
           };
         }
@@ -421,18 +417,15 @@
       } catch(e) { return null; }
     }
 
-    // Main identification orchestrator
     async function identifyImage(imageBlob) {
       let result = null;
-      if (currentMode === 'online') {
-        result = await identifyWithBackend(imageBlob);
-      } else if (currentMode === 'offline') {
+      if (currentMode === 'online') result = await identifyWithBackend(imageBlob);
+      else if (currentMode === 'offline') {
         const img = await blobToImage(imageBlob);
         result = await classifyOffline(img);
-      } else { // auto: backend first, fallback to offline
+      } else { // auto
         result = await identifyWithBackend(imageBlob);
         if (!result && offlineReady) {
-          setStatus("Backend failed, using offline AI...", false);
           const img = await blobToImage(imageBlob);
           result = await classifyOffline(img);
         }
@@ -452,7 +445,7 @@
         setStatus(`✅ ${result.name} (${result.confidence}%)`, false);
       } else {
         defaultMsg.classList.remove('hidden');
-        aiOutput.innerHTML = `<div class="error-msg">❌ No plant found (backend and offline both failed).</div>`;
+        aiOutput.innerHTML = `<div class="error-msg">❌ No plant found.</div>`;
         setStatus("No identification.", false);
       }
     }
@@ -477,7 +470,7 @@
         if (result.appliedCorrectionKey && pendingCorrections[result.appliedCorrectionKey]) {
           const undoBtn = document.createElement('button');
           undoBtn.className = 'undo-correction-btn';
-          undoBtn.innerHTML = '<i class="fas fa-undo-alt"></i> Remove pending correction';
+          undoBtn.innerHTML = '<i class="fas fa-undo-alt"></i> Remove correction';
           undoBtn.onclick = () => {
             removePendingCorrection(result.appliedCorrectionKey);
             if (lastImageBlob) identifyImage(lastImageBlob);
@@ -488,10 +481,9 @@
         editBtn.className = 'primary';
         editBtn.style.background = '#2f6b47';
         editBtn.style.marginLeft = '6px';
-        editBtn.innerHTML = '<i class="fas fa-edit"></i> Owner: Correct this label';
+        editBtn.innerHTML = '<i class="fas fa-edit"></i> Owner: Correct this';
         editBtn.onclick = () => {
           correctionKeyInput.value = predictedKey;
-          // Try to auto‑fill from local database
           const dbEntry = plantDatabase[predictedKey.toLowerCase()];
           if (dbEntry) {
             commonNameInput.value = dbEntry.common;
@@ -513,7 +505,6 @@
       }
     }
 
-    // Helper functions
     function blobToImage(blob) {
       return new Promise((resolve) => {
         const img = new Image();
@@ -521,6 +512,7 @@
         img.src = URL.createObjectURL(blob);
       });
     }
+
     async function captureFromCamera() {
       if (!cameraActive || !video.videoWidth) { setStatus("Start camera first", false); return; }
       const canvas = document.createElement('canvas');
@@ -528,23 +520,30 @@
       canvas.height = video.videoHeight;
       canvas.getContext('2d').drawImage(video, 0, 0);
       const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.9));
+      // show preview
+      const url = URL.createObjectURL(blob);
+      previewImg.src = url;
+      previewImg.style.display = 'block';
+      URL.revokeObjectURL(url);
       await identifyImage(blob);
     }
+
     async function handleUpload(file) {
       if (!file) return;
+      // show preview
+      const url = URL.createObjectURL(file);
+      previewImg.src = url;
+      previewImg.style.display = 'block';
+      URL.revokeObjectURL(url);
       await identifyImage(file);
     }
+
     async function loadOfflineModel() {
-      setStatus("Loading offline AI (MobileNet)...", true);
       try {
         offlineModel = await mobilenet.load({ version: 2, alpha: 1.0 });
         offlineReady = true;
-        setStatus(`Offline AI ready. Mode: ${currentMode}`, false);
         if (cameraActive) snapBtn.disabled = false;
-      } catch(e) {
-        offlineReady = false;
-        setStatus("Offline AI failed. Backend only.", false);
-      }
+      } catch(e) { offlineReady = false; }
     }
 
     // Camera UI
@@ -575,7 +574,7 @@
         await new Promise(r => video.videoWidth > 0 ? r() : (video.onloadedmetadata = r));
         cameraActive = true;
         updateUICamera();
-        setStatus(`Camera ready. Mode: ${currentMode}`, false);
+        setStatus(`Camera ready.`, false);
       } catch(e) {
         cameraActive = false;
         updateUICamera();
@@ -606,12 +605,12 @@
         ownerPanel.classList.add('visible');
         ownerLoginBtn.style.display = 'none';
         logoutBtn.style.display = 'inline-block';
-        setStatus("🔓 Owner mode active. You can correct labels.", false);
+        setStatus("🔓 Owner mode", false);
       } else {
         ownerPanel.classList.remove('visible');
         ownerLoginBtn.style.display = 'inline-block';
         logoutBtn.style.display = 'none';
-        setStatus("👤 User mode.", false);
+        setStatus("User mode", false);
       }
     }
     submitPassword.addEventListener('click', () => {
@@ -653,7 +652,7 @@
 
     loadGlobalCorrections(true).then(() => {
       loadOfflineModel();
-      setStatus("✅ Ready. Your backend is now integrated. Owner can correct any label.", false);
+      setStatus("✅ Ready", false);
     });
   })();
 </script>
