@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>🌿 KWASU PLANT IDENTIFICATION</title>
-  <!-- TensorFlow.js (offline fallback) -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
@@ -85,7 +84,6 @@
     <input type="file" id="fileInput" accept="image/*" style="display:none">
   </div>
 
-  <!-- Image preview -->
   <div class="preview-area">
     <img id="preview" alt="Preview">
   </div>
@@ -195,7 +193,7 @@
 
     const BACKEND_URL = 'https://plant-backend-avof.onrender.com/identify';
 
-    // Rich plant database with family, importance, uses
+    // Rich plant database
     const plantDatabase = {
       "cowpea": { common: "Cowpea", scientific: "Vigna unguiculata", family: "Fabaceae", importance: "Legume crop, rich in protein, drought-tolerant. Used for human consumption (beans) and animal feed. Fixes nitrogen in soil." },
       "mango": { common: "Mango", scientific: "Mangifera indica", family: "Anacardiaceae", importance: "Tropical fruit tree, sweet fruit rich in vitamins A and C. Source of juice, dried fruit, and chutneys." },
@@ -530,11 +528,12 @@
       canvas.height = video.videoHeight;
       canvas.getContext('2d').drawImage(video, 0, 0);
       const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.9));
-      // Show preview
+      // Show preview – don't revoke immediately
       const url = URL.createObjectURL(blob);
       previewImg.src = url;
       previewImg.style.display = 'block';
-      URL.revokeObjectURL(url);
+      // Revoke after load to prevent memory leaks
+      previewImg.onload = () => URL.revokeObjectURL(url);
       await identifyImage(blob);
     }
 
@@ -543,7 +542,7 @@
       const url = URL.createObjectURL(file);
       previewImg.src = url;
       previewImg.style.display = 'block';
-      URL.revokeObjectURL(url);
+      previewImg.onload = () => URL.revokeObjectURL(url);
       await identifyImage(file);
     }
 
