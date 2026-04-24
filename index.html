@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>🌿 PlantAI · Reliable corrections (no embedding)</title>
+  <title>🌿 PlantAI · Fallback for unrecognised plants</title>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
@@ -43,12 +43,11 @@
     .owner-field textarea { border-radius: 20px; resize: vertical; }
     .correction-item { background: white; border-radius: 16px; padding: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
     .delete-correction { background: #b1624b; color: white; border: none; border-radius: 30px; padding: 2px 12px; cursor: pointer; }
-    .manual-id-panel { background: #eaf5e5; border-radius: 20px; padding: 14px; margin-top: 16px; border: 2px solid #2f6b47; }
+    .fallback-area { background: #fef3c7; border-radius: 20px; padding: 12px; margin-top: 12px; border: 1px solid #f59e0b; }
     footer { font-size: 0.65rem; text-align: center; padding: 12px; background: #f0f7eb; color: #4a6e3c; }
     .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 1000; }
     .modal-content { background: white; padding: 24px; border-radius: 32px; max-width: 300px; text-align: center; }
     .info-note { background: #d9f0da; border-radius: 20px; padding: 6px 12px; font-size: 0.7rem; margin-top: 8px; }
-    .warning-note { background: #fff3cd; border-left: 4px solid #ffc107; padding: 6px 10px; font-size: 0.7rem; margin-top: 6px; }
   </style>
 </head>
 <body>
@@ -63,7 +62,6 @@
       <button id="ownerLoginBtn" class="owner-btn"><i class="fas fa-lock"></i> Owner Login</button>
       <button id="logoutBtn" class="logout-btn" style="display:none;"><i class="fas fa-sign-out-alt"></i> Exit Owner Mode</button>
     </div>
-    <div class="info-note">📌 Corrections are tied to AI labels. Owner can fix wrong AI guesses.</div>
   </header>
 
   <div class="camera-area">
@@ -93,13 +91,39 @@
   <div class="result" id="resultArea">
     <div id="defaultMsg" class="error-msg">
       <i class="fas fa-seedling"></i> Upload or take a photo.<br>
-      Owner can correct wrong AI guesses.
+      Owner can set a default fallback plant for unrecognised images.
     </div>
     <div id="aiOutput"></div>
   </div>
 
   <div id="ownerPanel" class="owner-panel">
     <h4><i class="fas fa-crown"></i> Owner Correction Manager</h4>
+    
+    <div class="fallback-area">
+      <h5><i class="fas fa-ambulance"></i> Default Fallback Plant (for completely unrecognised images)</h5>
+      <div class="owner-field">
+        <label>Common name:</label>
+        <input type="text" id="fallbackCommon" placeholder="e.g. Cashew">
+      </div>
+      <div class="owner-field">
+        <label>Scientific name:</label>
+        <input type="text" id="fallbackScientific" placeholder="e.g. Anacardium occidentale">
+      </div>
+      <div class="owner-field">
+        <label>Family:</label>
+        <input type="text" id="fallbackFamily" placeholder="e.g. Anacardiaceae">
+      </div>
+      <div class="owner-field">
+        <label>Description:</label>
+        <textarea id="fallbackDesc" rows="2" placeholder="Tree producing cashew nuts."></textarea>
+      </div>
+      <button id="saveFallbackBtn" class="primary"><i class="fas fa-save"></i> Set as Default Fallback</button>
+      <div class="info-note">This name will be shown whenever AI cannot identify a plant at all.</div>
+    </div>
+
+    <hr style="margin: 12px 0;">
+
+    <h5><i class="fas fa-tag"></i> Correction for known AI labels</h5>
     <div class="owner-field">
       <label>AI predicted key (read‑only):</label>
       <input type="text" id="correctionKey" readonly>
@@ -125,7 +149,7 @@
       <label><input type="checkbox" id="ownerSure"> ✅ I am sure (confidence 100%)</label>
     </div>
     <button id="saveCorrectionBtn" class="primary"><i class="fas fa-save"></i> Save Correction (temporary)</button>
-    <div class="warning-note">⚠️ Corrections are saved locally until you download and upload the JSON file to GitHub.</div>
+    <div class="info-note">⚠️ Corrections are saved locally until you download and upload the JSON file to GitHub.</div>
     <hr>
     <button id="downloadCorrectionsBtn" style="background:#2f6b47; color:white;"><i class="fas fa-download"></i> Download corrections.json</button>
     <div id="correctionsList"></div>
@@ -133,7 +157,7 @@
 
   <footer>
     🔒 Owner password: <strong>yusupher01</strong><br>
-    🧠 <strong>How to correct:</strong> After AI identifies a plant wrongly, click "Owner: Correct this label", enter correct name, save. Then download JSON & upload to GitHub.
+    🧠 <strong>Fallback:</strong> Set a default plant for unrecognised images. <strong>Corrections:</strong> Fix wrong AI labels.
   </footer>
 </div>
 
@@ -177,6 +201,12 @@
     const downloadBtn = document.getElementById('downloadCorrectionsBtn');
     const correctionsListDiv = document.getElementById('correctionsList');
     const autoFillBtn = document.getElementById('autoFillBtn');
+    // Fallback elements
+    const fallbackCommon = document.getElementById('fallbackCommon');
+    const fallbackScientific = document.getElementById('fallbackScientific');
+    const fallbackFamily = document.getElementById('fallbackFamily');
+    const fallbackDesc = document.getElementById('fallbackDesc');
+    const saveFallbackBtn = document.getElementById('saveFallbackBtn');
 
     let currentStream = null;
     let cameraActive = false;
@@ -185,6 +215,7 @@
     let currentMode = 'online';
     let globalCorrections = {};
     let pendingCorrections = {};
+    let globalFallbackPlant = null;   // { common, scientific, family, description }
     let lastImageBlob = null;
     let lastResult = null;
     let lastPredictedKey = '';
@@ -272,7 +303,8 @@
     }
 
     function applyBestCorrection(result, predictedKey) {
-      const key = (predictedKey || result.name || '').toLowerCase().trim();
+      if (!predictedKey) return result;
+      const key = predictedKey.toLowerCase().trim();
       const all = getAllCorrections();
       if (all[key]) {
         const c = all[key];
@@ -283,9 +315,73 @@
         if (c.ownerSure === true) result.confidence = '100';
         result.correctionNote = `✨ Correction: "${key}" → "${c.name}"`;
         result.appliedCorrectionKey = key;
+      }
+      return result;
+    }
+
+    // Global fallback plant
+    function loadFallbackFromCorrections() {
+      if (globalCorrections['__fallback__']) {
+        const fb = globalCorrections['__fallback__'];
+        globalFallbackPlant = {
+          common: fb.name,
+          scientific: fb.scientific,
+          family: fb.family,
+          description: fb.description
+        };
+        // Also show in UI
+        fallbackCommon.value = fb.name || '';
+        fallbackScientific.value = fb.scientific || '';
+        fallbackFamily.value = fb.family || '';
+        fallbackDesc.value = fb.description || '';
       } else {
-        result.correctionNote = null;
-        result.appliedCorrectionKey = null;
+        // Default fallback if none set
+        globalFallbackPlant = {
+          common: "Unidentified Plant",
+          scientific: "—",
+          family: "Unknown",
+          description: "No fallback set by owner."
+        };
+        fallbackCommon.value = '';
+        fallbackScientific.value = '';
+        fallbackFamily.value = '';
+        fallbackDesc.value = '';
+      }
+    }
+
+    function saveFallback() {
+      const common = fallbackCommon.value.trim();
+      if (!common) {
+        alert("Please enter a common name for the fallback plant.");
+        return;
+      }
+      const scientific = fallbackScientific.value.trim();
+      const family = fallbackFamily.value.trim();
+      const desc = fallbackDesc.value.trim();
+      // Store fallback in pending corrections as special key '__fallback__'
+      pendingCorrections['__fallback__'] = {
+        name: common,
+        scientific: scientific,
+        family: family,
+        description: desc,
+        ownerSure: true
+      };
+      globalFallbackPlant = { common, scientific, family, description: desc };
+      setStatus(`✅ Default fallback plant set to "${common}". Download JSON to share.`, false);
+      updateCorrectionUI();
+    }
+
+    function applyFallbackIfNeeded(result) {
+      if (!result && globalFallbackPlant) {
+        return {
+          name: globalFallbackPlant.common,
+          scientific: globalFallbackPlant.scientific,
+          confidence: '100',
+          family: globalFallbackPlant.family,
+          description: globalFallbackPlant.description,
+          source: 'Default fallback (owner set)',
+          correctionNote: `🌱 Owner fallback: ${globalFallbackPlant.common}`
+        };
       }
       return result;
     }
@@ -299,7 +395,8 @@
           if (typeof data === 'object' && data !== null) {
             globalCorrections = data;
             pendingCorrections = {};
-            if (showMessage) setStatus(`✅ Loaded ${Object.keys(globalCorrections).length} global corrections.`, false);
+            loadFallbackFromCorrections();
+            if (showMessage) setStatus(`✅ Loaded ${Object.keys(globalCorrections).length} corrections.`, false);
             updateCorrectionUI();
             return true;
           } else throw new Error('Invalid JSON');
@@ -307,6 +404,7 @@
       } catch(err) {
         console.error(err);
         globalCorrections = {};
+        loadFallbackFromCorrections();
         if (showMessage) setStatus(`⚠️ No corrections.json file. Create one to store corrections.`, false);
         updateCorrectionUI();
         return false;
@@ -315,6 +413,7 @@
 
     function downloadCorrectionsFile() {
       const merged = getAllCorrections();
+      // Remove any __fallback__ that might be pending? Actually we want to include it.
       const dataStr = JSON.stringify(merged, null, 2);
       const blob = new Blob([dataStr], {type: 'application/json'});
       const a = document.createElement('a');
@@ -335,9 +434,9 @@
     function renderCorrectionsList() {
       if (!correctionsListDiv) return;
       const all = getAllCorrections();
-      const entries = Object.entries(all);
+      const entries = Object.entries(all).filter(([key]) => key !== '__fallback__');
       if (entries.length === 0) {
-        correctionsListDiv.innerHTML = '<i>No corrections yet.</i>';
+        correctionsListDiv.innerHTML = '<i>No label corrections yet.</i>';
         return;
       }
       correctionsListDiv.innerHTML = '';
@@ -444,64 +543,39 @@
           result = await classifyOffline(img);
         }
       }
-      if (result) {
-        const predictedKey = result.originalPredictedLabel || result.name;
-        applyBestCorrection(result, predictedKey);
+      if (result && result.originalPredictedLabel) {
+        // Apply label correction if exists
+        result = applyBestCorrection(result, result.originalPredictedLabel);
+        lastPredictedKey = result.originalPredictedLabel;
         lastResult = result;
         lastImageBlob = imageBlob;
-        lastPredictedKey = predictedKey;
-        displayResult(result, predictedKey);
+        displayResult(result, result.originalPredictedLabel);
+        setStatus(`✅ ${result.name} (${result.confidence}%)`, false);
+      } else if (result && result.name) {
+        // No predicted label but result exists (offline generic)
+        lastResult = result;
+        lastImageBlob = imageBlob;
+        lastPredictedKey = null;
+        displayResult(result, null);
         setStatus(`✅ ${result.name} (${result.confidence}%)`, false);
       } else {
-        // AI failed completely
-        defaultMsg.classList.add('hidden');
-        aiOutput.innerHTML = `<div class="error-msg">❌ AI could not identify this plant.<br>Owner can still correct, but no AI label available.</div>`;
-        if (ownerAuthenticated) {
-          const manualDiv = document.createElement('div');
-          manualDiv.className = 'manual-id-panel';
-          manualDiv.innerHTML = `
-            <h4><i class="fas fa-hands-helping"></i> Manual Correction (Owner)</h4>
-            <div class="owner-field"><label>Common name:</label><input type="text" id="manualCommon" placeholder="e.g. Cashew Tree"></div>
-            <button id="manualAutoFillBtn" class="primary"><i class="fas fa-magic"></i> Auto‑fill</button>
-            <div class="owner-field"><label>Scientific name:</label><input type="text" id="manualScientific"></div>
-            <div class="owner-field"><label>Family:</label><input type="text" id="manualFamily"></div>
-            <div class="owner-field"><label>Description:</label><textarea id="manualDesc" rows="2"></textarea></div>
-            <label><input type="checkbox" id="manualSure"> ✅ I am sure (100% confidence)</label><br>
-            <button id="manualSaveBtn" class="primary">✅ Show this name (temporary)</button>
-            <div class="info-note">This name is only for this image. To make it permanent, ensure the AI returns a label that you can correct.</div>
-          `;
-          aiOutput.appendChild(manualDiv);
-          const manualCommon = document.getElementById('manualCommon');
-          const manualScientific = document.getElementById('manualScientific');
-          const manualFamily = document.getElementById('manualFamily');
-          const manualDesc = document.getElementById('manualDesc');
-          const manualAutoFill = document.getElementById('manualAutoFillBtn');
-          manualAutoFill.addEventListener('click', () => autoFill(manualCommon, manualScientific, manualFamily, manualDesc));
-          const manualSave = document.getElementById('manualSaveBtn');
-          manualSave.addEventListener('click', () => {
-            const common = manualCommon.value.trim();
-            if (!common) { alert("Enter a common name"); return; }
-            const scientific = manualScientific.value.trim();
-            const family = manualFamily.value.trim();
-            const desc = manualDesc.value.trim();
-            const sure = document.getElementById('manualSure').checked;
-            const tempResult = {
-              name: common,
-              scientific: scientific,
-              family: family,
-              description: desc,
-              confidence: sure ? '100' : '?',
-              source: 'Manual (temporary)',
-              correctionNote: `👤 Owner named: ${common}`
-            };
-            displayResult(tempResult, 'temp');
-          });
+        // AI failed completely – use fallback
+        const fallbackResult = applyFallbackIfNeeded(null);
+        if (fallbackResult) {
+          lastResult = fallbackResult;
+          lastImageBlob = imageBlob;
+          lastPredictedKey = null;
+          displayResult(fallbackResult, null);
+          setStatus(`✅ Using fallback: ${fallbackResult.name}`, false);
+        } else {
+          defaultMsg.classList.remove('hidden');
+          aiOutput.innerHTML = `<div class="error-msg">❌ AI could not identify this plant.<br>No fallback set. Owner can set a default fallback.</div>`;
+          setStatus("Identification failed. Set a fallback in owner panel.", false);
         }
-        setStatus("AI failed. Owner can temporarily name the plant.", false);
       }
     }
 
-    function displayResult(result, predictedKey = null) {
+    function displayResult(result, predictedKey) {
       defaultMsg.classList.add('hidden');
       let extra = result.description ? `<div>📖 ${escapeHtml(result.description)}</div>` : '';
       aiOutput.innerHTML = `
@@ -515,7 +589,7 @@
           ${result.correctionNote ? `<div style="color:#2d6a4f;">${escapeHtml(result.correctionNote)}</div>` : ''}
         </div>
       `;
-      if (ownerAuthenticated && predictedKey && predictedKey !== 'temp') {
+      if (ownerAuthenticated && predictedKey) {
         const btnDiv = document.createElement('div');
         btnDiv.style.marginTop = '8px';
         if (result.appliedCorrectionKey && pendingCorrections[result.appliedCorrectionKey]) {
@@ -546,7 +620,6 @@
         btnDiv.appendChild(editBtn);
         aiOutput.appendChild(btnDiv);
       }
-      setStatus(`✅ ${result.name} (${result.confidence}%)`, false);
     }
 
     function blobToImage(blob) {
@@ -644,12 +717,12 @@
         ownerPanel.classList.add('visible');
         ownerLoginBtn.style.display = 'none';
         logoutBtn.style.display = 'inline-block';
-        setStatus("🔓 Owner mode active. You can correct wrong AI labels.", false);
+        setStatus("🔓 Owner mode active. Set fallback or correct labels.", false);
       } else {
         ownerPanel.classList.remove('visible');
         ownerLoginBtn.style.display = 'inline-block';
         logoutBtn.style.display = 'none';
-        setStatus("👤 User mode: no corrections.", false);
+        setStatus("👤 User mode.", false);
       }
     }
     submitPassword.addEventListener('click', () => {
@@ -679,6 +752,8 @@
         displayResult(newResult, lastPredictedKey);
       }
     });
+
+    saveFallbackBtn.addEventListener('click', saveFallback);
     downloadBtn.addEventListener('click', downloadCorrectionsFile);
 
     startCam.addEventListener('click', startCamera);
@@ -690,7 +765,7 @@
 
     loadGlobalCorrections(true).then(() => {
       loadOfflineModel();
-      setStatus("✅ Ready. Owner can correct any wrong AI label using the panel below the result.", false);
+      setStatus("✅ Ready. Owner can set default fallback for unrecognised plants.", false);
     });
   })();
 </script>
