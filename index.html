@@ -1,10 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>🌿 PlantAI · Auto‑fallback + auto‑fill correction</title>
+  <title>🌿 PlantAI · Your Backend + Offline + Corrections</title>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
@@ -53,16 +52,15 @@
 <body>
 <div class="app">
   <header>
-    <h1><i class="fas fa-leaf"></i> PlantAI <i class="fas fa-robot"></i></h1>
+    <h1><i class="fas fa-leaf"></i> PlantAI <i class="fas fa-globe"></i></h1>
     <div class="mode-selector">
-      <button id="modeAuto" class="mode-btn active">🔄 Auto (recommended)</button>
-      <button id="modeOnline" class="mode-btn">🌐 Online Only</button>
+      <button id="modeAuto" class="mode-btn active">🔄 Auto (Backend → Offline)</button>
+      <button id="modeOnline" class="mode-btn">🌐 Backend Only</button>
       <button id="modeOffline" class="mode-btn">📴 Offline Only</button>
       <button id="refreshCorrectionsBtn" class="refresh-btn"><i class="fas fa-sync-alt"></i> Reload JSON</button>
       <button id="ownerLoginBtn" class="owner-btn"><i class="fas fa-lock"></i> Owner Login</button>
       <button id="logoutBtn" class="logout-btn" style="display:none;"><i class="fas fa-sign-out-alt"></i> Exit Owner Mode</button>
     </div>
-    <div class="info-note">📌 Auto mode: tries online, if fails → automatically uses offline. Owner can correct any label – fields auto‑fill from database.</div>
   </header>
 
   <div class="camera-area">
@@ -84,7 +82,7 @@
   </div>
 
   <div class="status">
-    <span id="statusMsg">🌐 Auto mode – will fallback to offline if needed</span>
+    <span id="statusMsg">🌐 Loading AI & corrections...</span>
     <span id="spinner" class="loader hidden"></span>
     <span id="correctionStats" style="font-size:0.7rem; margin-left:auto;">—</span>
   </div>
@@ -92,7 +90,7 @@
   <div class="result" id="resultArea">
     <div id="defaultMsg" class="error-msg">
       <i class="fas fa-seedling"></i> Upload or take a photo.<br>
-      Owner can correct any AI label – details auto‑fill from our database.
+      Powered by your backend + offline fallback.
     </div>
     <div id="aiOutput"></div>
   </div>
@@ -132,7 +130,7 @@
 
   <footer>
     🔒 Owner password: <strong>yusupher01</strong><br>
-    🧠 <strong>How it works:</strong> Auto mode → if online fails, offline runs automatically. Click "Owner: Correct this label" → fields are pre‑filled from database if the label is known (e.g., "mango" → auto fills scientific etc.). Save, download JSON, upload to GitHub.
+    🧠 <strong>How it works:</strong> Auto mode uses your backend (https://plant-backend-avof.onrender.com/identify). If that fails, falls back to offline MobileNet. Owner can correct any label.
   </footer>
 </div>
 
@@ -188,54 +186,39 @@
     let lastResult = null;
     let lastPredictedKey = '';
 
-    // ---------- ENHANCED PLANT DATABASE (used for auto‑fill) ----------
-    // Keys are the predicted labels (lowercase) that the AI might return.
-    const plantDatabase = {
-      // Common offline mode labels
-      "mango": { common: "Mango", scientific: "Mangifera indica", family: "Anacardiaceae", description: "Tropical fruit tree, sweet fruit. Rich in vitamins." },
-      "mango tree": { common: "Mango Tree", scientific: "Mangifera indica", family: "Anacardiaceae", description: "Tropical fruit tree, produces mango fruits." },
-      "oak": { common: "Oak Tree", scientific: "Quercus robur", family: "Fagaceae", description: "Deciduous tree, produces acorns, hardwood used in furniture." },
-      "sunflower": { common: "Sunflower", scientific: "Helianthus annuus", family: "Asteraceae", description: "Tall annual, large yellow flower head, edible seeds." },
-      "rose": { common: "Rose", scientific: "Rosa spp.", family: "Rosaceae", description: "Ornamental shrub, fragrant flowers, many cultivars." },
-      "tulip": { common: "Tulip", scientific: "Tulipa gesneriana", family: "Liliaceae", description: "Spring bulb flower, cup-shaped blooms." },
-      "daisy": { common: "Daisy", scientific: "Bellis perennis", family: "Asteraceae", description: "Composite flower with white petals and yellow disc." },
-      "orchid": { common: "Orchid", scientific: "Orchidaceae", family: "Orchidaceae", description: "Exotic flowers, epiphytic, high diversity." },
-      "fern": { common: "Fern", scientific: "Polypodiopsida", family: "Pteridophyta", description: "Vascular plant without flowers, reproduces via spores." },
-      "cactus": { common: "Cactus", scientific: "Cactaceae", family: "Cactaceae", description: "Succulent adapted to arid climates, water-storing stem." },
-      "bamboo": { common: "Bamboo", scientific: "Bambusoideae", family: "Poaceae", description: "Fast-growing grass, strong stalks used in construction." },
-      "lavender": { common: "Lavender", scientific: "Lavandula", family: "Lamiaceae", description: "Aromatic herb, purple flowers, relaxing scent." },
-      "basil": { common: "Basil", scientific: "Ocimum basilicum", family: "Lamiaceae", description: "Aromatic herb, used in cooking, especially pesto." },
-      "cowpea": { common: "Cowpea", scientific: "Vigna unguiculata", family: "Fabaceae", description: "Legume crop, rich in protein, drought-tolerant." },
-      "cashew": { common: "Cashew", scientific: "Anacardium occidentale", family: "Anacardiaceae", description: "Produces cashew nuts and cashew apple." },
-      "tomato": { common: "Tomato", scientific: "Solanum lycopersicum", family: "Solanaceae", description: "Fruit vegetable, rich in lycopene." },
-      "maize": { common: "Maize", scientific: "Zea mays", family: "Poaceae", description: "Cereal grain, staple food in many regions." },
-      "rice": { common: "Rice", scientific: "Oryza sativa", family: "Poaceae", description: "Staple cereal grain, grown in paddies." }
-    };
+    // ---------- YOUR BACKEND URL ----------
+    const BACKEND_URL = 'https://plant-backend-avof.onrender.com/identify';
 
-    // Auto‑fill function: given a predicted key, fill the correction fields.
-    function autoFillFromDatabase(key) {
-      const lookup = key.toLowerCase();
-      if (plantDatabase[lookup]) {
-        const data = plantDatabase[lookup];
-        commonNameInput.value = data.common;
-        scientificNameInput.value = data.scientific;
-        familyNameInput.value = data.family;
-        descriptionInput.value = data.description;
-        setStatus(`✅ Auto‑filled details for "${data.common}"`, false);
-        return true;
+    // ---------- PLANT DATABASE (auto-fill) ----------
+    const plantDatabase = {
+      "cowpea": { common: "Cowpea", scientific: "Vigna unguiculata", family: "Fabaceae", description: "Legume crop, rich in protein, drought-tolerant." },
+      "mango": { common: "Mango", scientific: "Mangifera indica", family: "Anacardiaceae", description: "Tropical fruit tree, sweet fruit." },
+      "cashew": { common: "Cashew", scientific: "Anacardium occidentale", family: "Anacardiaceae", description: "Produces cashew nuts and cashew apple." },
+      "oak": { common: "Oak", scientific: "Quercus robur", family: "Fagaceae", description: "Deciduous tree, acorns." },
+      "rose": { common: "Rose", scientific: "Rosa spp.", family: "Rosaceae", description: "Ornamental shrub." },
+      "sunflower": { common: "Sunflower", scientific: "Helianthus annuus", family: "Asteraceae", description: "Tall annual, edible seeds." },
+      "basil": { common: "Basil", scientific: "Ocimum basilicum", family: "Lamiaceae", description: "Aromatic herb." },
+      "tomato": { common: "Tomato", scientific: "Solanum lycopersicum", family: "Solanaceae", description: "Fruit vegetable." },
+      "maize": { common: "Maize", scientific: "Zea mays", family: "Poaceae", description: "Cereal grain." },
+      "rice": { common: "Rice", scientific: "Oryza sativa", family: "Poaceae", description: "Staple cereal grain." }
+    };
+    function autoFill(targetCommon, targetSci, targetFamily, targetDesc) {
+      const raw = targetCommon.value.trim().toLowerCase();
+      if (plantDatabase[raw]) {
+        const p = plantDatabase[raw];
+        targetSci.value = p.scientific;
+        targetFamily.value = p.family;
+        targetDesc.value = p.description;
+        setStatus(`✅ Auto-filled: ${p.common}`, false);
       } else {
-        setStatus(`❌ No database entry for "${key}". You can enter manually.`, false);
-        return false;
+        setStatus(`❌ No database entry for "${raw}"`, false);
       }
     }
-
     autoFillBtn.addEventListener('click', () => {
-      const key = correctionKeyInput.value.trim();
-      if (key) autoFillFromDatabase(key);
-      else setStatus("No predicted key to auto‑fill.", false);
+      autoFill(commonNameInput, scientificNameInput, familyNameInput, descriptionInput);
     });
 
-    // Mode buttons – default is 'auto'
+    // Mode buttons
     const modeAuto = document.getElementById('modeAuto');
     const modeOnline = document.getElementById('modeOnline');
     const modeOffline = document.getElementById('modeOffline');
@@ -247,7 +230,7 @@
       else if (mode === 'online') modeOnline.classList.add('active');
       else if (mode === 'offline') modeOffline.classList.add('active');
       currentMode = mode;
-      setStatus(`Mode: ${mode === 'auto' ? 'Auto (online → offline fallback)' : mode === 'online' ? 'Online (iNaturalist)' : 'Offline (MobileNet)'}`, false);
+      setStatus(`Mode: ${mode === 'auto' ? 'Auto (Backend → offline)' : mode === 'online' ? 'Backend only' : 'Offline (MobileNet)'}`, false);
     }
     modeAuto.addEventListener('click', () => setActiveMode('auto'));
     modeOnline.addEventListener('click', () => setActiveMode('online'));
@@ -259,6 +242,7 @@
       else spinner.classList.add('hidden');
     }
 
+    // Correction storage
     function getAllCorrections() { return { ...globalCorrections, ...pendingCorrections }; }
 
     function addPendingCorrection(key, common, scientific, family, description, ownerSure) {
@@ -374,41 +358,43 @@
       }
     }
 
-    // ---------- AI functions with auto fallback ----------
-    async function identifyOnline(imageBlob) {
-      setStatus("🌐 Online AI analyzing...", true);
+    // ---------- AI FUNCTIONS ----------
+    // Using your backend
+    async function identifyBackend(imageBlob) {
+      setStatus("🌐 Sending to your backend...", true);
       const formData = new FormData();
       formData.append('image', imageBlob, 'plant.jpg');
       try {
-        const response = await fetch('https://api.inaturalist.org/v1/computervision/identify', {
+        const response = await fetch(BACKEND_URL, {
           method: 'POST',
           body: formData
         });
-        if (!response.ok) throw new Error();
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data = await response.json();
-        if (data.results && data.results.length) {
+        if (data.results && data.results.length > 0) {
           const best = data.results[0];
-          const taxon = best.taxon;
-          if (!taxon) return null;
+          const commonName = best.species.commonNames?.[0] || '';
+          const scientificName = best.species.scientificNameWithoutAuthor || '';
           const confidence = (best.score * 100).toFixed(1);
-          if (confidence < 5) return null;
-          const commonName = taxon.preferred_common_name || '';
-          const scientificName = taxon.name || '';
-          const rawLabel = scientificName || commonName || taxon.id;
+          const rawLabel = scientificName || commonName || best.species.id;
           return {
-            name: commonName || scientificName.split(' ').slice(0,2).join(' '),
+            name: commonName || scientificName,
             scientific: scientificName,
             confidence: confidence,
-            family: taxon.ancestors?.find(a => a.rank === 'family')?.name || '',
+            family: '?',  // Your backend does not return family; we can keep generic or fetch from DB later
             description: '',
-            source: 'iNaturalist (online)',
+            source: 'Your Backend API',
             originalPredictedLabel: rawLabel
           };
         }
         return null;
-      } catch(e) { return null; }
+      } catch(err) {
+        console.error("Backend error:", err);
+        return null;
+      }
     }
 
+    // Offline MobileNet
     const offlinePlantMap = [
       { patterns: ['mango', 'mangifera'], name: 'Mango', scientific: 'Mangifera indica', family: 'Anacardiaceae' },
       { patterns: ['oak', 'quercus'], name: 'Oak', scientific: 'Quercus', family: 'Fagaceae' },
@@ -448,14 +434,14 @@
     async function identifyImage(imageBlob) {
       let result = null;
       if (currentMode === 'online') {
-        result = await identifyOnline(imageBlob);
+        result = await identifyBackend(imageBlob);
       } else if (currentMode === 'offline') {
         const img = await blobToImage(imageBlob);
         result = await classifyOffline(img);
-      } else { // auto mode: try online, fallback to offline if online fails
-        result = await identifyOnline(imageBlob);
+      } else { // auto: backend first, fallback to offline
+        result = await identifyBackend(imageBlob);
         if (!result && offlineReady) {
-          setStatus("Online failed, automatically using offline AI...", false);
+          setStatus("Backend failed, falling back to offline AI...", false);
           const img = await blobToImage(imageBlob);
           result = await classifyOffline(img);
         }
@@ -475,7 +461,7 @@
         setStatus(`✅ ${result.name} (${result.confidence}%)`, false);
       } else {
         defaultMsg.classList.remove('hidden');
-        aiOutput.innerHTML = `<div class="error-msg">❌ AI could not identify this plant (online and offline both failed).<br>Owner can still add a correction later if a label appears.</div>`;
+        aiOutput.innerHTML = `<div class="error-msg">❌ No plant identified (backend and offline both failed).<br>Owner can still add a correction later if a label appears.</div>`;
         setStatus("No match from any AI.", false);
       }
     }
@@ -514,8 +500,19 @@
         editBtn.innerHTML = '<i class="fas fa-edit"></i> Owner: Correct this label';
         editBtn.onclick = () => {
           correctionKeyInput.value = predictedKey;
-          // Auto‑fill from database when opening the correction panel
-          autoFillFromDatabase(predictedKey);
+          // Try to auto‑fill from plantDatabase if key matches any
+          const dbMatch = plantDatabase[predictedKey.toLowerCase()];
+          if (dbMatch) {
+            commonNameInput.value = dbMatch.common;
+            scientificNameInput.value = dbMatch.scientific;
+            familyNameInput.value = dbMatch.family;
+            descriptionInput.value = dbMatch.description;
+          } else {
+            commonNameInput.value = '';
+            scientificNameInput.value = '';
+            familyNameInput.value = '';
+            descriptionInput.value = '';
+          }
           ownerSureCheckbox.checked = false;
           ownerPanel.classList.add('visible');
           ownerPanel.scrollIntoView({ behavior: 'smooth' });
@@ -549,7 +546,7 @@
     }
 
     async function loadOfflineModel() {
-      setStatus("Loading offline AI...", true);
+      setStatus("Loading offline AI (MobileNet)...", true);
       try {
         offlineModel = await mobilenet.load({ version: 2, alpha: 1.0 });
         offlineReady = true;
@@ -557,7 +554,7 @@
         if (cameraActive) snapBtn.disabled = false;
       } catch(e) {
         offlineReady = false;
-        setStatus("Offline AI failed. Online only.", false);
+        setStatus("Offline AI failed. Backend only.", false);
       }
     }
 
@@ -620,7 +617,7 @@
         ownerPanel.classList.add('visible');
         ownerLoginBtn.style.display = 'none';
         logoutBtn.style.display = 'inline-block';
-        setStatus("🔓 Owner mode active. Click 'Correct this label' – fields auto‑fill from database.", false);
+        setStatus("🔓 Owner mode active. You can correct labels.", false);
       } else {
         ownerPanel.classList.remove('visible');
         ownerLoginBtn.style.display = 'inline-block';
@@ -667,7 +664,7 @@
 
     loadGlobalCorrections(true).then(() => {
       loadOfflineModel();
-      setStatus("✅ Ready. Auto mode will fallback to offline if needed. Owner corrections auto‑fill from database.", false);
+      setStatus("✅ Ready. Auto mode uses your backend → offline fallback.", false);
     });
   })();
 </script>
