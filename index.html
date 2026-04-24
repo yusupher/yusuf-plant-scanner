@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>🌿 PlantAI · Your Backend + Offline + Corrections</title>
+  <title>🌿 PlantAI · Your Backend + Owner Corrections</title>
+  <!-- TensorFlow.js (offline fallback) -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
@@ -52,7 +53,7 @@
 <body>
 <div class="app">
   <header>
-    <h1><i class="fas fa-leaf"></i> PlantAI <i class="fas fa-globe"></i></h1>
+    <h1><i class="fas fa-leaf"></i> PlantAI <i class="fas fa-cloud-upload-alt"></i></h1>
     <div class="mode-selector">
       <button id="modeAuto" class="mode-btn active">🔄 Auto (Backend → Offline)</button>
       <button id="modeOnline" class="mode-btn">🌐 Backend Only</button>
@@ -82,15 +83,14 @@
   </div>
 
   <div class="status">
-    <span id="statusMsg">🌐 Loading AI & corrections...</span>
+    <span id="statusMsg">🌐 Ready – using your backend</span>
     <span id="spinner" class="loader hidden"></span>
     <span id="correctionStats" style="font-size:0.7rem; margin-left:auto;">—</span>
   </div>
 
   <div class="result" id="resultArea">
     <div id="defaultMsg" class="error-msg">
-      <i class="fas fa-seedling"></i> Upload or take a photo.<br>
-      Powered by your backend + offline fallback.
+      <i class="fas fa-seedling"></i> Upload or take a photo. Results from your backend appear here.
     </div>
     <div id="aiOutput"></div>
   </div>
@@ -130,7 +130,7 @@
 
   <footer>
     🔒 Owner password: <strong>yusupher01</strong><br>
-    🧠 <strong>How it works:</strong> Auto mode uses your backend (https://plant-backend-avof.onrender.com/identify). If that fails, falls back to offline MobileNet. Owner can correct any label.
+    🧠 <strong>How to correct:</strong> After identification, click "Owner: Correct this label" → edit → Save. Then download JSON and upload to GitHub.
   </footer>
 </div>
 
@@ -186,10 +186,10 @@
     let lastResult = null;
     let lastPredictedKey = '';
 
-    // ---------- YOUR BACKEND URL ----------
+    // ----- YOUR BACKEND URL (exactly as in your working test) -----
     const BACKEND_URL = 'https://plant-backend-avof.onrender.com/identify';
 
-    // ---------- PLANT DATABASE (auto-fill) ----------
+    // ----- Local plant database for auto‑fill -----
     const plantDatabase = {
       "cowpea": { common: "Cowpea", scientific: "Vigna unguiculata", family: "Fabaceae", description: "Legume crop, rich in protein, drought-tolerant." },
       "mango": { common: "Mango", scientific: "Mangifera indica", family: "Anacardiaceae", description: "Tropical fruit tree, sweet fruit." },
@@ -230,7 +230,7 @@
       else if (mode === 'online') modeOnline.classList.add('active');
       else if (mode === 'offline') modeOffline.classList.add('active');
       currentMode = mode;
-      setStatus(`Mode: ${mode === 'auto' ? 'Auto (Backend → offline)' : mode === 'online' ? 'Backend only' : 'Offline (MobileNet)'}`, false);
+      setStatus(`Mode: ${mode === 'auto' ? 'Auto (Backend → offline)' : mode === 'online' ? 'Backend only' : 'Offline only'}`, false);
     }
     modeAuto.addEventListener('click', () => setActiveMode('auto'));
     modeOnline.addEventListener('click', () => setActiveMode('online'));
@@ -242,9 +242,8 @@
       else spinner.classList.add('hidden');
     }
 
-    // Correction storage
+    // ---------- Correction storage (same as before) ----------
     function getAllCorrections() { return { ...globalCorrections, ...pendingCorrections }; }
-
     function addPendingCorrection(key, common, scientific, family, description, ownerSure) {
       if (!key || !common) return false;
       const normalizedKey = key.toLowerCase().trim();
@@ -259,7 +258,6 @@
       updateCorrectionUI();
       return true;
     }
-
     function removePendingCorrection(key) {
       const normalizedKey = key.toLowerCase().trim();
       if (pendingCorrections[normalizedKey]) {
@@ -270,7 +268,6 @@
       }
       return false;
     }
-
     function applyBestCorrection(result, predictedKey) {
       if (!predictedKey) return result;
       const key = predictedKey.toLowerCase().trim();
@@ -287,7 +284,6 @@
       }
       return result;
     }
-
     async function loadGlobalCorrections(showMessage = true) {
       setStatus("📡 Fetching corrections from GitHub...", true);
       try {
@@ -310,7 +306,6 @@
         return false;
       }
     }
-
     function downloadCorrectionsFile() {
       const merged = getAllCorrections();
       const dataStr = JSON.stringify(merged, null, 2);
@@ -322,14 +317,12 @@
       URL.revokeObjectURL(blob);
       setStatus("Downloaded corrections.json – upload to GitHub, then click Reload JSON.", false);
     }
-
     function updateCorrectionUI() {
       const pendingCount = Object.keys(pendingCorrections).length;
       const globalCount = Object.keys(globalCorrections).length;
       correctionStatsSpan.innerHTML = `${globalCount} global, ${pendingCount} pending`;
       renderCorrectionsList();
     }
-
     function renderCorrectionsList() {
       if (!correctionsListDiv) return;
       const all = getAllCorrections();
@@ -358,12 +351,10 @@
       }
     }
 
-    // ---------- AI FUNCTIONS ----------
-    // Using your backend
-    async function identifyBackend(imageBlob) {
-      setStatus("🌐 Sending to your backend...", true);
+    // ---------- IDENTIFICATION (exactly like your working test) ----------
+    async function identifyWithBackend(imageBlob) {
       const formData = new FormData();
-      formData.append('image', imageBlob, 'plant.jpg');
+      formData.append('image', imageBlob);
       try {
         const response = await fetch(BACKEND_URL, {
           method: 'POST',
@@ -381,9 +372,9 @@
             name: commonName || scientificName,
             scientific: scientificName,
             confidence: confidence,
-            family: '?',  // Your backend does not return family; we can keep generic or fetch from DB later
+            family: '?', // backend does not return family; will be auto‑filled later if correction applied
             description: '',
-            source: 'Your Backend API',
+            source: 'Your Backend',
             originalPredictedLabel: rawLabel
           };
         }
@@ -394,7 +385,7 @@
       }
     }
 
-    // Offline MobileNet
+    // Offline fallback (MobileNet) – only used if backend fails and mode allows it
     const offlinePlantMap = [
       { patterns: ['mango', 'mangifera'], name: 'Mango', scientific: 'Mangifera indica', family: 'Anacardiaceae' },
       { patterns: ['oak', 'quercus'], name: 'Oak', scientific: 'Quercus', family: 'Fagaceae' },
@@ -410,7 +401,6 @@
     }
     async function classifyOffline(imgElement) {
       if (!offlineModel) return null;
-      setStatus("📴 Offline AI analyzing...", true);
       try {
         const tensor = tf.browser.fromPixels(imgElement).resizeNearestNeighbor([224,224]).toFloat();
         const expanded = tensor.expandDims(0);
@@ -423,7 +413,7 @@
             scientific: plant.scientific,
             confidence: (preds[0].probability*100).toFixed(1),
             family: plant.family,
-            source: 'MobileNet (offline)',
+            source: 'Offline MobileNet',
             originalPredictedLabel: preds[0].className
           };
         }
@@ -431,17 +421,18 @@
       } catch(e) { return null; }
     }
 
+    // Main identification orchestrator
     async function identifyImage(imageBlob) {
       let result = null;
       if (currentMode === 'online') {
-        result = await identifyBackend(imageBlob);
+        result = await identifyWithBackend(imageBlob);
       } else if (currentMode === 'offline') {
         const img = await blobToImage(imageBlob);
         result = await classifyOffline(img);
       } else { // auto: backend first, fallback to offline
-        result = await identifyBackend(imageBlob);
+        result = await identifyWithBackend(imageBlob);
         if (!result && offlineReady) {
-          setStatus("Backend failed, falling back to offline AI...", false);
+          setStatus("Backend failed, using offline AI...", false);
           const img = await blobToImage(imageBlob);
           result = await classifyOffline(img);
         }
@@ -461,8 +452,8 @@
         setStatus(`✅ ${result.name} (${result.confidence}%)`, false);
       } else {
         defaultMsg.classList.remove('hidden');
-        aiOutput.innerHTML = `<div class="error-msg">❌ No plant identified (backend and offline both failed).<br>Owner can still add a correction later if a label appears.</div>`;
-        setStatus("No match from any AI.", false);
+        aiOutput.innerHTML = `<div class="error-msg">❌ No plant found (backend and offline both failed).</div>`;
+        setStatus("No identification.", false);
       }
     }
 
@@ -500,18 +491,18 @@
         editBtn.innerHTML = '<i class="fas fa-edit"></i> Owner: Correct this label';
         editBtn.onclick = () => {
           correctionKeyInput.value = predictedKey;
-          // Try to auto‑fill from plantDatabase if key matches any
-          const dbMatch = plantDatabase[predictedKey.toLowerCase()];
-          if (dbMatch) {
-            commonNameInput.value = dbMatch.common;
-            scientificNameInput.value = dbMatch.scientific;
-            familyNameInput.value = dbMatch.family;
-            descriptionInput.value = dbMatch.description;
+          // Try to auto‑fill from local database
+          const dbEntry = plantDatabase[predictedKey.toLowerCase()];
+          if (dbEntry) {
+            commonNameInput.value = dbEntry.common;
+            scientificNameInput.value = dbEntry.scientific;
+            familyNameInput.value = dbEntry.family;
+            descriptionInput.value = dbEntry.description;
           } else {
-            commonNameInput.value = '';
-            scientificNameInput.value = '';
-            familyNameInput.value = '';
-            descriptionInput.value = '';
+            commonNameInput.value = result.name;
+            scientificNameInput.value = result.scientific || '';
+            familyNameInput.value = result.family || '';
+            descriptionInput.value = result.description || '';
           }
           ownerSureCheckbox.checked = false;
           ownerPanel.classList.add('visible');
@@ -522,6 +513,7 @@
       }
     }
 
+    // Helper functions
     function blobToImage(blob) {
       return new Promise((resolve) => {
         const img = new Image();
@@ -529,7 +521,6 @@
         img.src = URL.createObjectURL(blob);
       });
     }
-
     async function captureFromCamera() {
       if (!cameraActive || !video.videoWidth) { setStatus("Start camera first", false); return; }
       const canvas = document.createElement('canvas');
@@ -539,12 +530,10 @@
       const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.9));
       await identifyImage(blob);
     }
-
     async function handleUpload(file) {
       if (!file) return;
       await identifyImage(file);
     }
-
     async function loadOfflineModel() {
       setStatus("Loading offline AI (MobileNet)...", true);
       try {
@@ -664,7 +653,7 @@
 
     loadGlobalCorrections(true).then(() => {
       loadOfflineModel();
-      setStatus("✅ Ready. Auto mode uses your backend → offline fallback.", false);
+      setStatus("✅ Ready. Your backend is now integrated. Owner can correct any label.", false);
     });
   })();
 </script>
