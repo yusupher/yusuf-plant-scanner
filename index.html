@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>🌿 PlantAI · Owner/User switch, auto‑learning</title>
+  <title>🌿 PlantAI · Owner‑controlled corrections (GitHub JSON)</title>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
@@ -47,22 +47,22 @@
     footer { font-size: 0.65rem; text-align: center; padding: 12px; background: #f0f7eb; color: #4a6e3c; }
     .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 1000; }
     .modal-content { background: white; padding: 24px; border-radius: 32px; max-width: 300px; text-align: center; }
-    .auto-update-badge { background: #2d6a4f; border-radius: 20px; padding: 2px 8px; font-size: 0.6rem; margin-left: 8px; }
+    .info-note { background: #d9f0da; border-radius: 20px; padding: 6px 12px; font-size: 0.7rem; margin-top: 8px; }
   </style>
 </head>
 <body>
 <div class="app">
   <header>
-    <h1><i class="fas fa-leaf"></i> PlantAI <i class="fas fa-user-friends"></i></h1>
+    <h1><i class="fas fa-leaf"></i> PlantAI <i class="fas fa-cloud-upload-alt"></i></h1>
     <div class="mode-selector">
       <button id="modeAuto" class="mode-btn">🔄 Auto</button>
       <button id="modeOnline" class="mode-btn active">🌐 Online (best)</button>
       <button id="modeOffline" class="mode-btn">📴 Offline</button>
-      <button id="refreshCorrectionsBtn" class="refresh-btn"><i class="fas fa-sync-alt"></i> Check Updates</button>
+      <button id="refreshCorrectionsBtn" class="refresh-btn"><i class="fas fa-sync-alt"></i> Reload JSON</button>
       <button id="ownerLoginBtn" class="owner-btn"><i class="fas fa-lock"></i> Owner Login</button>
       <button id="logoutBtn" class="logout-btn" style="display:none;"><i class="fas fa-sign-out-alt"></i> Exit Owner Mode</button>
     </div>
-    <div style="font-size:0.6rem; margin-top:4px;">📡 Auto‑fetches improvements every 10 minutes</div>
+    <div class="info-note">📌 All corrections are stored in <code>corrections.json</code> on GitHub. No local storage.</div>
   </header>
 
   <div class="camera-area">
@@ -84,7 +84,7 @@
   </div>
 
   <div class="status">
-    <span id="statusMsg">🌐 Online mode – auto‑improves</span>
+    <span id="statusMsg">🌐 Loading corrections from GitHub...</span>
     <span id="spinner" class="loader hidden"></span>
     <span id="correctionStats" style="font-size:0.7rem; margin-left:auto;">—</span>
   </div>
@@ -92,7 +92,7 @@
   <div class="result" id="resultArea">
     <div id="defaultMsg" class="error-msg">
       <i class="fas fa-seedling"></i> Upload or take a photo.<br>
-      The app automatically learns from owner improvements.
+      Owner can add corrections and then upload the merged JSON to GitHub.
     </div>
     <div id="aiOutput"></div>
   </div>
@@ -123,16 +123,17 @@
     <div class="owner-field">
       <label><input type="checkbox" id="ownerSure"> ✅ I am sure (confidence 100%)</label>
     </div>
-    <button id="saveCorrectionBtn" class="primary"><i class="fas fa-save"></i> Save Correction (local)</button>
+    <button id="saveCorrectionBtn" class="primary"><i class="fas fa-save"></i> Add / Update (temporary)</button>
+    <div class="info-note" style="margin-top:6px;">⚠️ Changes are not saved to GitHub yet. After adding your corrections, click <strong>Download corrections.json</strong> and upload the file to GitHub.</div>
     <hr>
-    <button id="downloadCorrectionsBtn" style="background:#2f6b47; color:white;"><i class="fas fa-download"></i> Download merged corrections.json</button>
+    <button id="downloadCorrectionsBtn" style="background:#2f6b47; color:white;"><i class="fas fa-download"></i> Download corrections.json</button>
     <div id="correctionsList"></div>
   </div>
 
   <footer>
-    🔒 Owner password: <strong>yusupher01</strong> – only owner can add/remove corrections.<br>
-    🌍 <strong>Automatic updates</strong>: every 10 minutes the app downloads the latest <code>corrections.json</code> from GitHub.<br>
-    👤 <strong>Switch to user mode</strong> with “Exit Owner Mode” button.
+    🔒 Owner password: <strong>yusupher01</strong> – only owner can add temporary corrections.<br>
+    🌐 <strong>To share with all users:</strong> after adding corrections, download the JSON file and upload it to GitHub (replace the existing <code>corrections.json</code>). Then all users click “Reload JSON”.<br>
+    🧠 No local storage – everything is driven by the global JSON file.
   </footer>
 </div>
 
@@ -149,9 +150,8 @@
     const CORRECTIONS_URL = 'corrections.json';
     const OWNER_PASSWORD = 'yusupher01';
     let ownerAuthenticated = false;
-    let autoUpdateInterval = null;
 
-    // DOM elements
+    // DOM references
     const video = document.getElementById('video');
     const startCam = document.getElementById('startCam');
     const stopCam = document.getElementById('stopCam');
@@ -183,8 +183,10 @@
     let offlineModel = null;
     let offlineReady = false;
     let currentMode = 'online';
+    // Global corrections – the only source of truth
     let globalCorrections = {};
-    let localCorrections = {};
+    // Temporary additions made by owner (not yet uploaded)
+    let pendingCorrections = {};
     let lastImageBlob = null;
     let lastResult = null;
     let lastPredictedKey = '';
@@ -242,71 +244,39 @@
       else spinner.classList.add('hidden');
     }
 
-    // Correction storage
-    function getAllCorrections() { return { ...globalCorrections, ...localCorrections }; }
-    function saveLocalCorrections() {
-      localStorage.setItem('plantai_local_corrections', JSON.stringify(localCorrections));
-      updateCorrectionStats();
-      renderCorrectionsList();
+    // Get all corrections (global + pending)
+    function getAllCorrections() {
+      return { ...globalCorrections, ...pendingCorrections };
     }
-    function loadLocalCorrections() {
-      const stored = localStorage.getItem('plantai_local_corrections');
-      if (stored) { try { localCorrections = JSON.parse(stored); } catch(e) {} }
-      updateCorrectionStats();
-    }
-    function addCorrection(key, common, scientific, family, description, ownerSure) {
+
+    // Add a pending correction (temporary, not yet saved to GitHub)
+    function addPendingCorrection(key, common, scientific, family, description, ownerSure) {
       if (!key || !common) return false;
       const normalizedKey = key.toLowerCase().trim();
-      localCorrections[normalizedKey] = {
+      pendingCorrections[normalizedKey] = {
         name: common.trim(),
         scientific: scientific.trim() || '',
         family: family.trim() || '',
         description: description.trim() || '',
         ownerSure: ownerSure || false
       };
-      saveLocalCorrections();
-      setStatus(`✅ Correction saved for "${normalizedKey}" → "${common.trim()}"`, false);
+      setStatus(`✅ Correction added (pending upload): "${normalizedKey}" → "${common.trim()}"`, false);
+      updateCorrectionUI();
       return true;
     }
-    function removeCorrection(key) {
+
+    function removePendingCorrection(key) {
       const normalizedKey = key.toLowerCase().trim();
-      if (localCorrections[normalizedKey]) {
-        delete localCorrections[normalizedKey];
-        saveLocalCorrections();
-        setStatus(`🗑️ Removed correction for "${normalizedKey}"`, false);
+      if (pendingCorrections[normalizedKey]) {
+        delete pendingCorrections[normalizedKey];
+        setStatus(`🗑️ Removed pending correction for "${normalizedKey}"`, false);
+        updateCorrectionUI();
         return true;
       }
       return false;
     }
-    function updateCorrectionStats() {
-      const total = Object.keys(globalCorrections).length + Object.keys(localCorrections).length;
-      correctionStatsSpan.innerHTML = `${total} total (${Object.keys(localCorrections).length} owner)`;
-      renderCorrectionsList();
-    }
-    function renderCorrectionsList() {
-      if (!correctionsListDiv) return;
-      const all = getAllCorrections();
-      const entries = Object.entries(all);
-      if (entries.length === 0) {
-        correctionsListDiv.innerHTML = '<i>No corrections yet.</i>';
-        return;
-      }
-      correctionsListDiv.innerHTML = '';
-      for (const [key, val] of entries) {
-        const isLocal = !!localCorrections[key];
-        const div = document.createElement('div');
-        div.className = 'correction-item';
-        div.innerHTML = `
-          <div><span class="correction-key">${escapeHtml(key)}</span> → <span class="correction-value">${escapeHtml(val.name)}</span> ${isLocal ? '<span style="background:gold; padding:2px 6px; border-radius:40px;">owner</span>' : ''}</div>
-          <button class="delete-correction" data-key="${escapeHtml(key)}"><i class="fas fa-trash"></i> Delete</button>
-        `;
-        const delBtn = div.querySelector('.delete-correction');
-        delBtn.addEventListener('click', () => removeCorrection(key));
-        correctionsListDiv.appendChild(div);
-      }
-    }
 
-    // Apply correction to a result object
+    // Apply correction from global or pending
     function applyBestCorrection(result, predictedKey) {
       const key = (predictedKey || result.name || '').toLowerCase().trim();
       const all = getAllCorrections();
@@ -317,7 +287,7 @@
         result.family = c.family || result.family;
         result.description = c.description || '';
         if (c.ownerSure === true) result.confidence = '100';
-        result.correctionNote = `✨ Owner correction: "${key}" → "${c.name}"`;
+        result.correctionNote = `✨ Correction: "${key}" → "${c.name}"`;
         result.appliedCorrectionKey = key;
       } else {
         result.correctionNote = null;
@@ -326,42 +296,80 @@
       return result;
     }
 
-    // Load global corrections from GitHub (with cache buster)
+    // Load global corrections from GitHub
     async function loadGlobalCorrections(showMessage = true) {
-      setStatus("📡 Checking for updates...", true);
+      setStatus("📡 Fetching corrections from GitHub...", true);
       try {
         const response = await fetch(CORRECTIONS_URL + '?t=' + Date.now());
         if (response.ok) {
           const data = await response.json();
           if (typeof data === 'object' && data !== null) {
             globalCorrections = data;
+            // Clear pending corrections when a fresh global file is loaded (they are now merged in the file)
+            pendingCorrections = {};
             if (showMessage) setStatus(`✅ Loaded ${Object.keys(globalCorrections).length} global corrections.`, false);
-            updateCorrectionStats();
-            if (ownerAuthenticated && showMessage) setStatus(`Global corrections updated automatically.`, false);
+            updateCorrectionUI();
+            return true;
           } else throw new Error();
         } else throw new Error();
       } catch(e) {
-        if (showMessage) setStatus(`⚠️ No global corrections file. Only local corrections active.`, false);
+        if (showMessage) setStatus(`⚠️ No corrections.json file. Create one to store corrections.`, false);
+        globalCorrections = {};
+        updateCorrectionUI();
+        return false;
       }
     }
 
+    // Download merged corrections (global + pending)
     function downloadCorrectionsFile() {
       const merged = getAllCorrections();
-      const blob = new Blob([JSON.stringify(merged, null, 2)], {type: 'application/json'});
+      const dataStr = JSON.stringify(merged, null, 2);
+      const blob = new Blob([dataStr], {type: 'application/json'});
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = 'corrections.json';
       a.click();
       URL.revokeObjectURL(blob);
-      setStatus("Downloaded merged corrections.json – upload to GitHub for all users.", false);
+      setStatus("Downloaded corrections.json – now upload this file to GitHub (replace existing). After upload, click 'Reload JSON' to see the effect.", false);
     }
 
-    // Set up automatic update interval (every 10 minutes)
-    function startAutoUpdates() {
-      if (autoUpdateInterval) clearInterval(autoUpdateInterval);
-      autoUpdateInterval = setInterval(() => {
-        loadGlobalCorrections(false);  // silent update
-      }, 10 * 60 * 1000); // 10 minutes
+    function updateCorrectionUI() {
+      const all = getAllCorrections();
+      const total = Object.keys(all).length;
+      correctionStatsSpan.innerHTML = `${total} corrections active`;
+      renderCorrectionsList();
+    }
+
+    function renderCorrectionsList() {
+      if (!correctionsListDiv) return;
+      const all = getAllCorrections();
+      const entries = Object.entries(all);
+      if (entries.length === 0) {
+        correctionsListDiv.innerHTML = '<i>No corrections yet. Add one above.</i>';
+        return;
+      }
+      correctionsListDiv.innerHTML = '';
+      for (const [key, val] of entries) {
+        const isPending = !!pendingCorrections[key];
+        const div = document.createElement('div');
+        div.className = 'correction-item';
+        div.innerHTML = `
+          <div><span class="correction-key">${escapeHtml(key)}</span> → <span class="correction-value">${escapeHtml(val.name)}</span> ${isPending ? '<span style="background:#f4a261; color:black; padding:2px 6px; border-radius:40px;">pending upload</span>' : '<span style="background:#2d6a4f; color:white; padding:2px 6px; border-radius:40px;">global</span>'}</div>
+          ${ownerAuthenticated ? `<button class="delete-correction" data-key="${escapeHtml(key)}"><i class="fas fa-trash"></i> Delete${isPending ? ' (pending)' : ''}</button>` : ''}
+        `;
+        if (ownerAuthenticated) {
+          const delBtn = div.querySelector('.delete-correction');
+          delBtn.addEventListener('click', () => {
+            if (pendingCorrections[key]) {
+              removePendingCorrection(key);
+            } else {
+              // Global correction – cannot delete directly from here, must be removed from JSON file
+              setStatus(`Global correction "${key}" can only be removed by editing corrections.json and re-uploading.`, false);
+            }
+          });
+        }
+        correctionsListDiv.appendChild(div);
+      }
     }
 
     // ---------- AI functions (iNaturalist + MobileNet) ----------
@@ -456,7 +464,7 @@
         lastPredictedKey = predictedKey;
         displayResult(result, predictedKey);
       } else {
-        // AI failed – check for manual_unknown correction
+        // AI failed – check for manual_unknown correction (global or pending)
         const all = getAllCorrections();
         if (all['manual_unknown']) {
           const manualCorrection = all['manual_unknown'];
@@ -488,7 +496,7 @@
               <div class="owner-field"><label>Family:</label><input type="text" id="manualFamily" placeholder="e.g. Anacardiaceae"></div>
               <div class="owner-field"><label>Description:</label><textarea id="manualDesc" rows="2" placeholder="Tree producing cashew nuts and cashew apple."></textarea></div>
               <label><input type="checkbox" id="manualSure"> ✅ I am sure (100% confidence)</label><br>
-              <button id="manualSaveBtn" class="primary" style="margin-top:10px;">✅ Save & Remember for future</button>
+              <button id="manualSaveBtn" class="primary" style="margin-top:10px;">✅ Save as Correction (pending)</button>
             `;
             aiOutput.appendChild(manualDiv);
             const manualCommon = document.getElementById('manualCommon');
@@ -507,8 +515,8 @@
               const family = manualFamily.value.trim();
               const desc = manualDesc.value.trim();
               const sure = document.getElementById('manualSure').checked;
-              addCorrection('manual_unknown', common, scientific, family, desc, sure);
-              setStatus(`Manual correction saved. Future unidentified images will show "${common}".`, false);
+              addPendingCorrection('manual_unknown', common, scientific, family, desc, sure);
+              setStatus(`Manual correction added (pending). Download and upload JSON to make it permanent.`, false);
               if (lastImageBlob) identifyImage(lastImageBlob);
             });
           } else {
@@ -537,16 +545,25 @@
         const btnDiv = document.createElement('div');
         btnDiv.style.marginTop = '8px';
         if (result.appliedCorrectionKey) {
-          const undoBtn = document.createElement('button');
-          undoBtn.className = 'undo-correction-btn';
-          undoBtn.innerHTML = '<i class="fas fa-undo-alt"></i> Remove this correction';
-          undoBtn.onclick = () => {
-            if (confirm(`Remove correction for "${result.appliedCorrectionKey}"?`)) {
-              removeCorrection(result.appliedCorrectionKey);
-              if (lastImageBlob) identifyImage(lastImageBlob);
-            }
-          };
-          btnDiv.appendChild(undoBtn);
+          const pendingKeyExists = !!pendingCorrections[result.appliedCorrectionKey];
+          const globalKeyExists = !!globalCorrections[result.appliedCorrectionKey];
+          if (pendingKeyExists) {
+            const undoBtn = document.createElement('button');
+            undoBtn.className = 'undo-correction-btn';
+            undoBtn.innerHTML = '<i class="fas fa-undo-alt"></i> Remove pending correction';
+            undoBtn.onclick = () => {
+              if (confirm(`Remove pending correction for "${result.appliedCorrectionKey}"?`)) {
+                removePendingCorrection(result.appliedCorrectionKey);
+                if (lastImageBlob) identifyImage(lastImageBlob);
+              }
+            };
+            btnDiv.appendChild(undoBtn);
+          } else if (globalKeyExists) {
+            const infoSpan = document.createElement('span');
+            infoSpan.className = 'info-note';
+            infoSpan.innerHTML = '<i class="fas fa-info-circle"></i> Global correction – edit JSON file to remove.';
+            btnDiv.appendChild(infoSpan);
+          }
         }
         const editBtn = document.createElement('button');
         editBtn.className = 'primary';
@@ -658,13 +675,12 @@
         ownerPanel.classList.add('visible');
         ownerLoginBtn.style.display = 'none';
         logoutBtn.style.display = 'inline-block';
-        setStatus("🔓 Owner mode active. You can now correct or manually identify.", false);
+        setStatus("🔓 Owner mode active. You can add pending corrections.", false);
       } else {
         ownerPanel.classList.remove('visible');
         ownerLoginBtn.style.display = 'inline-block';
         logoutBtn.style.display = 'none';
-        setStatus("👤 Switched to user mode. Corrections are hidden.", false);
-        // Optionally clear any manual panel that might be open
+        setStatus("👤 Switched to user mode. No corrections can be added.", false);
         const existingManual = document.querySelector('.manual-id-panel');
         if (existingManual) existingManual.remove();
       }
@@ -677,16 +693,14 @@
       } else alert("Wrong password");
     });
     ownerLoginBtn.addEventListener('click', showPasswordModal);
-    logoutBtn.addEventListener('click', () => {
-      setOwnerMode(false);
-    });
+    logoutBtn.addEventListener('click', () => { setOwnerMode(false); });
     modal.addEventListener('click', (e) => { if (e.target === modal) hideModal(); });
 
     saveCorrectionBtn.addEventListener('click', () => {
       const key = correctionKeyInput.value.trim();
       const common = commonNameInput.value.trim();
       if (!key || !common) { alert("Enter predicted key and common name"); return; }
-      addCorrection(key, common, scientificNameInput.value.trim(), familyNameInput.value.trim(), descriptionInput.value.trim(), ownerSureCheckbox.checked);
+      addPendingCorrection(key, common, scientificNameInput.value.trim(), familyNameInput.value.trim(), descriptionInput.value.trim(), ownerSureCheckbox.checked);
       commonNameInput.value = '';
       scientificNameInput.value = '';
       familyNameInput.value = '';
@@ -705,13 +719,11 @@
     snapBtn.addEventListener('click', captureFromCamera);
     uploadLabel.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', (e) => { if (e.target.files[0]) handleUpload(e.target.files[0]); fileInput.value = ''; });
-    refreshBtn.addEventListener('click', () => loadGlobalCorrections(true));
+    refreshBtn.addEventListener('click', () => loadGlobalCorrections(true).then(() => { if (lastImageBlob) identifyImage(lastImageBlob); }));
 
-    loadLocalCorrections();
     loadGlobalCorrections(true).then(() => {
       loadOfflineModel();
-      startAutoUpdates();
-      setStatus("✅ Auto‑update active. Every 10 minutes the app fetches improvements from GitHub.", false);
+      setStatus("✅ Ready. All corrections come from corrections.json on GitHub.", false);
     });
   })();
 </script>
