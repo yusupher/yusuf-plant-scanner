@@ -1,10 +1,9 @@
-html
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>🌿 PlantAI · Plant Identifier</title>
+  <title>🌿 KWASU PLANT IDENTIFICATION</title>
   <!-- TensorFlow.js (offline fallback) -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
@@ -14,7 +13,7 @@ html
     body { background: #c8e0bc; font-family: system-ui, sans-serif; padding: 16px; }
     .app { max-width: 750px; margin: 0 auto; background: white; border-radius: 2rem; overflow: hidden; box-shadow: 0 20px 35px rgba(0,0,0,0.2); }
     header { background: #1a3c2a; color: white; padding: 1rem; text-align: center; }
-    header h1 { display: flex; justify-content: center; gap: 10px; font-size: 1.5rem; }
+    header h1 { font-size: 1.5rem; display: flex; justify-content: center; gap: 10px; align-items: center; }
     .mode-selector { display: flex; justify-content: center; gap: 12px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
     .mode-btn { background: #2d6a4f; border: none; padding: 6px 14px; border-radius: 40px; font-size: 0.7rem; font-weight: bold; cursor: pointer; color: white; }
     .mode-btn.active { background: #f4a261; color: #1a3c2a; }
@@ -29,8 +28,8 @@ html
     button.primary { background: #2f6b47; color: white; }
     button.danger { background: #b1624b; color: white; }
     .file-label { background: #e2eed9; }
-    .preview-area { text-align: center; margin-top: 6px; }
-    #preview { max-width: 100%; max-height: 200px; border-radius: 20px; display: none; margin-top: 8px; border: 2px solid #b8daa4; }
+    .preview-area { text-align: center; margin-top: 8px; }
+    #preview { max-width: 100%; max-height: 180px; border-radius: 20px; display: none; margin-top: 6px; border: 2px solid #b8daa4; object-fit: contain; background: #f0f7eb; }
     .status { background: #eef3e8; padding: 8px 16px; font-size: 0.8rem; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     .result { padding: 20px; background: #fffef7; }
     .plant-card { background: #fefbe6; border-radius: 24px; padding: 18px; border-left: 6px solid #3b8b5a; margin-bottom: 16px; }
@@ -47,15 +46,17 @@ html
     .owner-field textarea { border-radius: 20px; resize: vertical; }
     .correction-item { background: white; border-radius: 16px; padding: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
     .delete-correction { background: #b1624b; color: white; border: none; border-radius: 30px; padding: 2px 12px; cursor: pointer; }
-    footer { font-size: 0.65rem; text-align: center; padding: 12px; background: #f0f7eb; color: #4a6e3c; }
+    footer { font-size: 0.7rem; text-align: center; padding: 12px; background: #f0f7eb; color: #4a6e3c; border-top: 1px solid #d9efcd; }
     .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 1000; }
     .modal-content { background: white; padding: 24px; border-radius: 32px; max-width: 300px; text-align: center; }
+    .scientific { font-style: italic; margin: 4px 0; color: #2d5a2c; }
+    .info-section { margin-top: 10px; background: #eaf5e6; padding: 8px 12px; border-radius: 20px; }
   </style>
 </head>
 <body>
 <div class="app">
   <header>
-    <h1><i class="fas fa-leaf"></i> PlantAI <i class="fas fa-camera-retro"></i></h1>
+    <h1><i class="fas fa-leaf"></i> KWASU PLANT IDENTIFICATION</h1>
     <div class="mode-selector">
       <button id="modeAuto" class="mode-btn active">🔄 Auto</button>
       <button id="modeOnline" class="mode-btn">🌐 Online</button>
@@ -84,7 +85,7 @@ html
     <input type="file" id="fileInput" accept="image/*" style="display:none">
   </div>
 
-  <!-- Image preview (like the simple working code) -->
+  <!-- Image preview -->
   <div class="preview-area">
     <img id="preview" alt="Preview">
   </div>
@@ -122,8 +123,8 @@ html
       <input type="text" id="familyName" placeholder="Fabaceae">
     </div>
     <div class="owner-field">
-      <label>Description:</label>
-      <textarea id="description" rows="2" placeholder="Legume crop, rich in protein."></textarea>
+      <label>Importance / Uses:</label>
+      <textarea id="importance" rows="2" placeholder="Legume crop, rich in protein, drought-tolerant."></textarea>
     </div>
     <div class="owner-field">
       <label><input type="checkbox" id="ownerSure"> ✅ I am sure (100% confidence)</label>
@@ -135,7 +136,7 @@ html
   </div>
 
   <footer>
-    📸 Take a photo or upload · Powered by Plant AI
+    🌿 Identify plants from leaves, flowers, fruits, or whole plants. Results include family and uses.
   </footer>
 </div>
 
@@ -174,7 +175,7 @@ html
     const commonNameInput = document.getElementById('commonName');
     const scientificNameInput = document.getElementById('scientificName');
     const familyNameInput = document.getElementById('familyName');
-    const descriptionInput = document.getElementById('description');
+    const importanceInput = document.getElementById('importance');
     const ownerSureCheckbox = document.getElementById('ownerSure');
     const saveCorrectionBtn = document.getElementById('saveCorrectionBtn');
     const downloadBtn = document.getElementById('downloadCorrectionsBtn');
@@ -194,33 +195,34 @@ html
 
     const BACKEND_URL = 'https://plant-backend-avof.onrender.com/identify';
 
-    // Local plant database for auto‑fill
+    // Rich plant database with family, importance, uses
     const plantDatabase = {
-      "cowpea": { common: "Cowpea", scientific: "Vigna unguiculata", family: "Fabaceae", description: "Legume crop, rich in protein, drought-tolerant." },
-      "mango": { common: "Mango", scientific: "Mangifera indica", family: "Anacardiaceae", description: "Tropical fruit tree, sweet fruit." },
-      "cashew": { common: "Cashew", scientific: "Anacardium occidentale", family: "Anacardiaceae", description: "Produces cashew nuts and cashew apple." },
-      "oak": { common: "Oak", scientific: "Quercus robur", family: "Fagaceae", description: "Deciduous tree, acorns." },
-      "rose": { common: "Rose", scientific: "Rosa spp.", family: "Rosaceae", description: "Ornamental shrub." },
-      "sunflower": { common: "Sunflower", scientific: "Helianthus annuus", family: "Asteraceae", description: "Tall annual, edible seeds." },
-      "basil": { common: "Basil", scientific: "Ocimum basilicum", family: "Lamiaceae", description: "Aromatic herb." },
-      "tomato": { common: "Tomato", scientific: "Solanum lycopersicum", family: "Solanaceae", description: "Fruit vegetable." },
-      "maize": { common: "Maize", scientific: "Zea mays", family: "Poaceae", description: "Cereal grain." },
-      "rice": { common: "Rice", scientific: "Oryza sativa", family: "Poaceae", description: "Staple cereal grain." }
+      "cowpea": { common: "Cowpea", scientific: "Vigna unguiculata", family: "Fabaceae", importance: "Legume crop, rich in protein, drought-tolerant. Used for human consumption (beans) and animal feed. Fixes nitrogen in soil." },
+      "mango": { common: "Mango", scientific: "Mangifera indica", family: "Anacardiaceae", importance: "Tropical fruit tree, sweet fruit rich in vitamins A and C. Source of juice, dried fruit, and chutneys." },
+      "cashew": { common: "Cashew", scientific: "Anacardium occidentale", family: "Anacardiaceae", importance: "Produces cashew nuts and cashew apple. Nuts are high in healthy fats; apple used for juice and fermented drinks." },
+      "oak": { common: "Oak", scientific: "Quercus robur", family: "Fagaceae", importance: "Deciduous tree, produces acorns. Timber used in furniture and construction. Supports wildlife." },
+      "rose": { common: "Rose", scientific: "Rosa spp.", family: "Rosaceae", importance: "Ornamental shrub, fragrant flowers used in perfumes and cosmetics. Rose hips rich in vitamin C." },
+      "sunflower": { common: "Sunflower", scientific: "Helianthus annuus", family: "Asteraceae", importance: "Tall annual grown for edible seeds and oil. Seeds are rich in healthy fats and vitamin E." },
+      "basil": { common: "Basil", scientific: "Ocimum basilicum", family: "Lamiaceae", importance: "Aromatic herb used in cooking (pesto, salads). Has medicinal properties (anti‑inflammatory)." },
+      "tomato": { common: "Tomato", scientific: "Solanum lycopersicum", family: "Solanaceae", importance: "Fruit vegetable, rich in lycopene and vitamin C. Used in salads, sauces, and juices worldwide." },
+      "maize": { common: "Maize", scientific: "Zea mays", family: "Poaceae", importance: "Cereal grain, staple food in many regions. Used for flour, oil, biofuel, and animal feed." },
+      "rice": { common: "Rice", scientific: "Oryza sativa", family: "Poaceae", importance: "Staple cereal grain, feeds half the world. Source of carbohydrates, used in thousands of dishes." }
     };
-    function autoFill(targetCommon, targetSci, targetFamily, targetDesc) {
+
+    function autoFill(targetCommon, targetSci, targetFamily, targetImportance) {
       const raw = targetCommon.value.trim().toLowerCase();
       if (plantDatabase[raw]) {
         const p = plantDatabase[raw];
         targetSci.value = p.scientific;
         targetFamily.value = p.family;
-        targetDesc.value = p.description;
+        targetImportance.value = p.importance;
         setStatus(`✅ Auto-filled: ${p.common}`, false);
       } else {
         setStatus(`❌ No database entry for "${raw}"`, false);
       }
     }
     autoFillBtn.addEventListener('click', () => {
-      autoFill(commonNameInput, scientificNameInput, familyNameInput, descriptionInput);
+      autoFill(commonNameInput, scientificNameInput, familyNameInput, importanceInput);
     });
 
     // Mode buttons
@@ -235,7 +237,6 @@ html
       else if (mode === 'online') modeOnline.classList.add('active');
       else if (mode === 'offline') modeOffline.classList.add('active');
       currentMode = mode;
-      setStatus(`Mode: ${mode === 'auto' ? 'Auto' : mode === 'online' ? 'Online' : 'Offline'}`, false);
     }
     modeAuto.addEventListener('click', () => setActiveMode('auto'));
     modeOnline.addEventListener('click', () => setActiveMode('online'));
@@ -247,16 +248,16 @@ html
       else spinner.classList.add('hidden');
     }
 
-    // Correction storage (unchanged)
+    // Correction storage
     function getAllCorrections() { return { ...globalCorrections, ...pendingCorrections }; }
-    function addPendingCorrection(key, common, scientific, family, description, ownerSure) {
+    function addPendingCorrection(key, common, scientific, family, importance, ownerSure) {
       if (!key || !common) return false;
       const normalizedKey = key.toLowerCase().trim();
       pendingCorrections[normalizedKey] = {
         name: common.trim(),
         scientific: scientific.trim() || '',
         family: family.trim() || '',
-        description: description.trim() || '',
+        importance: importance.trim() || '',
         ownerSure: ownerSure || false
       };
       setStatus(`✅ Correction added (pending)`, false);
@@ -282,7 +283,7 @@ html
         result.name = c.name || result.name;
         result.scientific = c.scientific || result.scientific;
         result.family = c.family || result.family;
-        result.description = c.description || '';
+        result.importance = c.importance || '';
         if (c.ownerSure === true) result.confidence = '100';
         result.correctionNote = `✨ Correction: "${key}" → "${c.name}"`;
         result.appliedCorrectionKey = key;
@@ -295,14 +296,15 @@ html
         const response = await fetch(CORRECTIONS_URL + '?t=' + Date.now());
         if (response.ok) {
           const data = await response.json();
-          if (typeof data === 'object' && data !== null) {
+          if (typeof data === 'object') {
             globalCorrections = data;
             pendingCorrections = {};
             if (showMessage) setStatus(`✅ Loaded ${Object.keys(globalCorrections).length} corrections.`, false);
             updateCorrectionUI();
             return true;
-          } else throw new Error();
-        } else throw new Error();
+          }
+        }
+        throw new Error();
       } catch(e) {
         globalCorrections = {};
         if (showMessage) setStatus(`⚠️ No corrections file.`, false);
@@ -355,7 +357,7 @@ html
       }
     }
 
-    // Identification
+    // Identification with backend
     async function identifyWithBackend(imageBlob) {
       const formData = new FormData();
       formData.append('image', imageBlob);
@@ -374,8 +376,7 @@ html
             scientific: scientificName,
             confidence: confidence,
             family: '?',
-            description: '',
-            source: 'Backend',
+            importance: '',
             originalPredictedLabel: rawLabel
           };
         }
@@ -383,18 +384,19 @@ html
       } catch(e) { return null; }
     }
 
+    // Offline fallback
     const offlinePlantMap = [
-      { patterns: ['mango', 'mangifera'], name: 'Mango', scientific: 'Mangifera indica', family: 'Anacardiaceae' },
-      { patterns: ['oak', 'quercus'], name: 'Oak', scientific: 'Quercus', family: 'Fagaceae' },
-      { patterns: ['sunflower', 'helianthus'], name: 'Sunflower', scientific: 'Helianthus annuus', family: 'Asteraceae' },
-      { patterns: ['rose', 'rosa'], name: 'Rose', scientific: 'Rosa', family: 'Rosaceae' }
+      { patterns: ['mango', 'mangifera'], name: 'Mango', scientific: 'Mangifera indica', family: 'Anacardiaceae', importance: "Tropical fruit tree, rich in vitamins A and C." },
+      { patterns: ['oak', 'quercus'], name: 'Oak', scientific: 'Quercus', family: 'Fagaceae', importance: "Hardwood timber, acorns feed wildlife." },
+      { patterns: ['sunflower', 'helianthus'], name: 'Sunflower', scientific: 'Helianthus annuus', family: 'Asteraceae', importance: "Edible seeds and oil, rich in vitamin E." },
+      { patterns: ['rose', 'rosa'], name: 'Rose', scientific: 'Rosa', family: 'Rosaceae', importance: "Fragrant flowers, used in perfumes and teas." }
     ];
     function matchOffline(label) {
       const lower = label.toLowerCase();
       for (let p of offlinePlantMap) if (p.patterns.some(pat => lower.includes(pat))) return p;
       let generic = label.split(',')[0].replace(/_/g,' ');
       generic = generic.replace(/(^\w|\s\w)/g, c=>c.toUpperCase());
-      return { name: generic, scientific: '—', family: 'Plantae' };
+      return { name: generic, scientific: '—', family: 'Unknown', importance: '' };
     }
     async function classifyOffline(imgElement) {
       if (!offlineModel) return null;
@@ -410,7 +412,7 @@ html
             scientific: plant.scientific,
             confidence: (preds[0].probability*100).toFixed(1),
             family: plant.family,
-            source: 'Offline',
+            importance: plant.importance || '',
             originalPredictedLabel: preds[0].className
           };
         }
@@ -453,16 +455,23 @@ html
 
     function displayResult(result, predictedKey) {
       defaultMsg.classList.add('hidden');
-      let extra = result.description ? `<div>📖 ${escapeHtml(result.description)}</div>` : '';
+      // If result has no importance, try to fill from database
+      if ((!result.importance || result.importance === '') && result.name) {
+        const dbMatch = plantDatabase[result.name.toLowerCase()];
+        if (dbMatch) {
+          result.family = dbMatch.family;
+          result.importance = dbMatch.importance;
+        }
+      }
+      let importanceHtml = result.importance ? `<div class="info-section"><i class="fas fa-info-circle"></i> <strong>Importance / Uses:</strong><br>${escapeHtml(result.importance)}</div>` : '';
       aiOutput.innerHTML = `
         <div class="plant-card">
           <div><strong>${escapeHtml(result.name)}</strong></div>
-          <div class="sci-name">${escapeHtml(result.scientific || '')}</div>
+          <div class="scientific">${escapeHtml(result.scientific || '')}</div>
           <div class="confidence">🎯 Confidence: ${result.confidence}%</div>
           <div>🌿 Family: ${escapeHtml(result.family)}</div>
-          ${extra}
-          <div>🔍 Source: ${escapeHtml(result.source || 'Correction')}</div>
-          ${result.correctionNote ? `<div style="color:#2d6a4f;">${escapeHtml(result.correctionNote)}</div>` : ''}
+          ${importanceHtml}
+          ${result.correctionNote ? `<div style="font-size:0.7rem; margin-top:8px; color:#2d6a4f;">${escapeHtml(result.correctionNote)}</div>` : ''}
         </div>
       `;
       if (ownerAuthenticated && predictedKey) {
@@ -490,12 +499,12 @@ html
             commonNameInput.value = dbEntry.common;
             scientificNameInput.value = dbEntry.scientific;
             familyNameInput.value = dbEntry.family;
-            descriptionInput.value = dbEntry.description;
+            importanceInput.value = dbEntry.importance;
           } else {
             commonNameInput.value = result.name;
             scientificNameInput.value = result.scientific || '';
             familyNameInput.value = result.family || '';
-            descriptionInput.value = result.description || '';
+            importanceInput.value = result.importance || '';
           }
           ownerSureCheckbox.checked = false;
           ownerPanel.classList.add('visible');
@@ -514,30 +523,27 @@ html
       });
     }
 
-    // Capture from camera with preview
     async function captureFromCamera() {
       if (!cameraActive || !video.videoWidth) { setStatus("Start camera first", false); return; }
       const canvas = document.createElement('canvas');
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       canvas.getContext('2d').drawImage(video, 0, 0);
-      canvas.toBlob(async (blob) => {
-        const url = URL.createObjectURL(blob);
-        previewImg.src = url;
-        previewImg.style.display = 'block';
-        // Do not revoke immediately; keep it for the preview.
-        await identifyImage(blob);
-        // Keep URL for preview, it will be replaced next time.
-      }, 'image/jpeg', 0.9);
+      const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.9));
+      // Show preview
+      const url = URL.createObjectURL(blob);
+      previewImg.src = url;
+      previewImg.style.display = 'block';
+      URL.revokeObjectURL(url);
+      await identifyImage(blob);
     }
 
-    // Upload handler with preview
     async function handleUpload(file) {
       if (!file) return;
       const url = URL.createObjectURL(file);
       previewImg.src = url;
       previewImg.style.display = 'block';
-      // Keep URL for preview; revoke only when new image loaded.
+      URL.revokeObjectURL(url);
       await identifyImage(file);
     }
 
@@ -631,11 +637,11 @@ html
       const key = correctionKeyInput.value.trim();
       const common = commonNameInput.value.trim();
       if (!key || !common) { alert("Enter predicted key and common name"); return; }
-      addPendingCorrection(key, common, scientificNameInput.value.trim(), familyNameInput.value.trim(), descriptionInput.value.trim(), ownerSureCheckbox.checked);
+      addPendingCorrection(key, common, scientificNameInput.value.trim(), familyNameInput.value.trim(), importanceInput.value.trim(), ownerSureCheckbox.checked);
       commonNameInput.value = '';
       scientificNameInput.value = '';
       familyNameInput.value = '';
-      descriptionInput.value = '';
+      importanceInput.value = '';
       ownerSureCheckbox.checked = false;
       correctionKeyInput.value = '';
       if (lastResult && lastPredictedKey) {
