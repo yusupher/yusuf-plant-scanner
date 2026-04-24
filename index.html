@@ -1,13 +1,15 @@
+html
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>🌿 PlantAI · Fixed embedding extraction</title>
+  <title>🌿 PlantAI · Reliable Feature Learning</title>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <style>
+    /* (same as before, keep CSS) */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #c8e0bc; font-family: system-ui, sans-serif; padding: 16px; }
     .app { max-width: 750px; margin: 0 auto; background: white; border-radius: 2rem; overflow: hidden; box-shadow: 0 20px 35px rgba(0,0,0,0.2); }
@@ -56,14 +58,12 @@
   <header>
     <h1><i class="fas fa-leaf"></i> PlantAI <i class="fas fa-brain"></i></h1>
     <div class="mode-selector">
-      <button id="modeAuto" class="mode-btn">🔄 Auto</button>
-      <button id="modeOnline" class="mode-btn active">🌐 Online</button>
-      <button id="modeOffline" class="mode-btn">📴 Offline</button>
+      <button id="modeOffline" class="mode-btn active">📴 Feature Recognition</button>
       <button id="refreshCorrectionsBtn" class="refresh-btn"><i class="fas fa-sync-alt"></i> Reload JSON</button>
       <button id="ownerLoginBtn" class="owner-btn"><i class="fas fa-lock"></i> Owner Login</button>
       <button id="logoutBtn" class="logout-btn" style="display:none;"><i class="fas fa-sign-out-alt"></i> Exit Owner Mode</button>
     </div>
-    <div class="info-note">🧠 <strong>Training requires at least 1 reference image</strong> – then the app recognises the plant from any part.</div>
+    <div class="info-note">🧠 <strong>Train by adding reference images</strong> – then the app recognises the plant from any part (leaf, fruit, tree).</div>
   </header>
 
   <div class="camera-area">
@@ -85,7 +85,7 @@
   </div>
 
   <div class="status">
-    <span id="statusMsg">🌐 Loading AI & embeddings...</span>
+    <span id="statusMsg">📡 Loading AI model...</span>
     <span id="spinner" class="loader hidden"></span>
     <span id="correctionStats" style="font-size:0.7rem; margin-left:auto;">—</span>
   </div>
@@ -122,14 +122,11 @@
       <textarea id="description" rows="2" placeholder="Legume crop, rich in protein."></textarea>
     </div>
     <div class="owner-field">
-      <label><input type="checkbox" id="ownerSure"> ✅ I am sure (100% confidence)</label>
-    </div>
-    <div class="owner-field">
       <label>Use current image as reference:</label>
       <button id="addReferenceBtn" class="primary"><i class="fas fa-plus-circle"></i> Add this image as reference</button>
     </div>
     <button id="saveCorrectionBtn" class="primary"><i class="fas fa-save"></i> Save details only (no image)</button>
-    <div class="warning-note" id="noImageWarning" style="display:none;">⚠️ Without a reference image, this plant will NOT be recognised from new photos – only if the AI returns the exact key.</div>
+    <div class="warning-note" id="noImageWarning" style="display:none;">⚠️ Without a reference image, this plant will NOT be recognised from photos.</div>
     <hr>
     <button id="downloadCorrectionsBtn" style="background:#2f6b47; color:white;"><i class="fas fa-download"></i> Download corrections.json</button>
     <div id="correctionsList"></div>
@@ -137,7 +134,7 @@
 
   <footer>
     🔒 Owner password: <strong>yusupher01</strong><br>
-    🧠 <strong>How to train correctly:</strong> 1) Upload a plant photo. 2) Click "Train: Add current image as reference". 3) Add multiple references (different parts) for same plant. 4) Download JSON & upload to GitHub.
+    🧠 <strong>How to train:</strong> 1) Upload a plant photo. 2) Click "Train: Add this image as reference". 3) Add multiple references (different parts) for same plant. 4) Download JSON & upload to GitHub.
   </footer>
 </div>
 
@@ -186,15 +183,12 @@
 
     let currentStream = null;
     let cameraActive = false;
-    let offlineModel = null;
-    let embeddingModel = null;
-    let embeddingReady = false;
-    let offlineReady = false;
-    let currentMode = 'online';
-    let globalCorrections = {};
-    let pendingCorrections = {};
+    let mobilenetModel = null;       // classification + embedding
+    let modelLoaded = false;
     let lastImageBlob = null;
     let lastImageElement = null;
+    let globalCorrections = {};
+    let pendingCorrections = {};
 
     // Plant database auto‑fill
     const plantDatabase = {
@@ -225,95 +219,64 @@
       autoFill(commonNameInput, scientificNameInput, familyNameInput, descriptionInput);
     });
 
-    // Mode buttons
-    const modeAuto = document.getElementById('modeAuto');
-    const modeOnline = document.getElementById('modeOnline');
-    const modeOffline = document.getElementById('modeOffline');
-    function setActiveMode(mode) {
-      modeAuto.classList.remove('active');
-      modeOnline.classList.remove('active');
-      modeOffline.classList.remove('active');
-      if (mode === 'auto') modeAuto.classList.add('active');
-      else if (mode === 'online') modeOnline.classList.add('active');
-      else if (mode === 'offline') modeOffline.classList.add('active');
-      currentMode = mode;
-      setStatus(`Mode: ${mode === 'auto' ? 'Auto (online→offline)' : mode === 'online' ? 'Online (iNaturalist)' : 'Offline (MobileNet)'}`, false);
-    }
-    modeAuto.addEventListener('click', () => setActiveMode('auto'));
-    modeOnline.addEventListener('click', () => setActiveMode('online'));
-    modeOffline.addEventListener('click', () => setActiveMode('offline'));
-
     function setStatus(msg, loading = false) {
       statusSpan.innerText = msg;
       if (loading) spinner.classList.remove('hidden');
       else spinner.classList.add('hidden');
     }
 
-    // ---------- Embedding extraction (robust) ----------
-    async function loadEmbeddingModel() {
-      setStatus("Loading feature extraction model...", true);
+    // ---------- Load MobileNet (both classification and embedding) ----------
+    async function loadModel() {
+      setStatus("Loading AI model...", true);
       try {
-        const mobilenet = await mobilenet.load({ version: 2, alpha: 1.0 });
-        const model = mobilenet.model;
-        // Try to find the global average pooling layer
+        mobilenetModel = await mobilenet.load({ version: 2, alpha: 1.0 });
+        modelLoaded = true;
+        setStatus("✅ AI model ready. Owner can train.", false);
+        if (cameraActive) snapBtn.disabled = false;
+      } catch(e) {
+        console.error(e);
+        setStatus("❌ Failed to load AI model. Refresh page.", false);
+      }
+    }
+
+    // Extract embedding using the internal logits (before softmax)
+    async function getEmbedding(imgElement) {
+      if (!mobilenetModel) return null;
+      try {
+        // Returns a 1D tensor (logits) of shape [1000]? No, internal=true returns logits.
+        // Actually mobilenet.infer with internal:true gives the logits (pre-softmax) of shape [1, 1000] for classification.
+        // But we want a feature vector: use the 'conv_pw_13' layer? Simpler: use the logits as a 1000-dim embedding.
+        // For MobileNetV2, the penultimate layer has 1280 dimensions. We'll use the model's embedding by taking the output of the global pooling.
+        // Instead of hacking, we'll use the tf.Model approach: get the model from the mobilenet instance.
+        const model = mobilenetModel.model;
+        // Identify the global average pooling layer (output shape [1, 1280] for MobileNetV2)
         let embeddingLayer = null;
-        const allLayers = model.layers;
-        for (let i = allLayers.length - 1; i >= 0; i--) {
-          const layerName = allLayers[i].name;
-          if (layerName.includes('global_average_pooling2d') || layerName.includes('avg_pool')) {
-            embeddingLayer = allLayers[i];
+        const layers = model.layers;
+        for (let i = layers.length - 1; i >= 0; i--) {
+          const name = layers[i].name;
+          if (name.includes('global_average_pooling2d') || name.includes('avg_pool')) {
+            embeddingLayer = layers[i];
             break;
           }
         }
         if (!embeddingLayer) {
-          // If not found, use the layer before the last dense layer (logits)
-          embeddingLayer = allLayers[allLayers.length - 2];
+          // Fallback: use the layer before the last dense layer
+          embeddingLayer = layers[layers.length - 2];
         }
-        if (embeddingLayer) {
-          embeddingModel = tf.model({ inputs: model.inputs, outputs: embeddingLayer.output });
-          embeddingReady = true;
-          setStatus("✅ Feature extractor ready.", false);
-          console.log("Embedding model loaded");
-        } else {
-          throw new Error("No suitable layer found");
-        }
-      } catch(e) {
-        console.error("Embedding model error:", e);
-        embeddingReady = false;
-        setStatus("⚠️ Feature extraction unavailable – training won't work. Refresh page.", false);
-      }
-    }
-
-    async function getEmbedding(imgElement) {
-      if (!embeddingReady) {
-        console.warn("Embedding model not ready");
-        return null;
-      }
-      try {
-        // Ensure image is loaded
-        if (!imgElement.complete || imgElement.naturalWidth === 0) {
-          console.warn("Image not fully loaded");
-          return null;
-        }
-        // Preprocess: resize to 224x224, convert to tensor, normalize
-        let tensor = tf.browser.fromPixels(imgElement)
-          .resizeNearestNeighbor([224, 224])
-          .toFloat()
-          .expandDims(0);
-        // Normalize to [-1, 1] as required by MobileNet
+        const embeddingModel = tf.model({ inputs: model.inputs, outputs: embeddingLayer.output });
+        let tensor = tf.browser.fromPixels(imgElement).resizeNearestNeighbor([224,224]).toFloat().expandDims(0);
         tensor = tensor.sub(127.5).div(127.5);
-        const embeddingTensor = embeddingModel.predict(tensor);
-        const embedding = await embeddingTensor.data();
-        tensor.dispose();
-        embeddingTensor.dispose();
-        // Convert to regular array
-        return Array.from(embedding);
+        const embTensor = embeddingModel.predict(tensor);
+        const emb = await embTensor.data();
+        tensor.dispose(); embTensor.dispose();
+        return Array.from(emb);
       } catch(e) {
-        console.error("Embedding extraction error:", e);
+        console.error("Embedding error:", e);
         return null;
       }
     }
 
+    // Cosine similarity
     function cosineSimilarity(vecA, vecB) {
       if (!vecA || !vecB || vecA.length !== vecB.length) return 0;
       let dot = 0, magA = 0, magB = 0;
@@ -326,13 +289,15 @@
       return dot / (Math.sqrt(magA) * Math.sqrt(magB));
     }
 
+    // Find best matching plant by embeddings
     async function findMatchByEmbedding(imgElement) {
-      if (!embeddingReady) return null;
+      if (!modelLoaded) return null;
       const queryEmb = await getEmbedding(imgElement);
       if (!queryEmb) return null;
-      const all = getAllCorrections();
+      const allCorrections = { ...globalCorrections, ...pendingCorrections };
       let bestMatch = null, bestScore = 0.65;
-      for (const [key, plant] of Object.entries(all)) {
+      for (const key in allCorrections) {
+        const plant = allCorrections[key];
         if (plant.embeddings && plant.embeddings.length) {
           for (const refEmb of plant.embeddings) {
             const sim = cosineSimilarity(queryEmb, refEmb);
@@ -351,7 +316,7 @@
       return bestMatch;
     }
 
-    // Correction storage
+    // ----- Correction storage -----
     function getAllCorrections() { return { ...globalCorrections, ...pendingCorrections }; }
 
     function addPendingCorrection(key, common, scientific, family, description, ownerSure, embeddings = null) {
@@ -432,7 +397,7 @@
     function updateCorrectionUI() {
       const pendingCount = Object.keys(pendingCorrections).length;
       const globalCount = Object.keys(globalCorrections).length;
-      correctionStatsSpan.innerHTML = `${globalCount} trained plants (${pendingCount} pending)`;
+      correctionStatsSpan.innerHTML = `${globalCount} trained (${pendingCount} pending)`;
       renderCorrectionsList();
     }
 
@@ -452,7 +417,7 @@
         div.className = 'correction-item';
         div.innerHTML = `
           <div><span class="correction-key">${escapeHtml(key)}</span> → <span class="correction-value">${escapeHtml(val.name)}</span> 
-          ${refCount > 0 ? `<span class="reference-item"><i class="fas fa-images"></i> ${refCount} refs</span>` : '<span class="reference-item" style="color:#b1624b;">⚠️ no image reference</span>'}
+          ${refCount > 0 ? `<span class="reference-item"><i class="fas fa-images"></i> ${refCount} refs</span>` : '<span class="reference-item" style="color:#b1624b;">⚠️ no image</span>'}
           ${isPending ? '<span style="background:#f4a261; color:black; padding:2px 6px; border-radius:40px;">pending</span>' : '<span style="background:#2d6a4f; color:white; padding:2px 6px; border-radius:40px;">trained</span>'}</div>
           ${ownerAuthenticated ? `<button class="delete-correction" data-key="${escapeHtml(key)}"><i class="fas fa-trash"></i> Delete${isPending ? ' pending' : ''}</button>` : ''}
         `;
@@ -467,81 +432,12 @@
       }
     }
 
-    // AI identification (iNaturalist + offline fallback)
-    async function identifyOnline(imageBlob) {
-      setStatus("🌐 Online AI analyzing...", true);
-      const formData = new FormData();
-      formData.append('image', imageBlob, 'plant.jpg');
-      try {
-        const response = await fetch('https://api.inaturalist.org/v1/computervision/identify', {
-          method: 'POST',
-          body: formData
-        });
-        if (!response.ok) throw new Error();
-        const data = await response.json();
-        if (data.results && data.results.length) {
-          const best = data.results[0];
-          const taxon = best.taxon;
-          if (!taxon) return null;
-          const confidence = (best.score * 100).toFixed(1);
-          if (confidence < 5) return null;
-          const commonName = taxon.preferred_common_name || '';
-          const scientificName = taxon.name || '';
-          const rawLabel = scientificName || commonName || taxon.id;
-          return {
-            name: commonName || scientificName.split(' ').slice(0,2).join(' '),
-            scientific: scientificName,
-            confidence: confidence,
-            family: taxon.ancestors?.find(a => a.rank === 'family')?.name || '',
-            description: '',
-            source: 'iNaturalist (online)',
-            originalPredictedLabel: rawLabel
-          };
-        }
-        return null;
-      } catch(e) { return null; }
-    }
-
-    const offlinePlantMap = [
-      { patterns: ['mango', 'mangifera'], name: 'Mango', scientific: 'Mangifera indica', family: 'Anacardiaceae' },
-      { patterns: ['oak', 'quercus'], name: 'Oak', scientific: 'Quercus', family: 'Fagaceae' }
-    ];
-    function matchOffline(label) {
-      const lower = label.toLowerCase();
-      for (let p of offlinePlantMap) if (p.patterns.some(pat => lower.includes(pat))) return p;
-      let generic = label.split(',')[0].replace(/_/g,' ');
-      generic = generic.replace(/(^\w|\s\w)/g, c=>c.toUpperCase());
-      return { name: generic, scientific: '—', family: 'Plantae' };
-    }
-    async function classifyOffline(imgElement) {
-      if (!offlineModel) return null;
-      setStatus("📴 Offline AI...", true);
-      try {
-        const tensor = tf.browser.fromPixels(imgElement).resizeNearestNeighbor([224,224]).toFloat();
-        const expanded = tensor.expandDims(0);
-        const preds = await offlineModel.classify(expanded);
-        tensor.dispose(); expanded.dispose();
-        if (preds && preds[0]) {
-          const plant = matchOffline(preds[0].className);
-          return {
-            name: plant.name,
-            scientific: plant.scientific,
-            confidence: (preds[0].probability*100).toFixed(1),
-            family: plant.family,
-            source: 'MobileNet (offline)',
-            originalPredictedLabel: preds[0].className
-          };
-        }
-        return null;
-      } catch(e) { return null; }
-    }
-
+    // ----- Identification pipeline -----
     async function identifyImage(imageBlob) {
       const imgElement = await blobToImage(imageBlob);
       lastImageElement = imgElement;
       lastImageBlob = imageBlob;
-
-      // 1. Try feature matching
+      // Try feature matching first
       const match = await findMatchByEmbedding(imgElement);
       if (match) {
         displayResult({
@@ -555,33 +451,36 @@
         });
         return;
       }
-
-      // 2. Fallback to AI
-      let result = null;
-      if (currentMode === 'online') result = await identifyOnline(imageBlob);
-      else if (currentMode === 'offline') result = await classifyOffline(imgElement);
-      else {
-        result = await identifyOnline(imageBlob);
-        if (!result && offlineReady) result = await classifyOffline(imgElement);
-      }
-      if (result) {
-        const all = getAllCorrections();
-        const predictedKey = result.originalPredictedLabel || result.name;
-        if (all[predictedKey]) {
-          const c = all[predictedKey];
-          result.name = c.name;
-          result.scientific = c.scientific;
-          result.family = c.family;
-          result.description = c.description;
-          if (c.ownerSure) result.confidence = '100';
-          result.correctionNote = `✨ Correction: "${predictedKey}" → "${c.name}"`;
+      // No match: fallback to generic classification (offline)
+      if (mobilenetModel) {
+        try {
+          const predictions = await mobilenetModel.classify(imgElement);
+          if (predictions && predictions[0]) {
+            const top = predictions[0];
+            const result = {
+              name: top.className.split(',')[0].replace(/_/g, ' '),
+              confidence: (top.probability * 100).toFixed(1),
+              source: 'MobileNet (generic)',
+              scientific: '',
+              family: '',
+              description: ''
+            };
+            displayResult(result);
+            setStatus(`❓ Generic guess: ${result.name} (${result.confidence}%)`, false);
+          } else {
+            noMatch();
+          }
+        } catch(e) {
+          console.error(e);
+          noMatch();
         }
-        displayResult(result);
-        setStatus(`✅ ${result.name} (${result.confidence}%)`, false);
       } else {
-        // AI failed and no feature match
+        noMatch();
+      }
+
+      function noMatch() {
         defaultMsg.classList.add('hidden');
-        aiOutput.innerHTML = `<div class="error-msg">❌ AI could not identify this plant.<br>Owner can <strong>add a reference image</strong> to train the app.</div>`;
+        aiOutput.innerHTML = `<div class="error-msg">❌ Could not identify this plant.<br>Owner can <strong>add a reference image</strong> to train the app.</div>`;
         if (ownerAuthenticated) {
           const trainDiv = document.createElement('div');
           trainDiv.className = 'manual-id-panel';
@@ -612,12 +511,10 @@
             const family = trainFamily.value.trim();
             const desc = trainDesc.value.trim();
             const emb = await getEmbedding(lastImageElement);
-            if (!emb) {
-              alert("Could not extract features. Make sure the image is clear and try again. (Check console for errors)");
-              return;
-            }
+            if (!emb) { alert("Could not extract features – try a clearer image."); return; }
             addPendingCorrection(key, common, scientific, family, desc, false, [emb]);
             setStatus(`✅ Trained "${key}" with this image. Download JSON to save permanently.`, false);
+            // Re-run identification to show result
             const newMatch = await findMatchByEmbedding(lastImageElement);
             if (newMatch) displayResult({
               name: newMatch.name,
@@ -664,9 +561,7 @@
           if (emb) {
             addPendingCorrection(key, common, scientific, family, desc, false, [emb]);
             setStatus(`✅ Added reference image for "${key}". Download JSON to share.`, false);
-          } else {
-            alert("Could not extract features. Please try a different image.");
-          }
+          } else alert("Failed to extract features.");
         };
         btnDiv.appendChild(trainBtn);
         aiOutput.appendChild(btnDiv);
@@ -674,10 +569,9 @@
     }
 
     function blobToImage(blob) {
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve) => {
         const img = new Image();
         img.onload = () => resolve(img);
-        img.onerror = reject;
         img.src = URL.createObjectURL(blob);
       });
     }
@@ -694,15 +588,6 @@
     async function handleUpload(file) {
       if (!file) return;
       await identifyImage(file);
-    }
-    async function loadOfflineModel() {
-      setStatus("Loading offline AI...", true);
-      try {
-        offlineModel = await mobilenet.load({ version: 2, alpha: 1.0 });
-        offlineReady = true;
-        setStatus(`Offline AI ready.`, false);
-        if (cameraActive) snapBtn.disabled = false;
-      } catch(e) { offlineReady = false; }
     }
 
     // Camera UI
@@ -750,6 +635,7 @@
       updateUICamera();
       setStatus("Camera stopped.", false);
     }
+
     function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
 
     // Owner authentication
@@ -783,6 +669,7 @@
     logoutBtn.addEventListener('click', () => { setOwnerMode(false); });
     modal.addEventListener('click', (e) => { if (e.target === modal) hideModal(); });
 
+    // Training panel actions
     saveCorrectionBtn.addEventListener('click', () => {
       const key = correctionKeyInput.value.trim();
       const common = commonNameInput.value.trim();
@@ -803,7 +690,7 @@
       if (!key) { alert("Enter a plant key first."); return; }
       if (!lastImageElement) { alert("No image loaded. Upload or capture a photo first."); return; }
       const emb = await getEmbedding(lastImageElement);
-      if (!emb) { alert("Could not extract features. Make sure the image is clear and try again."); return; }
+      if (!emb) { alert("Could not extract features – try a clearer image."); return; }
       addReferenceToPending(key, emb);
     });
 
@@ -816,11 +703,9 @@
     fileInput.addEventListener('change', (e) => { if (e.target.files[0]) handleUpload(e.target.files[0]); fileInput.value = ''; });
     refreshBtn.addEventListener('click', () => loadGlobalCorrections(true).then(() => { if (lastImageBlob) identifyImage(lastImageBlob); }));
 
-    loadEmbeddingModel();
-    loadGlobalCorrections(true).then(() => {
-      loadOfflineModel();
-      setStatus("✅ Ready. Owner must add reference images to train the app – otherwise it cannot recognise new plants.", false);
-    });
+    loadGlobalCorrections(true);
+    loadModel();
+    setStatus("✅ Ready. Owner must add reference images to train the app.", false);
   })();
 </script>
 </body>
