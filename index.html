@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>🌿 PlantAI · Owner‑controlled corrections (GitHub JSON)</title>
+  <title>🌿 PlantAI · Fixed JSON loading</title>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
@@ -48,6 +48,7 @@
     .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 1000; }
     .modal-content { background: white; padding: 24px; border-radius: 32px; max-width: 300px; text-align: center; }
     .info-note { background: #d9f0da; border-radius: 20px; padding: 6px 12px; font-size: 0.7rem; margin-top: 8px; }
+    .error-details { background: #f8d7da; border-radius: 12px; padding: 6px; font-size: 0.7rem; margin-top: 4px; }
   </style>
 </head>
 <body>
@@ -62,7 +63,7 @@
       <button id="ownerLoginBtn" class="owner-btn"><i class="fas fa-lock"></i> Owner Login</button>
       <button id="logoutBtn" class="logout-btn" style="display:none;"><i class="fas fa-sign-out-alt"></i> Exit Owner Mode</button>
     </div>
-    <div class="info-note">📌 All corrections are stored in <code>corrections.json</code> on GitHub. No local storage.</div>
+    <div class="info-note">📌 All corrections are stored in <code>corrections.json</code> in the same folder as this page.</div>
   </header>
 
   <div class="camera-area">
@@ -124,7 +125,7 @@
       <label><input type="checkbox" id="ownerSure"> ✅ I am sure (confidence 100%)</label>
     </div>
     <button id="saveCorrectionBtn" class="primary"><i class="fas fa-save"></i> Add / Update (temporary)</button>
-    <div class="info-note" style="margin-top:6px;">⚠️ Changes are not saved to GitHub yet. After adding your corrections, click <strong>Download corrections.json</strong> and upload the file to GitHub.</div>
+    <div class="info-note" style="margin-top:6px;">⚠️ Changes are not saved to GitHub yet. After adding corrections, click <strong>Download corrections.json</strong> and upload the file to GitHub (replace existing). Then click <strong>Reload JSON</strong>.</div>
     <hr>
     <button id="downloadCorrectionsBtn" style="background:#2f6b47; color:white;"><i class="fas fa-download"></i> Download corrections.json</button>
     <div id="correctionsList"></div>
@@ -151,7 +152,7 @@
     const OWNER_PASSWORD = 'yusupher01';
     let ownerAuthenticated = false;
 
-    // DOM references
+    // DOM elements
     const video = document.getElementById('video');
     const startCam = document.getElementById('startCam');
     const stopCam = document.getElementById('stopCam');
@@ -183,15 +184,14 @@
     let offlineModel = null;
     let offlineReady = false;
     let currentMode = 'online';
-    // Global corrections – the only source of truth
     let globalCorrections = {};
-    // Temporary additions made by owner (not yet uploaded)
     let pendingCorrections = {};
     let lastImageBlob = null;
     let lastResult = null;
     let lastPredictedKey = '';
+    let lastFetchError = null;
 
-    // ---------- PLANT DATABASE (auto-fill) ----------
+    // Plant database (auto‑fill)
     const plantDatabase = {
       "cowpea": { common: "Cowpea", scientific: "Vigna unguiculata", family: "Fabaceae", description: "Legume crop, rich in protein, drought-tolerant." },
       "mango": { common: "Mango", scientific: "Mangifera indica", family: "Anacardiaceae", description: "Tropical fruit tree, sweet fruit." },
@@ -220,7 +220,6 @@
       autoFill(commonNameInput, scientificNameInput, familyNameInput, descriptionInput);
     });
 
-    // Mode buttons
     const modeAuto = document.getElementById('modeAuto');
     const modeOnline = document.getElementById('modeOnline');
     const modeOffline = document.getElementById('modeOffline');
@@ -244,12 +243,8 @@
       else spinner.classList.add('hidden');
     }
 
-    // Get all corrections (global + pending)
-    function getAllCorrections() {
-      return { ...globalCorrections, ...pendingCorrections };
-    }
+    function getAllCorrections() { return { ...globalCorrections, ...pendingCorrections }; }
 
-    // Add a pending correction (temporary, not yet saved to GitHub)
     function addPendingCorrection(key, common, scientific, family, description, ownerSure) {
       if (!key || !common) return false;
       const normalizedKey = key.toLowerCase().trim();
@@ -276,7 +271,6 @@
       return false;
     }
 
-    // Apply correction from global or pending
     function applyBestCorrection(result, predictedKey) {
       const key = (predictedKey || result.name || '').toLowerCase().trim();
       const all = getAllCorrections();
@@ -296,31 +290,36 @@
       return result;
     }
 
-    // Load global corrections from GitHub
     async function loadGlobalCorrections(showMessage = true) {
       setStatus("📡 Fetching corrections from GitHub...", true);
+      lastFetchError = null;
       try {
         const response = await fetch(CORRECTIONS_URL + '?t=' + Date.now());
         if (response.ok) {
           const data = await response.json();
           if (typeof data === 'object' && data !== null) {
             globalCorrections = data;
-            // Clear pending corrections when a fresh global file is loaded (they are now merged in the file)
+            // Clear pending only if the fetch succeeded (global file now contains the merged updates)
             pendingCorrections = {};
             if (showMessage) setStatus(`✅ Loaded ${Object.keys(globalCorrections).length} global corrections.`, false);
             updateCorrectionUI();
             return true;
-          } else throw new Error();
-        } else throw new Error();
-      } catch(e) {
-        if (showMessage) setStatus(`⚠️ No corrections.json file. Create one to store corrections.`, false);
+          } else throw new Error('Invalid JSON format');
+        } else {
+          throw new Error(`HTTP ${response.status}`);
+        }
+      } catch(err) {
+        console.error("Fetch error:", err);
+        lastFetchError = err.message;
         globalCorrections = {};
+        // Do NOT clear pending corrections – they are still waiting to be uploaded
+        const msg = `⚠️ Could not load corrections.json: ${err.message}. Make sure the file exists in the same folder as this page.`;
+        if (showMessage) setStatus(msg, false);
         updateCorrectionUI();
         return false;
       }
     }
 
-    // Download merged corrections (global + pending)
     function downloadCorrectionsFile() {
       const merged = getAllCorrections();
       const dataStr = JSON.stringify(merged, null, 2);
@@ -330,13 +329,14 @@
       a.download = 'corrections.json';
       a.click();
       URL.revokeObjectURL(blob);
-      setStatus("Downloaded corrections.json – now upload this file to GitHub (replace existing). After upload, click 'Reload JSON' to see the effect.", false);
+      setStatus("Downloaded corrections.json – upload to GitHub (replace existing), then click 'Reload JSON'.", false);
     }
 
     function updateCorrectionUI() {
-      const all = getAllCorrections();
-      const total = Object.keys(all).length;
-      correctionStatsSpan.innerHTML = `${total} corrections active`;
+      const pendingCount = Object.keys(pendingCorrections).length;
+      const globalCount = Object.keys(globalCorrections).length;
+      const total = pendingCount + globalCount;
+      correctionStatsSpan.innerHTML = `${total} active (${globalCount} global, ${pendingCount} pending)`;
       renderCorrectionsList();
     }
 
@@ -363,7 +363,6 @@
             if (pendingCorrections[key]) {
               removePendingCorrection(key);
             } else {
-              // Global correction – cannot delete directly from here, must be removed from JSON file
               setStatus(`Global correction "${key}" can only be removed by editing corrections.json and re-uploading.`, false);
             }
           });
@@ -372,7 +371,7 @@
       }
     }
 
-    // ---------- AI functions (iNaturalist + MobileNet) ----------
+    // AI functions (unchanged but included for completeness)
     async function identifyOnline(imageBlob) {
       setStatus("🌐 Online AI analyzing...", true);
       const formData = new FormData();
@@ -464,7 +463,6 @@
         lastPredictedKey = predictedKey;
         displayResult(result, predictedKey);
       } else {
-        // AI failed – check for manual_unknown correction (global or pending)
         const all = getAllCorrections();
         if (all['manual_unknown']) {
           const manualCorrection = all['manual_unknown'];
@@ -475,7 +473,7 @@
             family: manualCorrection.family,
             description: manualCorrection.description,
             source: 'Manual (remembered)',
-            correctionNote: `✨ Manual correction (for unrecognized images) → ${manualCorrection.name}`
+            correctionNote: `✨ Manual correction → ${manualCorrection.name}`
           };
           lastResult = manualResult;
           lastImageBlob = imageBlob;
@@ -545,9 +543,7 @@
         const btnDiv = document.createElement('div');
         btnDiv.style.marginTop = '8px';
         if (result.appliedCorrectionKey) {
-          const pendingKeyExists = !!pendingCorrections[result.appliedCorrectionKey];
-          const globalKeyExists = !!globalCorrections[result.appliedCorrectionKey];
-          if (pendingKeyExists) {
+          if (pendingCorrections[result.appliedCorrectionKey]) {
             const undoBtn = document.createElement('button');
             undoBtn.className = 'undo-correction-btn';
             undoBtn.innerHTML = '<i class="fas fa-undo-alt"></i> Remove pending correction';
@@ -558,10 +554,10 @@
               }
             };
             btnDiv.appendChild(undoBtn);
-          } else if (globalKeyExists) {
+          } else if (globalCorrections[result.appliedCorrectionKey]) {
             const infoSpan = document.createElement('span');
             infoSpan.className = 'info-note';
-            infoSpan.innerHTML = '<i class="fas fa-info-circle"></i> Global correction – edit JSON file to remove.';
+            infoSpan.innerHTML = '<i class="fas fa-info-circle"></i> Global correction – edit JSON to remove.';
             btnDiv.appendChild(infoSpan);
           }
         }
@@ -663,7 +659,7 @@
     }
     function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
 
-    // Owner authentication and logout
+    // Owner auth
     const modal = document.getElementById('passwordModal');
     const passwordInput = document.getElementById('ownerPassword');
     const submitPassword = document.getElementById('submitPassword');
@@ -723,7 +719,7 @@
 
     loadGlobalCorrections(true).then(() => {
       loadOfflineModel();
-      setStatus("✅ Ready. All corrections come from corrections.json on GitHub.", false);
+      setStatus("✅ Ready. Click 'Reload JSON' after uploading a new corrections.json file.", false);
     });
   })();
 </script>
