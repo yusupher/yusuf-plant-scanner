@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>🌿 PlantAI · Owner‑controlled corrections</title>
+  <title>🌿 PlantAI · Owner corrections with undo</title>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
@@ -42,10 +42,10 @@
     .owner-field textarea { border-radius: 20px; resize: vertical; }
     .correction-item { background: white; border-radius: 16px; padding: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
     .delete-correction { background: #b1624b; color: white; border: none; border-radius: 30px; padding: 2px 12px; cursor: pointer; }
+    .undo-correction-btn { background: #b1624b; color: white; border: none; border-radius: 40px; padding: 4px 12px; font-size: 0.7rem; margin-top: 6px; cursor: pointer; }
     footer { font-size: 0.65rem; text-align: center; padding: 12px; background: #f0f7eb; color: #4a6e3c; }
     .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 1000; }
     .modal-content { background: white; padding: 24px; border-radius: 32px; max-width: 300px; text-align: center; }
-    .modal-content input { width: 100%; padding: 10px; margin: 12px 0; border-radius: 40px; border: 1px solid #ccc; }
   </style>
 </head>
 <body>
@@ -126,7 +126,7 @@
   </div>
 
   <footer>
-    🔬 Online: iNaturalist · Offline: MobileNet · <strong>Owner</strong> can add scientific names, family, description, and force 100% confidence.
+    🔬 Online: iNaturalist · Offline: MobileNet · <strong>Owner</strong> can add corrections. If a correction wrongly applies to a new plant, click "Remove this correction" below the result.
   </footer>
 </div>
 
@@ -136,7 +136,6 @@
     <h3><i class="fas fa-key"></i> Owner Access</h3>
     <input type="password" id="ownerPassword" placeholder="Enter password">
     <button id="submitPassword" class="primary">Unlock</button>
-    <p style="font-size:0.7rem; margin-top:8px;">Contact app owner for password.</p>
   </div>
 </div>
 
@@ -146,7 +145,7 @@
     const OWNER_PASSWORD = 'yusupher01';
     let ownerAuthenticated = false;
 
-    // DOM elements
+    // DOM references
     const video = document.getElementById('video');
     const startCam = document.getElementById('startCam');
     const stopCam = document.getElementById('stopCam');
@@ -186,44 +185,14 @@
     let lastResult = null;
     let lastPredictedKey = '';
 
-    // ------------------- Built‑in plant database (owner auto‑fill) -------------------
+    // Plant database for auto‑fill
     const plantDatabase = {
-      "cowpea": {
-        common: "Cowpea",
-        scientific: "Vigna unguiculata",
-        family: "Fabaceae",
-        description: "Legume crop, rich in protein, drought-tolerant, grown for seeds and forage."
-      },
-      "mango": {
-        common: "Mango",
-        scientific: "Mangifera indica",
-        family: "Anacardiaceae",
-        description: "Tropical fruit tree, drupe fruit, rich in vitamins."
-      },
-      "oak": {
-        common: "Oak",
-        scientific: "Quercus robur",
-        family: "Fagaceae",
-        description: "Deciduous tree, produces acorns, hardwood used in furniture."
-      },
-      "rose": {
-        common: "Rose",
-        scientific: "Rosa spp.",
-        family: "Rosaceae",
-        description: "Ornamental shrub, fragrant flowers, many cultivars."
-      },
-      "sunflower": {
-        common: "Sunflower",
-        scientific: "Helianthus annuus",
-        family: "Asteraceae",
-        description: "Tall annual, large yellow flower head, edible seeds."
-      },
-      "basil": {
-        common: "Basil",
-        scientific: "Ocimum basilicum",
-        family: "Lamiaceae",
-        description: "Aromatic herb, used in cooking, especially pesto."
-      }
+      "cowpea": { common: "Cowpea", scientific: "Vigna unguiculata", family: "Fabaceae", description: "Legume crop, rich in protein, drought-tolerant." },
+      "mango": { common: "Mango", scientific: "Mangifera indica", family: "Anacardiaceae", description: "Tropical fruit tree, sweet fruit." },
+      "oak": { common: "Oak", scientific: "Quercus robur", family: "Fagaceae", description: "Deciduous tree, acorns, hardwood." },
+      "rose": { common: "Rose", scientific: "Rosa spp.", family: "Rosaceae", description: "Ornamental shrub, fragrant flowers." },
+      "sunflower": { common: "Sunflower", scientific: "Helianthus annuus", family: "Asteraceae", description: "Tall annual, edible seeds." },
+      "basil": { common: "Basil", scientific: "Ocimum basilicum", family: "Lamiaceae", description: "Aromatic herb, used in cooking." }
     };
 
     function autoFillFromDatabase() {
@@ -235,17 +204,15 @@
         descriptionInput.value = data.description;
         setStatus(`✅ Auto‑filled details for "${data.common}"`, false);
       } else {
-        setStatus(`⚠️ No database entry for "${common}". You can enter manually.`, false);
+        setStatus(`⚠️ No database entry for "${common}".`, false);
       }
     }
-
     autoFillBtn.addEventListener('click', autoFillFromDatabase);
 
-    // ------------------- Mode buttons -------------------
+    // Mode buttons
     const modeAuto = document.getElementById('modeAuto');
     const modeOnline = document.getElementById('modeOnline');
     const modeOffline = document.getElementById('modeOffline');
-
     function setActiveMode(mode) {
       modeAuto.classList.remove('active');
       modeOnline.classList.remove('active');
@@ -256,7 +223,6 @@
       currentMode = mode;
       setStatus(`Mode: ${mode === 'auto' ? 'Auto (online → offline)' : mode === 'online' ? 'Online (iNaturalist)' : 'Offline (MobileNet)'}`, false);
     }
-
     modeAuto.addEventListener('click', () => setActiveMode('auto'));
     modeOnline.addEventListener('click', () => setActiveMode('online'));
     modeOffline.addEventListener('click', () => setActiveMode('offline'));
@@ -267,25 +233,18 @@
       else spinner.classList.add('hidden');
     }
 
-    // ------------------- Correction storage -------------------
-    function getAllCorrections() {
-      return { ...globalCorrections, ...localCorrections };
-    }
-
+    // Correction storage
+    function getAllCorrections() { return { ...globalCorrections, ...localCorrections }; }
     function saveLocalCorrections() {
       localStorage.setItem('plantai_local_corrections', JSON.stringify(localCorrections));
       updateCorrectionStats();
       renderCorrectionsList();
     }
-
     function loadLocalCorrections() {
       const stored = localStorage.getItem('plantai_local_corrections');
-      if (stored) {
-        try { localCorrections = JSON.parse(stored); } catch(e) {}
-      }
+      if (stored) { try { localCorrections = JSON.parse(stored); } catch(e) {} }
       updateCorrectionStats();
     }
-
     function addCorrection(key, common, scientific, family, description, ownerSure) {
       if (!key || !common) return false;
       const normalizedKey = key.toLowerCase().trim();
@@ -300,7 +259,6 @@
       setStatus(`✅ Correction saved: "${normalizedKey}" → "${common.trim()}"`, false);
       return true;
     }
-
     function removeCorrection(key) {
       const normalizedKey = key.toLowerCase().trim();
       if (localCorrections[normalizedKey]) {
@@ -311,13 +269,11 @@
       }
       return false;
     }
-
     function updateCorrectionStats() {
       const total = Object.keys(globalCorrections).length + Object.keys(localCorrections).length;
       correctionStatsSpan.innerHTML = `${total} total (${Object.keys(localCorrections).length} owner)`;
       renderCorrectionsList();
     }
-
     function renderCorrectionsList() {
       if (!correctionsListDiv) return;
       const all = getAllCorrections();
@@ -341,7 +297,7 @@
       }
     }
 
-    // Apply correction to a result
+    // Apply correction to result
     function applyBestCorrection(result, predictedKey) {
       const key = (predictedKey || result.name || '').toLowerCase().trim();
       const all = getAllCorrections();
@@ -357,11 +313,15 @@
         } else {
           result.correctionNote = `✨ Corrected: "${key}" → "${c.name}"`;
         }
+        result.appliedCorrectionKey = key;  // store key to allow undo
+      } else {
+        result.correctionNote = null;
+        result.appliedCorrectionKey = null;
       }
       return result;
     }
 
-    // Load global corrections from GitHub
+    // Load global corrections
     async function loadGlobalCorrections(showMessage = true) {
       setStatus("🔄 Fetching global corrections...", true);
       try {
@@ -395,7 +355,7 @@
       setStatus("Downloaded merged corrections.json – upload to GitHub.", false);
     }
 
-    // ------------------- AI functions (iNaturalist + MobileNet) -------------------
+    // ---------- AI functions (iNaturalist + MobileNet) ----------
     const offlinePlantMap = [
       { patterns: ['mango', 'mangifera', '07747607'], name: 'Mango Tree', scientific: 'Mangifera indica', family: 'Anacardiaceae' },
       { patterns: ['oak', 'quercus', '07844045'], name: 'Oak Tree', scientific: 'Quercus', family: 'Fagaceae' },
@@ -405,7 +365,6 @@
       { patterns: ['rose', 'rosa', '07710403'], name: 'Rose', scientific: 'Rosa', family: 'Rosaceae' },
       { patterns: ['tulip', '07783194'], name: 'Tulip', scientific: 'Tulipa', family: 'Liliaceae' }
     ];
-
     function matchOfflinePlant(label) {
       const lower = label.toLowerCase();
       for (let plant of offlinePlantMap) {
@@ -417,7 +376,6 @@
       generic = generic.replace(/(^\w|\s\w)/g, c => c.toUpperCase());
       return { name: generic, scientific: '—', family: 'Plantae', description: '' };
     }
-
     async function identifyOnline(imageBlob) {
       setStatus("🌐 Online AI (iNaturalist) analyzing...", true);
       const formData = new FormData();
@@ -452,12 +410,8 @@
           };
         }
         return null;
-      } catch (err) {
-        console.error(err);
-        return null;
-      }
+      } catch (err) { console.error(err); return null; }
     }
-
     async function classifyOffline(imgElement) {
       if (!offlineModel) return null;
       setStatus("📴 Offline AI (MobileNet) analyzing...", true);
@@ -480,11 +434,8 @@
           };
         }
         return null;
-      } catch (err) {
-        return null;
-      }
+      } catch (err) { return null; }
     }
-
     async function identifyImage(imageBlob) {
       let result = null;
       if (currentMode === 'online') {
@@ -492,7 +443,7 @@
       } else if (currentMode === 'offline') {
         const img = await blobToImage(imageBlob);
         result = await classifyOffline(img);
-      } else { // auto
+      } else {
         result = await identifyOnline(imageBlob);
         if (!result && offlineReady) {
           setStatus("Online failed, falling back to offline...", false);
@@ -513,13 +464,10 @@
         setStatus("Could not identify. Use a clearer photo.", false);
       }
     }
-
     function displayResult(result, predictedKey) {
       defaultMsg.classList.add('hidden');
       let extraHtml = '';
-      if (result.description) {
-        extraHtml += `<div style="margin-top:8px;">📖 ${escapeHtml(result.description)}</div>`;
-      }
+      if (result.description) extraHtml += `<div style="margin-top:8px;">📖 ${escapeHtml(result.description)}</div>`;
       aiOutput.innerHTML = `
         <div class="plant-card">
           <div><strong><i class="fas fa-leaf"></i> ${escapeHtml(result.name)}</strong></div>
@@ -531,16 +479,28 @@
           ${result.correctionNote ? `<div style="font-size:0.7rem; color:#2d6a4f;">${escapeHtml(result.correctionNote)}</div>` : ''}
         </div>
       `;
-
-      // If owner is authenticated, show a quick button to open owner panel with this predicted key
+      // If a correction was applied and owner is authenticated, show "Remove this correction" button
+      if (result.appliedCorrectionKey && ownerAuthenticated) {
+        const undoDiv = document.createElement('div');
+        undoDiv.style.marginTop = '8px';
+        undoDiv.innerHTML = `<button id="undoCorrectionBtn" class="undo-correction-btn"><i class="fas fa-undo-alt"></i> Remove this correction (${result.appliedCorrectionKey})</button>`;
+        const undoBtn = undoDiv.querySelector('#undoCorrectionBtn');
+        undoBtn.addEventListener('click', () => {
+          if (confirm(`Remove correction for "${result.appliedCorrectionKey}" → "${result.name}"? This will stop it from being applied to future identifications.`)) {
+            removeCorrection(result.appliedCorrectionKey);
+            // Re-run identification on the same image to refresh without correction
+            if (lastImageBlob) identifyImage(lastImageBlob);
+          }
+        });
+        aiOutput.appendChild(undoDiv);
+      }
+      // Owner quick edit button
       if (ownerAuthenticated) {
-        const ownerQuickDiv = document.createElement('div');
-        ownerQuickDiv.className = 'feedback-area';
-        ownerQuickDiv.innerHTML = `
-          <button id="openOwnerForThis" class="primary" style="width:100%;"><i class="fas fa-edit"></i> ✏️ Owner: Correct this identification</button>
-        `;
-        const openBtn = ownerQuickDiv.querySelector('#openOwnerForThis');
-        openBtn.addEventListener('click', () => {
+        const editDiv = document.createElement('div');
+        editDiv.style.marginTop = '8px';
+        editDiv.innerHTML = `<button id="editCorrectionBtn" class="primary" style="background:#2f6b47;"><i class="fas fa-edit"></i> ✏️ Owner: Correct this identification</button>`;
+        const editBtn = editDiv.querySelector('#editCorrectionBtn');
+        editBtn.addEventListener('click', () => {
           correctionKeyInput.value = predictedKey;
           commonNameInput.value = '';
           scientificNameInput.value = '';
@@ -550,11 +510,10 @@
           ownerPanel.classList.add('visible');
           ownerPanel.scrollIntoView({ behavior: 'smooth' });
         });
-        aiOutput.appendChild(ownerQuickDiv);
+        aiOutput.appendChild(editDiv);
       }
       setStatus(`✅ ${result.name} (${result.confidence}%)`, false);
     }
-
     function blobToImage(blob) {
       return new Promise((resolve) => {
         const img = new Image();
@@ -562,7 +521,6 @@
         img.src = URL.createObjectURL(blob);
       });
     }
-
     async function captureFromCamera() {
       if (!cameraActive || !video.videoWidth) { setStatus("Start camera first", false); return; }
       const canvas = document.createElement('canvas');
@@ -572,12 +530,10 @@
       const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.9));
       await identifyImage(blob);
     }
-
     async function handleUpload(file) {
       if (!file) return;
       await identifyImage(file);
     }
-
     async function loadOfflineModel() {
       setStatus("Loading offline AI (MobileNet)...", true);
       try {
@@ -608,7 +564,6 @@
         snapBtn.disabled = true;
       }
     }
-
     async function startCamera() {
       if (currentStream) await stopCamera();
       setStatus("Requesting camera...", true);
@@ -627,7 +582,6 @@
         setStatus("Camera permission denied. Use upload.", false);
       }
     }
-
     async function stopCamera() {
       if (currentStream) {
         currentStream.getTracks().forEach(t => t.stop());
@@ -638,7 +592,6 @@
       updateUICamera();
       setStatus("Camera stopped.", false);
     }
-
     function escapeHtml(str) {
       if (!str) return '';
       return str.replace(/[&<>]/g, function(m) {
@@ -649,60 +602,47 @@
       });
     }
 
-    // ------------------- Owner authentication -------------------
-    function showPasswordModal() {
-      modal.style.display = 'flex';
-      passwordInput.value = '';
-    }
-
+    // Owner authentication
+    function showPasswordModal() { modal.style.display = 'flex'; passwordInput.value = ''; }
     function hideModal() { modal.style.display = 'none'; }
-
     submitPassword.addEventListener('click', () => {
       if (passwordInput.value === OWNER_PASSWORD) {
         ownerAuthenticated = true;
         hideModal();
-        setStatus("🔓 Owner mode active. You can now correct identifications.", false);
+        setStatus("🔓 Owner mode active. You can now correct or remove corrections.", false);
         ownerPanel.classList.add('visible');
         ownerLoginBtn.innerHTML = '<i class="fas fa-user-cog"></i> Owner Mode';
         ownerLoginBtn.style.background = 'gold';
         ownerLoginBtn.style.color = '#1a3c2a';
-      } else {
-        alert("Incorrect password.");
-      }
+      } else { alert("Incorrect password."); }
     });
-
     ownerLoginBtn.addEventListener('click', showPasswordModal);
+    modal.addEventListener('click', (e) => { if (e.target === modal) hideModal(); });
 
-    // Save correction from owner panel
+    // Owner panel save
     saveCorrectionBtn.addEventListener('click', () => {
       const key = correctionKeyInput.value.trim();
       const common = commonNameInput.value.trim();
-      if (!key || !common) {
-        alert("Please enter both AI predicted key and correct common name.");
-        return;
-      }
+      if (!key || !common) { alert("Please enter both AI predicted key and correct common name."); return; }
       const scientific = scientificNameInput.value.trim();
       const family = familyNameInput.value.trim();
       const description = descriptionInput.value.trim();
       const ownerSure = ownerSureCheckbox.checked;
       addCorrection(key, common, scientific, family, description, ownerSure);
-      // Clear panel except key
       commonNameInput.value = '';
       scientificNameInput.value = '';
       familyNameInput.value = '';
       descriptionInput.value = '';
       ownerSureCheckbox.checked = false;
-      // Re-apply to current result if exists
       if (lastResult && lastPredictedKey) {
         const newResult = { ...lastResult };
         applyBestCorrection(newResult, lastPredictedKey);
         displayResult(newResult, lastPredictedKey);
       }
     });
-
     downloadBtn.addEventListener('click', downloadCorrectionsFile);
 
-    // Event binding for camera and upload
+    // Event binding
     startCam.addEventListener('click', startCamera);
     stopCam.addEventListener('click', stopCamera);
     snapBtn.addEventListener('click', captureFromCamera);
@@ -716,11 +656,8 @@
     loadLocalCorrections();
     loadGlobalCorrections(true).then(() => {
       loadOfflineModel();
-      setStatus("Ready. Owner: click 'Owner Login' to add scientific names, family, descriptions, and force 100% confidence.", false);
+      setStatus("Ready. Owner: login to correct. If a correction wrongly applies to a new plant, click 'Remove this correction' below the result.", false);
     });
-
-    // Close modal when clicking outside content
-    modal.addEventListener('click', (e) => { if (e.target === modal) hideModal(); });
   })();
 </script>
 </body>
