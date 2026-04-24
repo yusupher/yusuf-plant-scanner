@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>🌿 PlantAI · Full Correction Control</title>
+  <title>🌿 PlantAI · Persistent Local Corrections</title>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
@@ -35,11 +35,10 @@
     .hidden { display: none; }
     .confidence { background: #e3f1db; display: inline-block; padding: 4px 12px; border-radius: 40px; font-size: 0.7rem; margin: 8px 0; }
     .feedback-area { background: #f5f9f0; border-radius: 20px; padding: 14px; margin-top: 12px; }
-    .feedback-input { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0; }
-    .feedback-input input { flex: 1; padding: 8px 12px; border-radius: 40px; border: 1px solid #c8e0bc; font-size: 0.85rem; }
+    .feedback-input { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0; align-items: center; }
+    .feedback-input input { flex: 2; padding: 8px 12px; border-radius: 40px; border: 1px solid #c8e0bc; font-size: 0.85rem; }
     .feedback-input button { background: #2f6b47; color: white; padding: 8px 16px; }
-    .json-snippet { background: #eef3e8; padding: 8px; font-family: monospace; font-size: 0.7rem; border-radius: 12px; margin-top: 8px; word-break: break-all; white-space: pre-wrap; }
-    .copy-btn { background: #2f6b47; color: white; border: none; border-radius: 40px; padding: 4px 10px; font-size: 0.6rem; margin-left: 8px; cursor: pointer; }
+    .copy-predicted { background: #e2eed9; border: none; border-radius: 40px; padding: 4px 8px; font-size: 0.7rem; cursor: pointer; }
     .dev-panel { background: #f0ebe0; border-radius: 20px; padding: 12px; margin-top: 12px; display: none; }
     .dev-panel.visible { display: block; }
     .correction-item { background: white; border-radius: 16px; padding: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
@@ -52,7 +51,7 @@
 <body>
 <div class="app">
   <header>
-    <h1><i class="fas fa-leaf"></i> PlantAI <i class="fas fa-edit"></i></h1>
+    <h1><i class="fas fa-leaf"></i> PlantAI <i class="fas fa-save"></i></h1>
     <div class="mode-selector">
       <button id="modeAuto" class="mode-btn active">🔄 Auto</button>
       <button id="modeOnline" class="mode-btn">🌐 Online</button>
@@ -89,7 +88,7 @@
   <div class="result" id="resultArea">
     <div id="defaultMsg" class="error-msg">
       <i class="fas fa-seedling"></i> Upload or take a photo.<br>
-      <strong>Wrong ID?</strong> Use the correction box below any result.
+      <strong>Wrong ID?</strong> Use the correction box below any result – corrections stay saved in your browser.
     </div>
     <div id="aiOutput"></div>
   </div>
@@ -104,21 +103,20 @@
     <div id="correctionsList"></div>
     <div style="margin-top:12px;">
       <button id="downloadCorrectionsBtn" style="background:#2f6b47; color:white;"><i class="fas fa-download"></i> Download corrections.json</button>
-      <span style="font-size:0.7rem; margin-left:8px;">Upload this file to GitHub → all users get updates after Reload.</span>
+      <span style="font-size:0.7rem; margin-left:8px;">Upload to GitHub to share with all users.</span>
     </div>
   </div>
 
   <footer>
-    🔬 Online: iNaturalist · Offline: MobileNet · <strong>You can always override</strong> any correction using the form below the result.
+    🔬 Online: iNaturalist · Offline: MobileNet · <strong>Your corrections are saved in your browser</strong> – they survive page refresh. Download the file to share with others.
   </footer>
 </div>
 
 <script>
   (function() {
-    // --- CONFIGURATION ---
     const CORRECTIONS_URL = 'corrections.json';
 
-    // --- DOM elements ---
+    // DOM elements
     const video = document.getElementById('video');
     const startCam = document.getElementById('startCam');
     const stopCam = document.getElementById('stopCam');
@@ -142,9 +140,10 @@
     let offlineModel = null;
     let offlineReady = false;
     let currentMode = 'auto';
-    let globalCorrections = {};
-    let lastRefresh = null;
-    let currentImageBlob = null; // store last identified blob for re-identification
+    let globalCorrections = {};      // from GitHub JSON
+    let localCorrections = {};       // from localStorage (user additions)
+    let lastImageBlob = null;
+    let lastResult = null;            // to re-apply correction without re-running AI
 
     // Mode buttons
     const modeAuto = document.getElementById('modeAuto');
@@ -172,28 +171,109 @@
       else spinner.classList.add('hidden');
     }
 
-    function updateCorrectionStats() {
-      const count = Object.keys(globalCorrections).length;
-      if (lastRefresh) {
-        correctionStatsSpan.innerHTML = `${count} corrections (${lastRefresh.toLocaleTimeString()})`;
-      } else {
-        correctionStatsSpan.innerHTML = count ? `${count} corrections` : 'No corrections';
+    // ---- Merge corrections: global (GitHub) + local (browser) - local overrides ----
+    function getAllCorrections() {
+      const merged = { ...globalCorrections, ...localCorrections };
+      return merged;
+    }
+
+    function saveLocalCorrections() {
+      localStorage.setItem('plantai_local_corrections', JSON.stringify(localCorrections));
+    }
+
+    function loadLocalCorrections() {
+      const stored = localStorage.getItem('plantai_local_corrections');
+      if (stored) {
+        try {
+          localCorrections = JSON.parse(stored);
+        } catch(e) { console.warn(e); }
       }
+      updateCorrectionStats();
+    }
+
+    // Add/update a correction (always saved to localStorage)
+    function addCorrection(key, name, scientific = '', family = '') {
+      if (!key || !name) return false;
+      const normalizedKey = key.toLowerCase().trim();
+      localCorrections[normalizedKey] = {
+        name: name.trim(),
+        scientific: scientific.trim() || '',
+        family: family.trim() || ''
+      };
+      saveLocalCorrections();
+      updateCorrectionStats();
+      setStatus(`✅ Correction saved locally: "${normalizedKey}" → "${name.trim()}"`, false);
+      return true;
+    }
+
+    function removeCorrection(key) {
+      const normalizedKey = key.toLowerCase().trim();
+      if (localCorrections[normalizedKey]) {
+        delete localCorrections[normalizedKey];
+        saveLocalCorrections();
+        updateCorrectionStats();
+        setStatus(`🗑️ Removed local correction for "${normalizedKey}"`, false);
+        return true;
+      }
+      return false;
+    }
+
+    function updateCorrectionStats() {
+      const total = Object.keys(globalCorrections).length + Object.keys(localCorrections).length;
+      correctionStatsSpan.innerHTML = `${total} total corrections (${Object.keys(localCorrections).length} local)`;
       renderCorrectionsList();
     }
 
-    // --- Load central corrections from JSON file ---
+    function renderCorrectionsList() {
+      if (!correctionsListDiv) return;
+      const all = getAllCorrections();
+      const entries = Object.entries(all);
+      if (entries.length === 0) {
+        correctionsListDiv.innerHTML = '<i>No corrections yet. Add one using the form below a result.</i>';
+        return;
+      }
+      correctionsListDiv.innerHTML = '';
+      for (const [key, val] of entries) {
+        const isLocal = !!localCorrections[key];
+        const div = document.createElement('div');
+        div.className = 'correction-item';
+        div.innerHTML = `
+          <div><span class="correction-key">${escapeHtml(key)}</span> → <span class="correction-value">${escapeHtml(val.name)}</span> ${isLocal ? '<span style="font-size:0.6rem; background:#e2eed9; padding:2px 6px; border-radius:40px;">local</span>' : ''}</div>
+          <button class="delete-correction" data-key="${escapeHtml(key)}"><i class="fas fa-trash"></i> Delete (local)</button>
+        `;
+        const delBtn = div.querySelector('.delete-correction');
+        delBtn.addEventListener('click', () => removeCorrection(key));
+        correctionsListDiv.appendChild(div);
+      }
+    }
+
+    // Apply correction to a result object
+    function applyBestCorrection(result, predictedKey) {
+      const key = (predictedKey || result.name || '').toLowerCase().trim();
+      const allCorrections = getAllCorrections();
+      if (allCorrections[key]) {
+        const c = allCorrections[key];
+        result.name = c.name || result.name;
+        result.scientific = c.scientific || result.scientific;
+        result.family = c.family || result.family;
+        result.correctionNote = `✨ Corrected: "${key}" → "${c.name}"`;
+      } else {
+        result.correctionNote = null;
+      }
+      return result;
+    }
+
+    // Load global corrections from GitHub JSON
     async function loadGlobalCorrections(showMessage = true) {
-      setStatus("🔄 Fetching latest corrections...", true);
+      setStatus("🔄 Fetching latest global corrections...", true);
       try {
         const response = await fetch(CORRECTIONS_URL + '?t=' + Date.now());
         if (response.ok) {
           const data = await response.json();
           if (typeof data === 'object' && data !== null) {
             globalCorrections = data;
-            lastRefresh = new Date();
-            if (showMessage) setStatus(`✅ Loaded ${Object.keys(globalCorrections).length} corrections.`, false);
-            else setStatus(`Corrections updated (${Object.keys(globalCorrections).length})`, false);
+            if (showMessage) setStatus(`✅ Loaded ${Object.keys(globalCorrections).length} global corrections.`, false);
+            else setStatus(`Global corrections updated.`, false);
           } else {
             throw new Error('Invalid JSON');
           }
@@ -203,76 +283,15 @@
       } catch(e) {
         console.warn("Could not load corrections file:", e);
         globalCorrections = {};
-        if (showMessage) setStatus(`⚠️ No corrections file. Create corrections.json in same folder.`, false);
-        else setStatus("Failed to load corrections", false);
+        if (showMessage) setStatus(`⚠️ No global corrections file. Only local corrections active.`, false);
       } finally {
         updateCorrectionStats();
       }
     }
 
-    // Apply correction – always returns corrected result
-    function applyGlobalCorrection(result, predictedKey) {
-      const key = (predictedKey || result.name || '').toLowerCase().trim();
-      if (globalCorrections[key]) {
-        const c = globalCorrections[key];
-        result.name = c.name || result.name;
-        result.scientific = c.scientific || result.scientific;
-        result.family = c.family || result.family;
-        result.correctionNote = `✨ Correction: "${key}" → "${c.name}"`;
-      } else {
-        result.correctionNote = null;
-      }
-      return result;
-    }
-
-    // --- Add or overwrite a correction (local, not saved to GitHub yet) ---
-    function addCorrection(key, name, scientific = '', family = '') {
-      if (!key || !name) return false;
-      const normalizedKey = key.toLowerCase().trim();
-      globalCorrections[normalizedKey] = {
-        name: name.trim(),
-        scientific: scientific.trim() || '',
-        family: family.trim() || ''
-      };
-      updateCorrectionStats();
-      setStatus(`✅ Correction added/updated: "${normalizedKey}" → "${name.trim()}"`, false);
-      return true;
-    }
-
-    function removeCorrection(key) {
-      const normalizedKey = key.toLowerCase().trim();
-      if (globalCorrections[normalizedKey]) {
-        delete globalCorrections[normalizedKey];
-        updateCorrectionStats();
-        setStatus(`🗑️ Removed correction for "${normalizedKey}"`, false);
-        return true;
-      }
-      return false;
-    }
-
-    function renderCorrectionsList() {
-      if (!correctionsListDiv) return;
-      const entries = Object.entries(globalCorrections);
-      if (entries.length === 0) {
-        correctionsListDiv.innerHTML = '<i>No corrections yet. Add one above.</i>';
-        return;
-      }
-      correctionsListDiv.innerHTML = '';
-      for (const [key, val] of entries) {
-        const div = document.createElement('div');
-        div.className = 'correction-item';
-        div.innerHTML = `
-          <div><span class="correction-key">${escapeHtml(key)}</span> → <span class="correction-value">${escapeHtml(val.name)}</span></div>
-          <button class="delete-correction" data-key="${escapeHtml(key)}"><i class="fas fa-trash"></i> Delete</button>
-        `;
-        const delBtn = div.querySelector('.delete-correction');
-        delBtn.addEventListener('click', () => removeCorrection(key));
-        correctionsListDiv.appendChild(div);
-      }
-    }
-
     function downloadCorrectionsFile() {
-      const dataStr = JSON.stringify(globalCorrections, null, 2);
+      const merged = getAllCorrections();
+      const dataStr = JSON.stringify(merged, null, 2);
       const blob = new Blob([dataStr], {type: 'application/json'});
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -280,10 +299,10 @@
       a.download = 'corrections.json';
       a.click();
       URL.revokeObjectURL(url);
-      setStatus("Downloaded corrections.json – upload to GitHub.", false);
+      setStatus("Downloaded merged corrections.json – upload to GitHub to share.", false);
     }
 
-    // --- AI functions ---
+    // ---- AI functions (unchanged) ----
     const offlinePlantMap = [
       { patterns: ['mango', 'mangifera', '07747607'], name: 'Mango Tree', scientific: 'Mangifera indica', family: 'Anacardiaceae' },
       { patterns: ['oak', 'quercus', '07844045'], name: 'Oak Tree', scientific: 'Quercus', family: 'Fagaceae' },
@@ -371,7 +390,7 @@
       }
     }
 
-    async function identifyImage(imageBlob, suppressAutoRerun = false) {
+    async function identifyImage(imageBlob) {
       let result = null;
       if (currentMode === 'online') {
         result = await identifyOnline(imageBlob);
@@ -388,51 +407,66 @@
       }
       if (result) {
         const predictedKey = result.originalPredictedLabel || result.name;
-        applyGlobalCorrection(result, predictedKey);
-        defaultMsg.classList.add('hidden');
-        aiOutput.innerHTML = `
-          <div class="plant-card">
-            <div><strong><i class="fas fa-leaf"></i> ${escapeHtml(result.name)}</strong></div>
-            <div class="sci-name">${escapeHtml(result.scientific || '')}</div>
-            <div class="confidence">🎯 Confidence: ${result.confidence}%</div>
-            <div>🌿 Family: ${escapeHtml(result.family)}</div>
-            <div style="font-size:0.7rem;">🔍 Source: ${result.source}</div>
-            ${result.correctionNote ? `<div style="font-size:0.7rem; color:#2d6a4f;">${escapeHtml(result.correctionNote)}</div>` : ''}
-          </div>
-        `;
-
-        // Always provide a correction form (allow override even if corrected already)
-        const feedbackDiv = document.createElement('div');
-        feedbackDiv.className = 'feedback-area';
-        feedbackDiv.innerHTML = `
-          <div><i class="fas fa-robot"></i> AI predicted: <code>${escapeHtml(predictedKey)}</code></div>
-          <div class="feedback-input">
-            <input type="text" id="quickCorrectName" placeholder="Correct plant name (e.g. Mango)" />
-            <button id="quickAddBtn" class="primary">➕ Add / Override Correction</button>
-          </div>
-          <div style="font-size:0.7rem;">This will be saved locally. Use "Download corrections.json" to share with all users.</div>
-        `;
-        const quickAddBtn = feedbackDiv.querySelector('#quickAddBtn');
-        const quickInput = feedbackDiv.querySelector('#quickCorrectName');
-        quickAddBtn.addEventListener('click', async () => {
-          const correctName = quickInput.value.trim();
-          if (correctName) {
-            addCorrection(predictedKey, correctName);
-            quickInput.value = '';
-            // Re-run identification on the same image to show corrected name
-            setStatus("Re-identifying with new correction...", false);
-            await identifyImage(currentImageBlob, true);
-          } else {
-            alert("Please enter a correct name.");
-          }
-        });
-        aiOutput.appendChild(feedbackDiv);
-        setStatus(`✅ ${result.name} (${result.confidence}%)`, false);
+        applyBestCorrection(result, predictedKey);
+        lastResult = result;
+        lastImageBlob = imageBlob;
+        displayResult(result, predictedKey);
       } else {
         defaultMsg.classList.remove('hidden');
         aiOutput.innerHTML = '';
         setStatus("Could not identify. Use a clearer photo.", false);
       }
+    }
+
+    function displayResult(result, predictedKey) {
+      defaultMsg.classList.add('hidden');
+      aiOutput.innerHTML = `
+        <div class="plant-card">
+          <div><strong><i class="fas fa-leaf"></i> ${escapeHtml(result.name)}</strong></div>
+          <div class="sci-name">${escapeHtml(result.scientific || '')}</div>
+          <div class="confidence">🎯 Confidence: ${result.confidence}%</div>
+          <div>🌿 Family: ${escapeHtml(result.family)}</div>
+          <div style="font-size:0.7rem;">🔍 Source: ${result.source}</div>
+          ${result.correctionNote ? `<div style="font-size:0.7rem; color:#2d6a4f;">${escapeHtml(result.correctionNote)}</div>` : ''}
+        </div>
+      `;
+      // Correction form
+      const feedbackDiv = document.createElement('div');
+      feedbackDiv.className = 'feedback-area';
+      feedbackDiv.innerHTML = `
+        <div><i class="fas fa-robot"></i> AI predicted: <code id="predictedKeyLabel">${escapeHtml(predictedKey)}</code>
+          <button id="copyPredictedBtn" class="copy-predicted"><i class="fas fa-copy"></i> Copy</button>
+        </div>
+        <div class="feedback-input">
+          <input type="text" id="quickCorrectName" placeholder="Correct plant name (e.g. Mango)" />
+          <button id="quickAddBtn" class="primary">➕ Save Correction (local)</button>
+        </div>
+        <div style="font-size:0.7rem;">✔️ Saved locally – survives page refresh. <strong>Download JSON to share with others.</strong></div>
+      `;
+      const quickAddBtn = feedbackDiv.querySelector('#quickAddBtn');
+      const quickInput = feedbackDiv.querySelector('#quickCorrectName');
+      const copyBtn = feedbackDiv.querySelector('#copyPredictedBtn');
+      copyBtn.addEventListener('click', () => {
+        navigator.clipboard.writeText(predictedKey);
+        copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+        setTimeout(() => copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy', 1500);
+      });
+      quickAddBtn.addEventListener('click', () => {
+        const correctName = quickInput.value.trim();
+        if (correctName) {
+          addCorrection(predictedKey, correctName);
+          quickInput.value = '';
+          // Re-apply correction to the current result without re-running AI
+          const newResult = { ...lastResult };
+          applyBestCorrection(newResult, predictedKey);
+          displayResult(newResult, predictedKey);
+          setStatus(`✅ Corrected locally: "${predictedKey}" → "${correctName}"`, false);
+        } else {
+          alert("Please enter a correct name.");
+        }
+      });
+      aiOutput.appendChild(feedbackDiv);
+      setStatus(`✅ ${result.name} (${result.confidence}%)`, false);
     }
 
     function blobToImage(blob) {
@@ -450,13 +484,11 @@
       canvas.height = video.videoHeight;
       canvas.getContext('2d').drawImage(video, 0, 0);
       const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.9));
-      currentImageBlob = blob;
       await identifyImage(blob);
     }
 
     async function handleUpload(file) {
       if (!file) return;
-      currentImageBlob = file;
       await identifyImage(file);
     }
 
@@ -473,7 +505,7 @@
       }
     }
 
-    // --- Camera UI ---
+    // Camera UI
     const placeholder = document.getElementById('placeholder');
     function updateUICamera() {
       if (cameraActive && currentStream && video.srcObject) {
@@ -531,7 +563,7 @@
       });
     }
 
-    // Developer Mode toggle
+    // Dev panel listeners
     devModeBtn.addEventListener('click', () => {
       devPanel.classList.toggle('visible');
     });
@@ -543,6 +575,12 @@
         addCorrection(key, name);
         document.getElementById('newKey').value = '';
         document.getElementById('newName').value = '';
+        if (lastResult && lastImageBlob) {
+          // Re-apply to last result
+          const newResult = { ...lastResult };
+          applyBestCorrection(newResult, key);
+          displayResult(newResult, key);
+        }
       } else {
         alert("Please enter both AI predicted text and correct name.");
       }
@@ -550,7 +588,7 @@
 
     downloadBtn.addEventListener('click', downloadCorrectionsFile);
 
-    // Initialise
+    // Main init
     startCam.addEventListener('click', startCamera);
     stopCam.addEventListener('click', stopCamera);
     snapBtn.addEventListener('click', captureFromCamera);
@@ -561,9 +599,10 @@
     });
     refreshBtn.addEventListener('click', () => loadGlobalCorrections(true));
 
+    loadLocalCorrections();
     loadGlobalCorrections(true).then(() => {
       loadOfflineModel();
-      setStatus("Ready. You can always override any correction using the box below the result.", false);
+      setStatus("Ready. Your corrections are saved locally and survive refresh.", false);
     });
   })();
 </script>
