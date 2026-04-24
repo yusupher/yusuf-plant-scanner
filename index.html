@@ -1,15 +1,13 @@
-html
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>🌿 PlantAI · Reliable Feature Learning</title>
+  <title>🌿 PlantAI · Reliable corrections (no embedding)</title>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <style>
-    /* (same as before, keep CSS) */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #c8e0bc; font-family: system-ui, sans-serif; padding: 16px; }
     .app { max-width: 750px; margin: 0 auto; background: white; border-radius: 2rem; overflow: hidden; box-shadow: 0 20px 35px rgba(0,0,0,0.2); }
@@ -45,7 +43,7 @@ html
     .owner-field textarea { border-radius: 20px; resize: vertical; }
     .correction-item { background: white; border-radius: 16px; padding: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
     .delete-correction { background: #b1624b; color: white; border: none; border-radius: 30px; padding: 2px 12px; cursor: pointer; }
-    .reference-item { font-size: 0.7rem; color: #2d6a4f; margin-left: 8px; }
+    .manual-id-panel { background: #eaf5e5; border-radius: 20px; padding: 14px; margin-top: 16px; border: 2px solid #2f6b47; }
     footer { font-size: 0.65rem; text-align: center; padding: 12px; background: #f0f7eb; color: #4a6e3c; }
     .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 1000; }
     .modal-content { background: white; padding: 24px; border-radius: 32px; max-width: 300px; text-align: center; }
@@ -56,14 +54,16 @@ html
 <body>
 <div class="app">
   <header>
-    <h1><i class="fas fa-leaf"></i> PlantAI <i class="fas fa-brain"></i></h1>
+    <h1><i class="fas fa-leaf"></i> PlantAI <i class="fas fa-crown"></i></h1>
     <div class="mode-selector">
-      <button id="modeOffline" class="mode-btn active">📴 Feature Recognition</button>
+      <button id="modeAuto" class="mode-btn">🔄 Auto</button>
+      <button id="modeOnline" class="mode-btn active">🌐 Online (best)</button>
+      <button id="modeOffline" class="mode-btn">📴 Offline</button>
       <button id="refreshCorrectionsBtn" class="refresh-btn"><i class="fas fa-sync-alt"></i> Reload JSON</button>
       <button id="ownerLoginBtn" class="owner-btn"><i class="fas fa-lock"></i> Owner Login</button>
       <button id="logoutBtn" class="logout-btn" style="display:none;"><i class="fas fa-sign-out-alt"></i> Exit Owner Mode</button>
     </div>
-    <div class="info-note">🧠 <strong>Train by adding reference images</strong> – then the app recognises the plant from any part (leaf, fruit, tree).</div>
+    <div class="info-note">📌 Corrections are tied to AI labels. Owner can fix wrong AI guesses.</div>
   </header>
 
   <div class="camera-area">
@@ -85,7 +85,7 @@ html
   </div>
 
   <div class="status">
-    <span id="statusMsg">📡 Loading AI model...</span>
+    <span id="statusMsg">🌐 Loading AI & corrections...</span>
     <span id="spinner" class="loader hidden"></span>
     <span id="correctionStats" style="font-size:0.7rem; margin-left:auto;">—</span>
   </div>
@@ -93,19 +93,19 @@ html
   <div class="result" id="resultArea">
     <div id="defaultMsg" class="error-msg">
       <i class="fas fa-seedling"></i> Upload or take a photo.<br>
-      Owner can teach the app by adding <strong>reference images</strong>.
+      Owner can correct wrong AI guesses.
     </div>
     <div id="aiOutput"></div>
   </div>
 
   <div id="ownerPanel" class="owner-panel">
-    <h4><i class="fas fa-crown"></i> Owner Training Panel</h4>
+    <h4><i class="fas fa-crown"></i> Owner Correction Manager</h4>
     <div class="owner-field">
-      <label>Plant name (key):</label>
-      <input type="text" id="correctionKey" placeholder="e.g. mango, cowpea, cashew">
+      <label>AI predicted key (read‑only):</label>
+      <input type="text" id="correctionKey" readonly>
     </div>
     <div class="owner-field">
-      <label>Common name (display):</label>
+      <label>Correct common name:</label>
       <input type="text" id="commonName" placeholder="e.g. Cowpea">
       <button id="autoFillBtn" class="primary" style="margin-top:5px;"><i class="fas fa-magic"></i> Auto‑fill from DB</button>
     </div>
@@ -122,11 +122,10 @@ html
       <textarea id="description" rows="2" placeholder="Legume crop, rich in protein."></textarea>
     </div>
     <div class="owner-field">
-      <label>Use current image as reference:</label>
-      <button id="addReferenceBtn" class="primary"><i class="fas fa-plus-circle"></i> Add this image as reference</button>
+      <label><input type="checkbox" id="ownerSure"> ✅ I am sure (confidence 100%)</label>
     </div>
-    <button id="saveCorrectionBtn" class="primary"><i class="fas fa-save"></i> Save details only (no image)</button>
-    <div class="warning-note" id="noImageWarning" style="display:none;">⚠️ Without a reference image, this plant will NOT be recognised from photos.</div>
+    <button id="saveCorrectionBtn" class="primary"><i class="fas fa-save"></i> Save Correction (temporary)</button>
+    <div class="warning-note">⚠️ Corrections are saved locally until you download and upload the JSON file to GitHub.</div>
     <hr>
     <button id="downloadCorrectionsBtn" style="background:#2f6b47; color:white;"><i class="fas fa-download"></i> Download corrections.json</button>
     <div id="correctionsList"></div>
@@ -134,7 +133,7 @@ html
 
   <footer>
     🔒 Owner password: <strong>yusupher01</strong><br>
-    🧠 <strong>How to train:</strong> 1) Upload a plant photo. 2) Click "Train: Add this image as reference". 3) Add multiple references (different parts) for same plant. 4) Download JSON & upload to GitHub.
+    🧠 <strong>How to correct:</strong> After AI identifies a plant wrongly, click "Owner: Correct this label", enter correct name, save. Then download JSON & upload to GitHub.
   </footer>
 </div>
 
@@ -175,22 +174,22 @@ html
     const descriptionInput = document.getElementById('description');
     const ownerSureCheckbox = document.getElementById('ownerSure');
     const saveCorrectionBtn = document.getElementById('saveCorrectionBtn');
-    const addReferenceBtn = document.getElementById('addReferenceBtn');
     const downloadBtn = document.getElementById('downloadCorrectionsBtn');
     const correctionsListDiv = document.getElementById('correctionsList');
     const autoFillBtn = document.getElementById('autoFillBtn');
-    const noImageWarning = document.getElementById('noImageWarning');
 
     let currentStream = null;
     let cameraActive = false;
-    let mobilenetModel = null;       // classification + embedding
-    let modelLoaded = false;
-    let lastImageBlob = null;
-    let lastImageElement = null;
+    let offlineModel = null;
+    let offlineReady = false;
+    let currentMode = 'online';
     let globalCorrections = {};
     let pendingCorrections = {};
+    let lastImageBlob = null;
+    let lastResult = null;
+    let lastPredictedKey = '';
 
-    // Plant database auto‑fill
+    // Plant database for auto‑fill
     const plantDatabase = {
       "cowpea": { common: "Cowpea", scientific: "Vigna unguiculata", family: "Fabaceae", description: "Legume crop, rich in protein, drought-tolerant." },
       "mango": { common: "Mango", scientific: "Mangifera indica", family: "Anacardiaceae", description: "Tropical fruit tree, sweet fruit." },
@@ -219,132 +218,44 @@ html
       autoFill(commonNameInput, scientificNameInput, familyNameInput, descriptionInput);
     });
 
+    // Mode buttons
+    const modeAuto = document.getElementById('modeAuto');
+    const modeOnline = document.getElementById('modeOnline');
+    const modeOffline = document.getElementById('modeOffline');
+    function setActiveMode(mode) {
+      modeAuto.classList.remove('active');
+      modeOnline.classList.remove('active');
+      modeOffline.classList.remove('active');
+      if (mode === 'auto') modeAuto.classList.add('active');
+      else if (mode === 'online') modeOnline.classList.add('active');
+      else if (mode === 'offline') modeOffline.classList.add('active');
+      currentMode = mode;
+      setStatus(`Mode: ${mode === 'auto' ? 'Auto (online→offline)' : mode === 'online' ? 'Online (iNaturalist)' : 'Offline (MobileNet)'}`, false);
+    }
+    modeAuto.addEventListener('click', () => setActiveMode('auto'));
+    modeOnline.addEventListener('click', () => setActiveMode('online'));
+    modeOffline.addEventListener('click', () => setActiveMode('offline'));
+
     function setStatus(msg, loading = false) {
       statusSpan.innerText = msg;
       if (loading) spinner.classList.remove('hidden');
       else spinner.classList.add('hidden');
     }
 
-    // ---------- Load MobileNet (both classification and embedding) ----------
-    async function loadModel() {
-      setStatus("Loading AI model...", true);
-      try {
-        mobilenetModel = await mobilenet.load({ version: 2, alpha: 1.0 });
-        modelLoaded = true;
-        setStatus("✅ AI model ready. Owner can train.", false);
-        if (cameraActive) snapBtn.disabled = false;
-      } catch(e) {
-        console.error(e);
-        setStatus("❌ Failed to load AI model. Refresh page.", false);
-      }
-    }
-
-    // Extract embedding using the internal logits (before softmax)
-    async function getEmbedding(imgElement) {
-      if (!mobilenetModel) return null;
-      try {
-        // Returns a 1D tensor (logits) of shape [1000]? No, internal=true returns logits.
-        // Actually mobilenet.infer with internal:true gives the logits (pre-softmax) of shape [1, 1000] for classification.
-        // But we want a feature vector: use the 'conv_pw_13' layer? Simpler: use the logits as a 1000-dim embedding.
-        // For MobileNetV2, the penultimate layer has 1280 dimensions. We'll use the model's embedding by taking the output of the global pooling.
-        // Instead of hacking, we'll use the tf.Model approach: get the model from the mobilenet instance.
-        const model = mobilenetModel.model;
-        // Identify the global average pooling layer (output shape [1, 1280] for MobileNetV2)
-        let embeddingLayer = null;
-        const layers = model.layers;
-        for (let i = layers.length - 1; i >= 0; i--) {
-          const name = layers[i].name;
-          if (name.includes('global_average_pooling2d') || name.includes('avg_pool')) {
-            embeddingLayer = layers[i];
-            break;
-          }
-        }
-        if (!embeddingLayer) {
-          // Fallback: use the layer before the last dense layer
-          embeddingLayer = layers[layers.length - 2];
-        }
-        const embeddingModel = tf.model({ inputs: model.inputs, outputs: embeddingLayer.output });
-        let tensor = tf.browser.fromPixels(imgElement).resizeNearestNeighbor([224,224]).toFloat().expandDims(0);
-        tensor = tensor.sub(127.5).div(127.5);
-        const embTensor = embeddingModel.predict(tensor);
-        const emb = await embTensor.data();
-        tensor.dispose(); embTensor.dispose();
-        return Array.from(emb);
-      } catch(e) {
-        console.error("Embedding error:", e);
-        return null;
-      }
-    }
-
-    // Cosine similarity
-    function cosineSimilarity(vecA, vecB) {
-      if (!vecA || !vecB || vecA.length !== vecB.length) return 0;
-      let dot = 0, magA = 0, magB = 0;
-      for (let i = 0; i < vecA.length; i++) {
-        dot += vecA[i] * vecB[i];
-        magA += vecA[i] * vecA[i];
-        magB += vecB[i] * vecB[i];
-      }
-      if (magA === 0 || magB === 0) return 0;
-      return dot / (Math.sqrt(magA) * Math.sqrt(magB));
-    }
-
-    // Find best matching plant by embeddings
-    async function findMatchByEmbedding(imgElement) {
-      if (!modelLoaded) return null;
-      const queryEmb = await getEmbedding(imgElement);
-      if (!queryEmb) return null;
-      const allCorrections = { ...globalCorrections, ...pendingCorrections };
-      let bestMatch = null, bestScore = 0.65;
-      for (const key in allCorrections) {
-        const plant = allCorrections[key];
-        if (plant.embeddings && plant.embeddings.length) {
-          for (const refEmb of plant.embeddings) {
-            const sim = cosineSimilarity(queryEmb, refEmb);
-            if (sim > bestScore) {
-              bestScore = sim;
-              bestMatch = plant;
-            }
-          }
-        }
-      }
-      if (bestMatch) {
-        bestMatch.confidence = Math.round(bestScore * 100);
-        bestMatch.source = `Feature match (${bestMatch.confidence}%)`;
-        bestMatch.correctionNote = `🧠 Recognised from ${bestMatch.embeddings.length} reference images → ${bestMatch.name}`;
-      }
-      return bestMatch;
-    }
-
-    // ----- Correction storage -----
+    // Correction storage
     function getAllCorrections() { return { ...globalCorrections, ...pendingCorrections }; }
 
-    function addPendingCorrection(key, common, scientific, family, description, ownerSure, embeddings = null) {
+    function addPendingCorrection(key, common, scientific, family, description, ownerSure) {
       if (!key || !common) return false;
       const normalizedKey = key.toLowerCase().trim();
-      const entry = {
+      pendingCorrections[normalizedKey] = {
         name: common.trim(),
         scientific: scientific.trim() || '',
         family: family.trim() || '',
         description: description.trim() || '',
         ownerSure: ownerSure || false
       };
-      if (embeddings && embeddings.length) entry.embeddings = embeddings;
-      else if (pendingCorrections[normalizedKey] && pendingCorrections[normalizedKey].embeddings)
-        entry.embeddings = pendingCorrections[normalizedKey].embeddings;
-      pendingCorrections[normalizedKey] = entry;
-      setStatus(`✅ Added/updated: "${normalizedKey}" → "${common.trim()}"`, false);
-      updateCorrectionUI();
-      return true;
-    }
-
-    function addReferenceToPending(key, embedding) {
-      if (!key || !embedding) return false;
-      const normalizedKey = key.toLowerCase().trim();
-      if (!pendingCorrections[normalizedKey]) pendingCorrections[normalizedKey] = { name: key };
-      if (!pendingCorrections[normalizedKey].embeddings) pendingCorrections[normalizedKey].embeddings = [];
-      pendingCorrections[normalizedKey].embeddings.push(embedding);
-      setStatus(`✅ Added reference image for "${normalizedKey}"`, false);
+      setStatus(`✅ Correction added (pending upload): "${normalizedKey}" → "${common.trim()}"`, false);
       updateCorrectionUI();
       return true;
     }
@@ -360,23 +271,43 @@ html
       return false;
     }
 
+    function applyBestCorrection(result, predictedKey) {
+      const key = (predictedKey || result.name || '').toLowerCase().trim();
+      const all = getAllCorrections();
+      if (all[key]) {
+        const c = all[key];
+        result.name = c.name || result.name;
+        result.scientific = c.scientific || result.scientific;
+        result.family = c.family || result.family;
+        result.description = c.description || '';
+        if (c.ownerSure === true) result.confidence = '100';
+        result.correctionNote = `✨ Correction: "${key}" → "${c.name}"`;
+        result.appliedCorrectionKey = key;
+      } else {
+        result.correctionNote = null;
+        result.appliedCorrectionKey = null;
+      }
+      return result;
+    }
+
     async function loadGlobalCorrections(showMessage = true) {
-      setStatus("📡 Fetching trained plants from GitHub...", true);
+      setStatus("📡 Fetching corrections from GitHub...", true);
       try {
         const response = await fetch(CORRECTIONS_URL + '?t=' + Date.now());
         if (response.ok) {
           const data = await response.json();
-          if (typeof data === 'object') {
+          if (typeof data === 'object' && data !== null) {
             globalCorrections = data;
             pendingCorrections = {};
-            if (showMessage) setStatus(`✅ Loaded ${Object.keys(globalCorrections).length} trained plants.`, false);
+            if (showMessage) setStatus(`✅ Loaded ${Object.keys(globalCorrections).length} global corrections.`, false);
             updateCorrectionUI();
             return true;
-          } else throw new Error();
-        } else throw new Error();
-      } catch(e) {
+          } else throw new Error('Invalid JSON');
+        } else throw new Error(`HTTP ${response.status}`);
+      } catch(err) {
+        console.error(err);
         globalCorrections = {};
-        if (showMessage) setStatus(`⚠️ No corrections.json file.`, false);
+        if (showMessage) setStatus(`⚠️ No corrections.json file. Create one to store corrections.`, false);
         updateCorrectionUI();
         return false;
       }
@@ -397,7 +328,7 @@ html
     function updateCorrectionUI() {
       const pendingCount = Object.keys(pendingCorrections).length;
       const globalCount = Object.keys(globalCorrections).length;
-      correctionStatsSpan.innerHTML = `${globalCount} trained (${pendingCount} pending)`;
+      correctionStatsSpan.innerHTML = `${globalCount} global, ${pendingCount} pending`;
       renderCorrectionsList();
     }
 
@@ -406,132 +337,171 @@ html
       const all = getAllCorrections();
       const entries = Object.entries(all);
       if (entries.length === 0) {
-        correctionsListDiv.innerHTML = '<i>No trained plants yet. Upload images and add references.</i>';
+        correctionsListDiv.innerHTML = '<i>No corrections yet.</i>';
         return;
       }
       correctionsListDiv.innerHTML = '';
       for (const [key, val] of entries) {
         const isPending = !!pendingCorrections[key];
-        const refCount = val.embeddings ? val.embeddings.length : 0;
         const div = document.createElement('div');
         div.className = 'correction-item';
         div.innerHTML = `
-          <div><span class="correction-key">${escapeHtml(key)}</span> → <span class="correction-value">${escapeHtml(val.name)}</span> 
-          ${refCount > 0 ? `<span class="reference-item"><i class="fas fa-images"></i> ${refCount} refs</span>` : '<span class="reference-item" style="color:#b1624b;">⚠️ no image</span>'}
-          ${isPending ? '<span style="background:#f4a261; color:black; padding:2px 6px; border-radius:40px;">pending</span>' : '<span style="background:#2d6a4f; color:white; padding:2px 6px; border-radius:40px;">trained</span>'}</div>
+          <div><span class="correction-key">${escapeHtml(key)}</span> → <span class="correction-value">${escapeHtml(val.name)}</span> ${isPending ? '<span style="background:#f4a261; color:black; padding:2px 6px; border-radius:40px;">pending</span>' : '<span style="background:#2d6a4f; color:white; padding:2px 6px; border-radius:40px;">global</span>'}</div>
           ${ownerAuthenticated ? `<button class="delete-correction" data-key="${escapeHtml(key)}"><i class="fas fa-trash"></i> Delete${isPending ? ' pending' : ''}</button>` : ''}
         `;
         if (ownerAuthenticated) {
           const delBtn = div.querySelector('.delete-correction');
           delBtn.addEventListener('click', () => {
             if (pendingCorrections[key]) removePendingCorrection(key);
-            else setStatus(`Trained plant "${key}" can only be removed by editing corrections.json.`, false);
+            else setStatus(`Global correction "${key}" can only be removed by editing corrections.json.`, false);
           });
         }
         correctionsListDiv.appendChild(div);
       }
     }
 
-    // ----- Identification pipeline -----
-    async function identifyImage(imageBlob) {
-      const imgElement = await blobToImage(imageBlob);
-      lastImageElement = imgElement;
-      lastImageBlob = imageBlob;
-      // Try feature matching first
-      const match = await findMatchByEmbedding(imgElement);
-      if (match) {
-        displayResult({
-          name: match.name,
-          scientific: match.scientific,
-          confidence: match.confidence,
-          family: match.family,
-          description: match.description,
-          source: match.source,
-          correctionNote: match.correctionNote
+    // ---------- AI functions (iNaturalist + MobileNet) ----------
+    async function identifyOnline(imageBlob) {
+      setStatus("🌐 Online AI analyzing...", true);
+      const formData = new FormData();
+      formData.append('image', imageBlob, 'plant.jpg');
+      try {
+        const response = await fetch('https://api.inaturalist.org/v1/computervision/identify', {
+          method: 'POST',
+          body: formData
         });
-        return;
-      }
-      // No match: fallback to generic classification (offline)
-      if (mobilenetModel) {
-        try {
-          const predictions = await mobilenetModel.classify(imgElement);
-          if (predictions && predictions[0]) {
-            const top = predictions[0];
-            const result = {
-              name: top.className.split(',')[0].replace(/_/g, ' '),
-              confidence: (top.probability * 100).toFixed(1),
-              source: 'MobileNet (generic)',
-              scientific: '',
-              family: '',
-              description: ''
-            };
-            displayResult(result);
-            setStatus(`❓ Generic guess: ${result.name} (${result.confidence}%)`, false);
-          } else {
-            noMatch();
-          }
-        } catch(e) {
-          console.error(e);
-          noMatch();
+        if (!response.ok) throw new Error();
+        const data = await response.json();
+        if (data.results && data.results.length) {
+          const best = data.results[0];
+          const taxon = best.taxon;
+          if (!taxon) return null;
+          const confidence = (best.score * 100).toFixed(1);
+          if (confidence < 5) return null;
+          const commonName = taxon.preferred_common_name || '';
+          const scientificName = taxon.name || '';
+          const rawLabel = scientificName || commonName || taxon.id;
+          return {
+            name: commonName || scientificName.split(' ').slice(0,2).join(' '),
+            scientific: scientificName,
+            confidence: confidence,
+            family: taxon.ancestors?.find(a => a.rank === 'family')?.name || '',
+            description: '',
+            source: 'iNaturalist (online)',
+            originalPredictedLabel: rawLabel
+          };
         }
-      } else {
-        noMatch();
-      }
+        return null;
+      } catch(e) { return null; }
+    }
 
-      function noMatch() {
+    const offlinePlantMap = [
+      { patterns: ['mango', 'mangifera'], name: 'Mango', scientific: 'Mangifera indica', family: 'Anacardiaceae' },
+      { patterns: ['oak', 'quercus'], name: 'Oak', scientific: 'Quercus', family: 'Fagaceae' }
+    ];
+    function matchOffline(label) {
+      const lower = label.toLowerCase();
+      for (let p of offlinePlantMap) if (p.patterns.some(pat => lower.includes(pat))) return p;
+      let generic = label.split(',')[0].replace(/_/g,' ');
+      generic = generic.replace(/(^\w|\s\w)/g, c=>c.toUpperCase());
+      return { name: generic, scientific: '—', family: 'Plantae' };
+    }
+    async function classifyOffline(imgElement) {
+      if (!offlineModel) return null;
+      setStatus("📴 Offline AI...", true);
+      try {
+        const tensor = tf.browser.fromPixels(imgElement).resizeNearestNeighbor([224,224]).toFloat();
+        const expanded = tensor.expandDims(0);
+        const preds = await offlineModel.classify(expanded);
+        tensor.dispose(); expanded.dispose();
+        if (preds && preds[0]) {
+          const plant = matchOffline(preds[0].className);
+          return {
+            name: plant.name,
+            scientific: plant.scientific,
+            confidence: (preds[0].probability*100).toFixed(1),
+            family: plant.family,
+            source: 'MobileNet (offline)',
+            originalPredictedLabel: preds[0].className
+          };
+        }
+        return null;
+      } catch(e) { return null; }
+    }
+
+    async function identifyImage(imageBlob) {
+      let result = null;
+      if (currentMode === 'online') {
+        result = await identifyOnline(imageBlob);
+      } else if (currentMode === 'offline') {
+        const img = await blobToImage(imageBlob);
+        result = await classifyOffline(img);
+      } else {
+        result = await identifyOnline(imageBlob);
+        if (!result && offlineReady) {
+          setStatus("Online failed, offline fallback", false);
+          const img = await blobToImage(imageBlob);
+          result = await classifyOffline(img);
+        }
+      }
+      if (result) {
+        const predictedKey = result.originalPredictedLabel || result.name;
+        applyBestCorrection(result, predictedKey);
+        lastResult = result;
+        lastImageBlob = imageBlob;
+        lastPredictedKey = predictedKey;
+        displayResult(result, predictedKey);
+        setStatus(`✅ ${result.name} (${result.confidence}%)`, false);
+      } else {
+        // AI failed completely
         defaultMsg.classList.add('hidden');
-        aiOutput.innerHTML = `<div class="error-msg">❌ Could not identify this plant.<br>Owner can <strong>add a reference image</strong> to train the app.</div>`;
+        aiOutput.innerHTML = `<div class="error-msg">❌ AI could not identify this plant.<br>Owner can still correct, but no AI label available.</div>`;
         if (ownerAuthenticated) {
-          const trainDiv = document.createElement('div');
-          trainDiv.className = 'manual-id-panel';
-          trainDiv.innerHTML = `
-            <h4><i class="fas fa-chalkboard-teacher"></i> Train the app (add reference image)</h4>
-            <div class="owner-field"><label>Plant name (key):</label><input type="text" id="trainKey" placeholder="e.g. cashew, cowpea"></div>
-            <div class="owner-field"><label>Common name:</label><input type="text" id="trainCommon" placeholder="e.g. Cashew Tree"></div>
-            <button id="trainAutoFillBtn" class="primary"><i class="fas fa-magic"></i> Auto‑fill</button>
-            <div class="owner-field"><label>Scientific name:</label><input type="text" id="trainScientific"></div>
-            <div class="owner-field"><label>Family:</label><input type="text" id="trainFamily"></div>
-            <div class="owner-field"><label>Description:</label><textarea id="trainDesc" rows="2"></textarea></div>
-            <button id="trainSaveBtn" class="primary">📸 Add this image as reference & train</button>
+          const manualDiv = document.createElement('div');
+          manualDiv.className = 'manual-id-panel';
+          manualDiv.innerHTML = `
+            <h4><i class="fas fa-hands-helping"></i> Manual Correction (Owner)</h4>
+            <div class="owner-field"><label>Common name:</label><input type="text" id="manualCommon" placeholder="e.g. Cashew Tree"></div>
+            <button id="manualAutoFillBtn" class="primary"><i class="fas fa-magic"></i> Auto‑fill</button>
+            <div class="owner-field"><label>Scientific name:</label><input type="text" id="manualScientific"></div>
+            <div class="owner-field"><label>Family:</label><input type="text" id="manualFamily"></div>
+            <div class="owner-field"><label>Description:</label><textarea id="manualDesc" rows="2"></textarea></div>
+            <label><input type="checkbox" id="manualSure"> ✅ I am sure (100% confidence)</label><br>
+            <button id="manualSaveBtn" class="primary">✅ Show this name (temporary)</button>
+            <div class="info-note">This name is only for this image. To make it permanent, ensure the AI returns a label that you can correct.</div>
           `;
-          aiOutput.appendChild(trainDiv);
-          const trainKey = document.getElementById('trainKey');
-          const trainCommon = document.getElementById('trainCommon');
-          const trainScientific = document.getElementById('trainScientific');
-          const trainFamily = document.getElementById('trainFamily');
-          const trainDesc = document.getElementById('trainDesc');
-          const trainAutoFill = document.getElementById('trainAutoFillBtn');
-          trainAutoFill.addEventListener('click', () => autoFill(trainCommon, trainScientific, trainFamily, trainDesc));
-          const trainSave = document.getElementById('trainSaveBtn');
-          trainSave.addEventListener('click', async () => {
-            const key = trainKey.value.trim();
-            const common = trainCommon.value.trim();
-            if (!key || !common) { alert("Enter plant key and common name"); return; }
-            const scientific = trainScientific.value.trim();
-            const family = trainFamily.value.trim();
-            const desc = trainDesc.value.trim();
-            const emb = await getEmbedding(lastImageElement);
-            if (!emb) { alert("Could not extract features – try a clearer image."); return; }
-            addPendingCorrection(key, common, scientific, family, desc, false, [emb]);
-            setStatus(`✅ Trained "${key}" with this image. Download JSON to save permanently.`, false);
-            // Re-run identification to show result
-            const newMatch = await findMatchByEmbedding(lastImageElement);
-            if (newMatch) displayResult({
-              name: newMatch.name,
-              scientific: newMatch.scientific,
-              confidence: newMatch.confidence,
-              family: newMatch.family,
-              description: newMatch.description,
-              source: newMatch.source,
-              correctionNote: newMatch.correctionNote
-            });
+          aiOutput.appendChild(manualDiv);
+          const manualCommon = document.getElementById('manualCommon');
+          const manualScientific = document.getElementById('manualScientific');
+          const manualFamily = document.getElementById('manualFamily');
+          const manualDesc = document.getElementById('manualDesc');
+          const manualAutoFill = document.getElementById('manualAutoFillBtn');
+          manualAutoFill.addEventListener('click', () => autoFill(manualCommon, manualScientific, manualFamily, manualDesc));
+          const manualSave = document.getElementById('manualSaveBtn');
+          manualSave.addEventListener('click', () => {
+            const common = manualCommon.value.trim();
+            if (!common) { alert("Enter a common name"); return; }
+            const scientific = manualScientific.value.trim();
+            const family = manualFamily.value.trim();
+            const desc = manualDesc.value.trim();
+            const sure = document.getElementById('manualSure').checked;
+            const tempResult = {
+              name: common,
+              scientific: scientific,
+              family: family,
+              description: desc,
+              confidence: sure ? '100' : '?',
+              source: 'Manual (temporary)',
+              correctionNote: `👤 Owner named: ${common}`
+            };
+            displayResult(tempResult, 'temp');
           });
         }
-        setStatus("Not recognised. Owner can train by adding a reference image.", false);
+        setStatus("AI failed. Owner can temporarily name the plant.", false);
       }
     }
 
-    function displayResult(result) {
+    function displayResult(result, predictedKey = null) {
       defaultMsg.classList.add('hidden');
       let extra = result.description ? `<div>📖 ${escapeHtml(result.description)}</div>` : '';
       aiOutput.innerHTML = `
@@ -545,27 +515,38 @@ html
           ${result.correctionNote ? `<div style="color:#2d6a4f;">${escapeHtml(result.correctionNote)}</div>` : ''}
         </div>
       `;
-      if (ownerAuthenticated && lastImageBlob) {
+      if (ownerAuthenticated && predictedKey && predictedKey !== 'temp') {
         const btnDiv = document.createElement('div');
         btnDiv.style.marginTop = '8px';
-        const trainBtn = document.createElement('button');
-        trainBtn.className = 'primary';
-        trainBtn.innerHTML = '<i class="fas fa-chalkboard"></i> Train: Add this image as reference';
-        trainBtn.onclick = async () => {
-          const key = result.name.toLowerCase().replace(/ /g, '_');
-          const common = result.name;
-          const scientific = result.scientific || '';
-          const family = result.family || '';
-          const desc = result.description || '';
-          const emb = await getEmbedding(lastImageElement);
-          if (emb) {
-            addPendingCorrection(key, common, scientific, family, desc, false, [emb]);
-            setStatus(`✅ Added reference image for "${key}". Download JSON to share.`, false);
-          } else alert("Failed to extract features.");
+        if (result.appliedCorrectionKey && pendingCorrections[result.appliedCorrectionKey]) {
+          const undoBtn = document.createElement('button');
+          undoBtn.className = 'undo-correction-btn';
+          undoBtn.innerHTML = '<i class="fas fa-undo-alt"></i> Remove pending correction';
+          undoBtn.onclick = () => {
+            removePendingCorrection(result.appliedCorrectionKey);
+            if (lastImageBlob) identifyImage(lastImageBlob);
+          };
+          btnDiv.appendChild(undoBtn);
+        }
+        const editBtn = document.createElement('button');
+        editBtn.className = 'primary';
+        editBtn.style.background = '#2f6b47';
+        editBtn.style.marginLeft = '6px';
+        editBtn.innerHTML = '<i class="fas fa-edit"></i> Owner: Correct this label';
+        editBtn.onclick = () => {
+          correctionKeyInput.value = predictedKey;
+          commonNameInput.value = '';
+          scientificNameInput.value = '';
+          familyNameInput.value = '';
+          descriptionInput.value = '';
+          ownerSureCheckbox.checked = false;
+          ownerPanel.classList.add('visible');
+          ownerPanel.scrollIntoView({ behavior: 'smooth' });
         };
-        btnDiv.appendChild(trainBtn);
+        btnDiv.appendChild(editBtn);
         aiOutput.appendChild(btnDiv);
       }
+      setStatus(`✅ ${result.name} (${result.confidence}%)`, false);
     }
 
     function blobToImage(blob) {
@@ -585,9 +566,23 @@ html
       const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.9));
       await identifyImage(blob);
     }
+
     async function handleUpload(file) {
       if (!file) return;
       await identifyImage(file);
+    }
+
+    async function loadOfflineModel() {
+      setStatus("Loading offline AI...", true);
+      try {
+        offlineModel = await mobilenet.load({ version: 2, alpha: 1.0 });
+        offlineReady = true;
+        setStatus(`Offline AI ready. Mode: ${currentMode}`, false);
+        if (cameraActive) snapBtn.disabled = false;
+      } catch(e) {
+        offlineReady = false;
+        setStatus("Offline AI failed. Online only.", false);
+      }
     }
 
     // Camera UI
@@ -618,7 +613,7 @@ html
         await new Promise(r => video.videoWidth > 0 ? r() : (video.onloadedmetadata = r));
         cameraActive = true;
         updateUICamera();
-        setStatus(`Camera ready.`, false);
+        setStatus(`Camera ready. Mode: ${currentMode}`, false);
       } catch(e) {
         cameraActive = false;
         updateUICamera();
@@ -635,7 +630,6 @@ html
       updateUICamera();
       setStatus("Camera stopped.", false);
     }
-
     function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
 
     // Owner authentication
@@ -650,12 +644,12 @@ html
         ownerPanel.classList.add('visible');
         ownerLoginBtn.style.display = 'none';
         logoutBtn.style.display = 'inline-block';
-        setStatus("🔓 Owner mode: you can train the app.", false);
+        setStatus("🔓 Owner mode active. You can correct wrong AI labels.", false);
       } else {
         ownerPanel.classList.remove('visible');
         ownerLoginBtn.style.display = 'inline-block';
         logoutBtn.style.display = 'none';
-        setStatus("👤 User mode.", false);
+        setStatus("👤 User mode: no corrections.", false);
       }
     }
     submitPassword.addEventListener('click', () => {
@@ -669,31 +663,22 @@ html
     logoutBtn.addEventListener('click', () => { setOwnerMode(false); });
     modal.addEventListener('click', (e) => { if (e.target === modal) hideModal(); });
 
-    // Training panel actions
     saveCorrectionBtn.addEventListener('click', () => {
       const key = correctionKeyInput.value.trim();
       const common = commonNameInput.value.trim();
-      if (!key || !common) { alert("Enter plant key and common name"); return; }
+      if (!key || !common) { alert("Enter predicted key and common name"); return; }
       addPendingCorrection(key, common, scientificNameInput.value.trim(), familyNameInput.value.trim(), descriptionInput.value.trim(), ownerSureCheckbox.checked);
-      correctionKeyInput.value = '';
       commonNameInput.value = '';
       scientificNameInput.value = '';
       familyNameInput.value = '';
       descriptionInput.value = '';
       ownerSureCheckbox.checked = false;
-      noImageWarning.style.display = 'block';
-      setTimeout(() => noImageWarning.style.display = 'none', 5000);
+      if (lastResult && lastPredictedKey) {
+        const newResult = { ...lastResult };
+        applyBestCorrection(newResult, lastPredictedKey);
+        displayResult(newResult, lastPredictedKey);
+      }
     });
-
-    addReferenceBtn.addEventListener('click', async () => {
-      const key = correctionKeyInput.value.trim();
-      if (!key) { alert("Enter a plant key first."); return; }
-      if (!lastImageElement) { alert("No image loaded. Upload or capture a photo first."); return; }
-      const emb = await getEmbedding(lastImageElement);
-      if (!emb) { alert("Could not extract features – try a clearer image."); return; }
-      addReferenceToPending(key, emb);
-    });
-
     downloadBtn.addEventListener('click', downloadCorrectionsFile);
 
     startCam.addEventListener('click', startCamera);
@@ -703,9 +688,10 @@ html
     fileInput.addEventListener('change', (e) => { if (e.target.files[0]) handleUpload(e.target.files[0]); fileInput.value = ''; });
     refreshBtn.addEventListener('click', () => loadGlobalCorrections(true).then(() => { if (lastImageBlob) identifyImage(lastImageBlob); }));
 
-    loadGlobalCorrections(true);
-    loadModel();
-    setStatus("✅ Ready. Owner must add reference images to train the app.", false);
+    loadGlobalCorrections(true).then(() => {
+      loadOfflineModel();
+      setStatus("✅ Ready. Owner can correct any wrong AI label using the panel below the result.", false);
+    });
   })();
 </script>
 </body>
