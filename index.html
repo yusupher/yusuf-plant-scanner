@@ -1,3 +1,4 @@
+html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -85,7 +86,7 @@
 
   <!-- Image preview (like the simple working code) -->
   <div class="preview-area">
-    <img id="preview">
+    <img id="preview" alt="Preview">
   </div>
 
   <div class="status">
@@ -246,7 +247,7 @@
       else spinner.classList.add('hidden');
     }
 
-    // Correction storage
+    // Correction storage (unchanged)
     function getAllCorrections() { return { ...globalCorrections, ...pendingCorrections }; }
     function addPendingCorrection(key, common, scientific, family, description, ownerSure) {
       if (!key || !common) return false;
@@ -513,28 +514,30 @@
       });
     }
 
+    // Capture from camera with preview
     async function captureFromCamera() {
       if (!cameraActive || !video.videoWidth) { setStatus("Start camera first", false); return; }
       const canvas = document.createElement('canvas');
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       canvas.getContext('2d').drawImage(video, 0, 0);
-      const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.9));
-      // show preview
-      const url = URL.createObjectURL(blob);
-      previewImg.src = url;
-      previewImg.style.display = 'block';
-      URL.revokeObjectURL(url);
-      await identifyImage(blob);
+      canvas.toBlob(async (blob) => {
+        const url = URL.createObjectURL(blob);
+        previewImg.src = url;
+        previewImg.style.display = 'block';
+        // Do not revoke immediately; keep it for the preview.
+        await identifyImage(blob);
+        // Keep URL for preview, it will be replaced next time.
+      }, 'image/jpeg', 0.9);
     }
 
+    // Upload handler with preview
     async function handleUpload(file) {
       if (!file) return;
-      // show preview
       const url = URL.createObjectURL(file);
       previewImg.src = url;
       previewImg.style.display = 'block';
-      URL.revokeObjectURL(url);
+      // Keep URL for preview; revoke only when new image loaded.
       await identifyImage(file);
     }
 
