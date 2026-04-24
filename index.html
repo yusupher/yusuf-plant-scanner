@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>🌿 PlantAI · Train with images – recognises any plant part</title>
+  <title>🌿 PlantAI · Fixed embedding extraction</title>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
@@ -63,7 +63,7 @@
       <button id="ownerLoginBtn" class="owner-btn"><i class="fas fa-lock"></i> Owner Login</button>
       <button id="logoutBtn" class="logout-btn" style="display:none;"><i class="fas fa-sign-out-alt"></i> Exit Owner Mode</button>
     </div>
-    <div class="info-note">🧠 <strong>Training requires at least 1 reference image</strong> – then the app recognises the plant from any part (leaf, fruit, tree).</div>
+    <div class="info-note">🧠 <strong>Training requires at least 1 reference image</strong> – then the app recognises the plant from any part.</div>
   </header>
 
   <div class="camera-area">
@@ -249,12 +249,13 @@
       else spinner.classList.add('hidden');
     }
 
-    // ---------- Embedding extraction (fixed) ----------
+    // ---------- Embedding extraction (robust) ----------
     async function loadEmbeddingModel() {
       setStatus("Loading feature extraction model...", true);
       try {
         const mobilenet = await mobilenet.load({ version: 2, alpha: 1.0 });
         const model = mobilenet.model;
+        // Try to find the global average pooling layer
         let embeddingLayer = null;
         const allLayers = model.layers;
         for (let i = allLayers.length - 1; i >= 0; i--) {
@@ -264,29 +265,53 @@
             break;
           }
         }
-        if (!embeddingLayer) embeddingLayer = allLayers[allLayers.length - 2];
+        if (!embeddingLayer) {
+          // If not found, use the layer before the last dense layer (logits)
+          embeddingLayer = allLayers[allLayers.length - 2];
+        }
         if (embeddingLayer) {
           embeddingModel = tf.model({ inputs: model.inputs, outputs: embeddingLayer.output });
           embeddingReady = true;
           setStatus("✅ Feature extractor ready.", false);
-        } else throw new Error();
+          console.log("Embedding model loaded");
+        } else {
+          throw new Error("No suitable layer found");
+        }
       } catch(e) {
-        console.error(e);
+        console.error("Embedding model error:", e);
         embeddingReady = false;
-        setStatus("⚠️ Feature extraction unavailable – training won't work.", false);
+        setStatus("⚠️ Feature extraction unavailable – training won't work. Refresh page.", false);
       }
     }
 
     async function getEmbedding(imgElement) {
-      if (!embeddingModel) return null;
+      if (!embeddingReady) {
+        console.warn("Embedding model not ready");
+        return null;
+      }
       try {
-        let tensor = tf.browser.fromPixels(imgElement).resizeNearestNeighbor([224,224]).toFloat().expandDims(0);
+        // Ensure image is loaded
+        if (!imgElement.complete || imgElement.naturalWidth === 0) {
+          console.warn("Image not fully loaded");
+          return null;
+        }
+        // Preprocess: resize to 224x224, convert to tensor, normalize
+        let tensor = tf.browser.fromPixels(imgElement)
+          .resizeNearestNeighbor([224, 224])
+          .toFloat()
+          .expandDims(0);
+        // Normalize to [-1, 1] as required by MobileNet
         tensor = tensor.sub(127.5).div(127.5);
-        const embTensor = embeddingModel.predict(tensor);
-        const emb = await embTensor.data();
-        tensor.dispose(); embTensor.dispose();
-        return Array.from(emb);
-      } catch(e) { console.error(e); return null; }
+        const embeddingTensor = embeddingModel.predict(tensor);
+        const embedding = await embeddingTensor.data();
+        tensor.dispose();
+        embeddingTensor.dispose();
+        // Convert to regular array
+        return Array.from(embedding);
+      } catch(e) {
+        console.error("Embedding extraction error:", e);
+        return null;
+      }
     }
 
     function cosineSimilarity(vecA, vecB) {
@@ -516,7 +541,7 @@
       lastImageElement = imgElement;
       lastImageBlob = imageBlob;
 
-      // 1. Try feature matching (trained plants with embeddings)
+      // 1. Try feature matching
       const match = await findMatchByEmbedding(imgElement);
       if (match) {
         displayResult({
@@ -531,7 +556,7 @@
         return;
       }
 
-      // 2. Fallback to AI (online/offline)
+      // 2. Fallback to AI
       let result = null;
       if (currentMode === 'online') result = await identifyOnline(imageBlob);
       else if (currentMode === 'offline') result = await classifyOffline(imgElement);
@@ -587,7 +612,10 @@
             const family = trainFamily.value.trim();
             const desc = trainDesc.value.trim();
             const emb = await getEmbedding(lastImageElement);
-            if (!emb) { alert("Could not extract features – try a clearer image."); return; }
+            if (!emb) {
+              alert("Could not extract features. Make sure the image is clear and try again. (Check console for errors)");
+              return;
+            }
             addPendingCorrection(key, common, scientific, family, desc, false, [emb]);
             setStatus(`✅ Trained "${key}" with this image. Download JSON to save permanently.`, false);
             const newMatch = await findMatchByEmbedding(lastImageElement);
@@ -636,7 +664,9 @@
           if (emb) {
             addPendingCorrection(key, common, scientific, family, desc, false, [emb]);
             setStatus(`✅ Added reference image for "${key}". Download JSON to share.`, false);
-          } else alert("Failed to extract features.");
+          } else {
+            alert("Could not extract features. Please try a different image.");
+          }
         };
         btnDiv.appendChild(trainBtn);
         aiOutput.appendChild(btnDiv);
@@ -644,9 +674,10 @@
     }
 
     function blobToImage(blob) {
-      return new Promise((resolve) => {
+      return new Promise((resolve, reject) => {
         const img = new Image();
         img.onload = () => resolve(img);
+        img.onerror = reject;
         img.src = URL.createObjectURL(blob);
       });
     }
@@ -772,7 +803,7 @@
       if (!key) { alert("Enter a plant key first."); return; }
       if (!lastImageElement) { alert("No image loaded. Upload or capture a photo first."); return; }
       const emb = await getEmbedding(lastImageElement);
-      if (!emb) { alert("Could not extract features – try a clearer image."); return; }
+      if (!emb) { alert("Could not extract features. Make sure the image is clear and try again."); return; }
       addReferenceToPending(key, emb);
     });
 
