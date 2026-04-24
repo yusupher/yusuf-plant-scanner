@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>🌿 PlantAI · Fallback for unrecognised plants</title>
+  <title>🌿 PlantAI · Auto‑fallback + auto‑fill correction</title>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
@@ -43,7 +44,6 @@
     .owner-field textarea { border-radius: 20px; resize: vertical; }
     .correction-item { background: white; border-radius: 16px; padding: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
     .delete-correction { background: #b1624b; color: white; border: none; border-radius: 30px; padding: 2px 12px; cursor: pointer; }
-    .fallback-area { background: #fef3c7; border-radius: 20px; padding: 12px; margin-top: 12px; border: 1px solid #f59e0b; }
     footer { font-size: 0.65rem; text-align: center; padding: 12px; background: #f0f7eb; color: #4a6e3c; }
     .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 1000; }
     .modal-content { background: white; padding: 24px; border-radius: 32px; max-width: 300px; text-align: center; }
@@ -53,15 +53,16 @@
 <body>
 <div class="app">
   <header>
-    <h1><i class="fas fa-leaf"></i> PlantAI <i class="fas fa-crown"></i></h1>
+    <h1><i class="fas fa-leaf"></i> PlantAI <i class="fas fa-robot"></i></h1>
     <div class="mode-selector">
-      <button id="modeAuto" class="mode-btn">🔄 Auto</button>
-      <button id="modeOnline" class="mode-btn active">🌐 Online (best)</button>
-      <button id="modeOffline" class="mode-btn">📴 Offline</button>
+      <button id="modeAuto" class="mode-btn active">🔄 Auto (recommended)</button>
+      <button id="modeOnline" class="mode-btn">🌐 Online Only</button>
+      <button id="modeOffline" class="mode-btn">📴 Offline Only</button>
       <button id="refreshCorrectionsBtn" class="refresh-btn"><i class="fas fa-sync-alt"></i> Reload JSON</button>
       <button id="ownerLoginBtn" class="owner-btn"><i class="fas fa-lock"></i> Owner Login</button>
       <button id="logoutBtn" class="logout-btn" style="display:none;"><i class="fas fa-sign-out-alt"></i> Exit Owner Mode</button>
     </div>
+    <div class="info-note">📌 Auto mode: tries online, if fails → automatically uses offline. Owner can correct any label – fields auto‑fill from database.</div>
   </header>
 
   <div class="camera-area">
@@ -83,7 +84,7 @@
   </div>
 
   <div class="status">
-    <span id="statusMsg">🌐 Loading AI & corrections...</span>
+    <span id="statusMsg">🌐 Auto mode – will fallback to offline if needed</span>
     <span id="spinner" class="loader hidden"></span>
     <span id="correctionStats" style="font-size:0.7rem; margin-left:auto;">—</span>
   </div>
@@ -91,39 +92,13 @@
   <div class="result" id="resultArea">
     <div id="defaultMsg" class="error-msg">
       <i class="fas fa-seedling"></i> Upload or take a photo.<br>
-      Owner can set a default fallback plant for unrecognised images.
+      Owner can correct any AI label – details auto‑fill from our database.
     </div>
     <div id="aiOutput"></div>
   </div>
 
   <div id="ownerPanel" class="owner-panel">
     <h4><i class="fas fa-crown"></i> Owner Correction Manager</h4>
-    
-    <div class="fallback-area">
-      <h5><i class="fas fa-ambulance"></i> Default Fallback Plant (for completely unrecognised images)</h5>
-      <div class="owner-field">
-        <label>Common name:</label>
-        <input type="text" id="fallbackCommon" placeholder="e.g. Cashew">
-      </div>
-      <div class="owner-field">
-        <label>Scientific name:</label>
-        <input type="text" id="fallbackScientific" placeholder="e.g. Anacardium occidentale">
-      </div>
-      <div class="owner-field">
-        <label>Family:</label>
-        <input type="text" id="fallbackFamily" placeholder="e.g. Anacardiaceae">
-      </div>
-      <div class="owner-field">
-        <label>Description:</label>
-        <textarea id="fallbackDesc" rows="2" placeholder="Tree producing cashew nuts."></textarea>
-      </div>
-      <button id="saveFallbackBtn" class="primary"><i class="fas fa-save"></i> Set as Default Fallback</button>
-      <div class="info-note">This name will be shown whenever AI cannot identify a plant at all.</div>
-    </div>
-
-    <hr style="margin: 12px 0;">
-
-    <h5><i class="fas fa-tag"></i> Correction for known AI labels</h5>
     <div class="owner-field">
       <label>AI predicted key (read‑only):</label>
       <input type="text" id="correctionKey" readonly>
@@ -157,7 +132,7 @@
 
   <footer>
     🔒 Owner password: <strong>yusupher01</strong><br>
-    🧠 <strong>Fallback:</strong> Set a default plant for unrecognised images. <strong>Corrections:</strong> Fix wrong AI labels.
+    🧠 <strong>How it works:</strong> Auto mode → if online fails, offline runs automatically. Click "Owner: Correct this label" → fields are pre‑filled from database if the label is known (e.g., "mango" → auto fills scientific etc.). Save, download JSON, upload to GitHub.
   </footer>
 </div>
 
@@ -201,55 +176,66 @@
     const downloadBtn = document.getElementById('downloadCorrectionsBtn');
     const correctionsListDiv = document.getElementById('correctionsList');
     const autoFillBtn = document.getElementById('autoFillBtn');
-    // Fallback elements
-    const fallbackCommon = document.getElementById('fallbackCommon');
-    const fallbackScientific = document.getElementById('fallbackScientific');
-    const fallbackFamily = document.getElementById('fallbackFamily');
-    const fallbackDesc = document.getElementById('fallbackDesc');
-    const saveFallbackBtn = document.getElementById('saveFallbackBtn');
 
     let currentStream = null;
     let cameraActive = false;
     let offlineModel = null;
     let offlineReady = false;
-    let currentMode = 'online';
+    let currentMode = 'auto';
     let globalCorrections = {};
     let pendingCorrections = {};
-    let globalFallbackPlant = null;   // { common, scientific, family, description }
     let lastImageBlob = null;
     let lastResult = null;
     let lastPredictedKey = '';
 
-    // Plant database for auto‑fill
+    // ---------- ENHANCED PLANT DATABASE (used for auto‑fill) ----------
+    // Keys are the predicted labels (lowercase) that the AI might return.
     const plantDatabase = {
+      // Common offline mode labels
+      "mango": { common: "Mango", scientific: "Mangifera indica", family: "Anacardiaceae", description: "Tropical fruit tree, sweet fruit. Rich in vitamins." },
+      "mango tree": { common: "Mango Tree", scientific: "Mangifera indica", family: "Anacardiaceae", description: "Tropical fruit tree, produces mango fruits." },
+      "oak": { common: "Oak Tree", scientific: "Quercus robur", family: "Fagaceae", description: "Deciduous tree, produces acorns, hardwood used in furniture." },
+      "sunflower": { common: "Sunflower", scientific: "Helianthus annuus", family: "Asteraceae", description: "Tall annual, large yellow flower head, edible seeds." },
+      "rose": { common: "Rose", scientific: "Rosa spp.", family: "Rosaceae", description: "Ornamental shrub, fragrant flowers, many cultivars." },
+      "tulip": { common: "Tulip", scientific: "Tulipa gesneriana", family: "Liliaceae", description: "Spring bulb flower, cup-shaped blooms." },
+      "daisy": { common: "Daisy", scientific: "Bellis perennis", family: "Asteraceae", description: "Composite flower with white petals and yellow disc." },
+      "orchid": { common: "Orchid", scientific: "Orchidaceae", family: "Orchidaceae", description: "Exotic flowers, epiphytic, high diversity." },
+      "fern": { common: "Fern", scientific: "Polypodiopsida", family: "Pteridophyta", description: "Vascular plant without flowers, reproduces via spores." },
+      "cactus": { common: "Cactus", scientific: "Cactaceae", family: "Cactaceae", description: "Succulent adapted to arid climates, water-storing stem." },
+      "bamboo": { common: "Bamboo", scientific: "Bambusoideae", family: "Poaceae", description: "Fast-growing grass, strong stalks used in construction." },
+      "lavender": { common: "Lavender", scientific: "Lavandula", family: "Lamiaceae", description: "Aromatic herb, purple flowers, relaxing scent." },
+      "basil": { common: "Basil", scientific: "Ocimum basilicum", family: "Lamiaceae", description: "Aromatic herb, used in cooking, especially pesto." },
       "cowpea": { common: "Cowpea", scientific: "Vigna unguiculata", family: "Fabaceae", description: "Legume crop, rich in protein, drought-tolerant." },
-      "mango": { common: "Mango", scientific: "Mangifera indica", family: "Anacardiaceae", description: "Tropical fruit tree, sweet fruit." },
       "cashew": { common: "Cashew", scientific: "Anacardium occidentale", family: "Anacardiaceae", description: "Produces cashew nuts and cashew apple." },
-      "oak": { common: "Oak", scientific: "Quercus robur", family: "Fagaceae", description: "Deciduous tree, acorns." },
-      "rose": { common: "Rose", scientific: "Rosa spp.", family: "Rosaceae", description: "Ornamental shrub." },
-      "sunflower": { common: "Sunflower", scientific: "Helianthus annuus", family: "Asteraceae", description: "Tall annual, edible seeds." },
-      "basil": { common: "Basil", scientific: "Ocimum basilicum", family: "Lamiaceae", description: "Aromatic herb." },
-      "tomato": { common: "Tomato", scientific: "Solanum lycopersicum", family: "Solanaceae", description: "Fruit vegetable." },
-      "maize": { common: "Maize", scientific: "Zea mays", family: "Poaceae", description: "Cereal grain." },
-      "rice": { common: "Rice", scientific: "Oryza sativa", family: "Poaceae", description: "Staple cereal grain." }
+      "tomato": { common: "Tomato", scientific: "Solanum lycopersicum", family: "Solanaceae", description: "Fruit vegetable, rich in lycopene." },
+      "maize": { common: "Maize", scientific: "Zea mays", family: "Poaceae", description: "Cereal grain, staple food in many regions." },
+      "rice": { common: "Rice", scientific: "Oryza sativa", family: "Poaceae", description: "Staple cereal grain, grown in paddies." }
     };
-    function autoFill(targetCommon, targetSci, targetFamily, targetDesc) {
-      const raw = targetCommon.value.trim().toLowerCase();
-      if (plantDatabase[raw]) {
-        const p = plantDatabase[raw];
-        targetSci.value = p.scientific;
-        targetFamily.value = p.family;
-        targetDesc.value = p.description;
-        setStatus(`✅ Auto-filled: ${p.common}`, false);
+
+    // Auto‑fill function: given a predicted key, fill the correction fields.
+    function autoFillFromDatabase(key) {
+      const lookup = key.toLowerCase();
+      if (plantDatabase[lookup]) {
+        const data = plantDatabase[lookup];
+        commonNameInput.value = data.common;
+        scientificNameInput.value = data.scientific;
+        familyNameInput.value = data.family;
+        descriptionInput.value = data.description;
+        setStatus(`✅ Auto‑filled details for "${data.common}"`, false);
+        return true;
       } else {
-        setStatus(`❌ No database entry for "${raw}"`, false);
+        setStatus(`❌ No database entry for "${key}". You can enter manually.`, false);
+        return false;
       }
     }
+
     autoFillBtn.addEventListener('click', () => {
-      autoFill(commonNameInput, scientificNameInput, familyNameInput, descriptionInput);
+      const key = correctionKeyInput.value.trim();
+      if (key) autoFillFromDatabase(key);
+      else setStatus("No predicted key to auto‑fill.", false);
     });
 
-    // Mode buttons
+    // Mode buttons – default is 'auto'
     const modeAuto = document.getElementById('modeAuto');
     const modeOnline = document.getElementById('modeOnline');
     const modeOffline = document.getElementById('modeOffline');
@@ -261,7 +247,7 @@
       else if (mode === 'online') modeOnline.classList.add('active');
       else if (mode === 'offline') modeOffline.classList.add('active');
       currentMode = mode;
-      setStatus(`Mode: ${mode === 'auto' ? 'Auto (online→offline)' : mode === 'online' ? 'Online (iNaturalist)' : 'Offline (MobileNet)'}`, false);
+      setStatus(`Mode: ${mode === 'auto' ? 'Auto (online → offline fallback)' : mode === 'online' ? 'Online (iNaturalist)' : 'Offline (MobileNet)'}`, false);
     }
     modeAuto.addEventListener('click', () => setActiveMode('auto'));
     modeOnline.addEventListener('click', () => setActiveMode('online'));
@@ -273,7 +259,6 @@
       else spinner.classList.add('hidden');
     }
 
-    // Correction storage
     function getAllCorrections() { return { ...globalCorrections, ...pendingCorrections }; }
 
     function addPendingCorrection(key, common, scientific, family, description, ownerSure) {
@@ -319,73 +304,6 @@
       return result;
     }
 
-    // Global fallback plant
-    function loadFallbackFromCorrections() {
-      if (globalCorrections['__fallback__']) {
-        const fb = globalCorrections['__fallback__'];
-        globalFallbackPlant = {
-          common: fb.name,
-          scientific: fb.scientific,
-          family: fb.family,
-          description: fb.description
-        };
-        // Also show in UI
-        fallbackCommon.value = fb.name || '';
-        fallbackScientific.value = fb.scientific || '';
-        fallbackFamily.value = fb.family || '';
-        fallbackDesc.value = fb.description || '';
-      } else {
-        // Default fallback if none set
-        globalFallbackPlant = {
-          common: "Unidentified Plant",
-          scientific: "—",
-          family: "Unknown",
-          description: "No fallback set by owner."
-        };
-        fallbackCommon.value = '';
-        fallbackScientific.value = '';
-        fallbackFamily.value = '';
-        fallbackDesc.value = '';
-      }
-    }
-
-    function saveFallback() {
-      const common = fallbackCommon.value.trim();
-      if (!common) {
-        alert("Please enter a common name for the fallback plant.");
-        return;
-      }
-      const scientific = fallbackScientific.value.trim();
-      const family = fallbackFamily.value.trim();
-      const desc = fallbackDesc.value.trim();
-      // Store fallback in pending corrections as special key '__fallback__'
-      pendingCorrections['__fallback__'] = {
-        name: common,
-        scientific: scientific,
-        family: family,
-        description: desc,
-        ownerSure: true
-      };
-      globalFallbackPlant = { common, scientific, family, description: desc };
-      setStatus(`✅ Default fallback plant set to "${common}". Download JSON to share.`, false);
-      updateCorrectionUI();
-    }
-
-    function applyFallbackIfNeeded(result) {
-      if (!result && globalFallbackPlant) {
-        return {
-          name: globalFallbackPlant.common,
-          scientific: globalFallbackPlant.scientific,
-          confidence: '100',
-          family: globalFallbackPlant.family,
-          description: globalFallbackPlant.description,
-          source: 'Default fallback (owner set)',
-          correctionNote: `🌱 Owner fallback: ${globalFallbackPlant.common}`
-        };
-      }
-      return result;
-    }
-
     async function loadGlobalCorrections(showMessage = true) {
       setStatus("📡 Fetching corrections from GitHub...", true);
       try {
@@ -395,7 +313,6 @@
           if (typeof data === 'object' && data !== null) {
             globalCorrections = data;
             pendingCorrections = {};
-            loadFallbackFromCorrections();
             if (showMessage) setStatus(`✅ Loaded ${Object.keys(globalCorrections).length} corrections.`, false);
             updateCorrectionUI();
             return true;
@@ -404,7 +321,6 @@
       } catch(err) {
         console.error(err);
         globalCorrections = {};
-        loadFallbackFromCorrections();
         if (showMessage) setStatus(`⚠️ No corrections.json file. Create one to store corrections.`, false);
         updateCorrectionUI();
         return false;
@@ -413,7 +329,6 @@
 
     function downloadCorrectionsFile() {
       const merged = getAllCorrections();
-      // Remove any __fallback__ that might be pending? Actually we want to include it.
       const dataStr = JSON.stringify(merged, null, 2);
       const blob = new Blob([dataStr], {type: 'application/json'});
       const a = document.createElement('a');
@@ -434,9 +349,9 @@
     function renderCorrectionsList() {
       if (!correctionsListDiv) return;
       const all = getAllCorrections();
-      const entries = Object.entries(all).filter(([key]) => key !== '__fallback__');
+      const entries = Object.entries(all);
       if (entries.length === 0) {
-        correctionsListDiv.innerHTML = '<i>No label corrections yet.</i>';
+        correctionsListDiv.innerHTML = '<i>No corrections yet.</i>';
         return;
       }
       correctionsListDiv.innerHTML = '';
@@ -459,7 +374,7 @@
       }
     }
 
-    // ---------- AI functions (iNaturalist + MobileNet) ----------
+    // ---------- AI functions with auto fallback ----------
     async function identifyOnline(imageBlob) {
       setStatus("🌐 Online AI analyzing...", true);
       const formData = new FormData();
@@ -496,7 +411,9 @@
 
     const offlinePlantMap = [
       { patterns: ['mango', 'mangifera'], name: 'Mango', scientific: 'Mangifera indica', family: 'Anacardiaceae' },
-      { patterns: ['oak', 'quercus'], name: 'Oak', scientific: 'Quercus', family: 'Fagaceae' }
+      { patterns: ['oak', 'quercus'], name: 'Oak', scientific: 'Quercus', family: 'Fagaceae' },
+      { patterns: ['sunflower', 'helianthus'], name: 'Sunflower', scientific: 'Helianthus annuus', family: 'Asteraceae' },
+      { patterns: ['rose', 'rosa'], name: 'Rose', scientific: 'Rosa', family: 'Rosaceae' }
     ];
     function matchOffline(label) {
       const lower = label.toLowerCase();
@@ -507,7 +424,7 @@
     }
     async function classifyOffline(imgElement) {
       if (!offlineModel) return null;
-      setStatus("📴 Offline AI...", true);
+      setStatus("📴 Offline AI analyzing...", true);
       try {
         const tensor = tf.browser.fromPixels(imgElement).resizeNearestNeighbor([224,224]).toFloat();
         const expanded = tensor.expandDims(0);
@@ -535,16 +452,15 @@
       } else if (currentMode === 'offline') {
         const img = await blobToImage(imageBlob);
         result = await classifyOffline(img);
-      } else {
+      } else { // auto mode: try online, fallback to offline if online fails
         result = await identifyOnline(imageBlob);
         if (!result && offlineReady) {
-          setStatus("Online failed, offline fallback", false);
+          setStatus("Online failed, automatically using offline AI...", false);
           const img = await blobToImage(imageBlob);
           result = await classifyOffline(img);
         }
       }
       if (result && result.originalPredictedLabel) {
-        // Apply label correction if exists
         result = applyBestCorrection(result, result.originalPredictedLabel);
         lastPredictedKey = result.originalPredictedLabel;
         lastResult = result;
@@ -552,26 +468,15 @@
         displayResult(result, result.originalPredictedLabel);
         setStatus(`✅ ${result.name} (${result.confidence}%)`, false);
       } else if (result && result.name) {
-        // No predicted label but result exists (offline generic)
         lastResult = result;
         lastImageBlob = imageBlob;
         lastPredictedKey = null;
         displayResult(result, null);
         setStatus(`✅ ${result.name} (${result.confidence}%)`, false);
       } else {
-        // AI failed completely – use fallback
-        const fallbackResult = applyFallbackIfNeeded(null);
-        if (fallbackResult) {
-          lastResult = fallbackResult;
-          lastImageBlob = imageBlob;
-          lastPredictedKey = null;
-          displayResult(fallbackResult, null);
-          setStatus(`✅ Using fallback: ${fallbackResult.name}`, false);
-        } else {
-          defaultMsg.classList.remove('hidden');
-          aiOutput.innerHTML = `<div class="error-msg">❌ AI could not identify this plant.<br>No fallback set. Owner can set a default fallback.</div>`;
-          setStatus("Identification failed. Set a fallback in owner panel.", false);
-        }
+        defaultMsg.classList.remove('hidden');
+        aiOutput.innerHTML = `<div class="error-msg">❌ AI could not identify this plant (online and offline both failed).<br>Owner can still add a correction later if a label appears.</div>`;
+        setStatus("No match from any AI.", false);
       }
     }
 
@@ -609,10 +514,8 @@
         editBtn.innerHTML = '<i class="fas fa-edit"></i> Owner: Correct this label';
         editBtn.onclick = () => {
           correctionKeyInput.value = predictedKey;
-          commonNameInput.value = '';
-          scientificNameInput.value = '';
-          familyNameInput.value = '';
-          descriptionInput.value = '';
+          // Auto‑fill from database when opening the correction panel
+          autoFillFromDatabase(predictedKey);
           ownerSureCheckbox.checked = false;
           ownerPanel.classList.add('visible');
           ownerPanel.scrollIntoView({ behavior: 'smooth' });
@@ -717,7 +620,7 @@
         ownerPanel.classList.add('visible');
         ownerLoginBtn.style.display = 'none';
         logoutBtn.style.display = 'inline-block';
-        setStatus("🔓 Owner mode active. Set fallback or correct labels.", false);
+        setStatus("🔓 Owner mode active. Click 'Correct this label' – fields auto‑fill from database.", false);
       } else {
         ownerPanel.classList.remove('visible');
         ownerLoginBtn.style.display = 'inline-block';
@@ -746,14 +649,13 @@
       familyNameInput.value = '';
       descriptionInput.value = '';
       ownerSureCheckbox.checked = false;
+      correctionKeyInput.value = '';
       if (lastResult && lastPredictedKey) {
         const newResult = { ...lastResult };
         applyBestCorrection(newResult, lastPredictedKey);
         displayResult(newResult, lastPredictedKey);
       }
     });
-
-    saveFallbackBtn.addEventListener('click', saveFallback);
     downloadBtn.addEventListener('click', downloadCorrectionsFile);
 
     startCam.addEventListener('click', startCamera);
@@ -765,7 +667,7 @@
 
     loadGlobalCorrections(true).then(() => {
       loadOfflineModel();
-      setStatus("✅ Ready. Owner can set default fallback for unrecognised plants.", false);
+      setStatus("✅ Ready. Auto mode will fallback to offline if needed. Owner corrections auto‑fill from database.", false);
     });
   })();
 </script>
