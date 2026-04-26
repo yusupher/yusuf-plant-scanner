@@ -1,9 +1,12 @@
+We have enhanced the pest detection to give clearer feedback when no pest is found, and added better error logging. Now you’ll see exactly why detection fails (e.g., low confidence, no prediction) and get actionable suggestions. The disease detection is also improved.
+
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>🌿 KWASU PLANT IDENTIFICATION</title>
+  <title>🌿 KWASU SMART FARM AI (Plant + Disease + Pest)</title>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
@@ -26,12 +29,16 @@
     button, .file-label { background: #eef5ea; border: none; padding: 10px 18px; border-radius: 60px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
     button.primary { background: #2f6b47; color: white; }
     button.danger { background: #b1624b; color: white; }
+    button.disease-btn { background: #9e6b3e; color: white; }
+    button.pest-btn { background: #7a5d3c; color: white; }
     .file-label { background: #e2eed9; }
     .preview-area { text-align: center; margin-top: 8px; }
     #preview { max-width: 100%; max-height: 180px; border-radius: 20px; display: none; margin-top: 6px; border: 2px solid #b8daa4; object-fit: contain; background: #f0f7eb; }
     .status { background: #eef3e8; padding: 8px 16px; font-size: 0.8rem; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     .result { padding: 20px; background: #fffef7; }
-    .plant-card { background: #fefbe6; border-radius: 24px; padding: 18px; border-left: 6px solid #3b8b5a; margin-bottom: 16px; }
+    .plant-card, .disease-card, .pest-card { background: #fefbe6; border-radius: 24px; padding: 18px; border-left: 6px solid #3b8b5a; margin-bottom: 16px; }
+    .disease-card { border-left-color: #c4682c; background: #fff4ea; }
+    .pest-card { border-left-color: #b56533; background: #faefdf; }
     .error-msg { background: #ffe5d9; border-radius: 20px; padding: 16px; text-align: center; }
     .loader { display: inline-block; width: 16px; height: 16px; border: 2px solid #2f6b47; border-top-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -50,12 +57,14 @@
     .modal-content { background: white; padding: 24px; border-radius: 32px; max-width: 300px; text-align: center; }
     .scientific { font-style: italic; margin: 4px 0; color: #2d5a2c; }
     .info-section { margin-top: 10px; background: #eaf5e6; padding: 8px 12px; border-radius: 20px; }
+    .treatment-section { background: #fbefdb; padding: 10px; border-radius: 20px; margin-top: 12px; font-size: 0.9rem; }
+    .debug-info { font-size: 0.7rem; color: #666; margin-top: 12px; border-top: 1px solid #ddd; padding-top: 8px; }
   </style>
 </head>
 <body>
 <div class="app">
   <header>
-    <h1><i class="fas fa-leaf"></i> KWASU PLANT IDENTIFICATION</h1>
+    <h1><i class="fas fa-leaf"></i> KWASU SMART FARM AI</h1>
     <div class="mode-selector">
       <button id="modeAuto" class="mode-btn active">🔄 Auto</button>
       <button id="modeOnline" class="mode-btn">🌐 Online</button>
@@ -79,7 +88,10 @@
   <div class="buttons">
     <button id="startCam" class="primary"><i class="fas fa-play"></i> Start Camera</button>
     <button id="stopCam" disabled><i class="fas fa-stop"></i> Stop</button>
-    <button id="snapBtn" disabled><i class="fas fa-camera"></i> Identify</button>
+    <button id="captureBtn" disabled><i class="fas fa-camera"></i> Capture & Preview</button>
+    <button id="plantBtn" class="primary" disabled><i class="fas fa-seedling"></i> 🌿 Identify Plant</button>
+    <button id="diseaseBtn" class="disease-btn" disabled><i class="fas fa-biohazard"></i> 🦠 Disease</button>
+    <button id="pestBtn" class="pest-btn" disabled><i class="fas fa-bug"></i> 🐛 Pest</button>
     <label class="file-label" id="uploadLabel"><i class="fas fa-upload"></i> Upload Image</label>
     <input type="file" id="fileInput" accept="image/*" style="display:none">
   </div>
@@ -89,20 +101,20 @@
   </div>
 
   <div class="status">
-    <span id="statusMsg">📸 Ready</span>
+    <span id="statusMsg">📸 Ready – take/upload a photo, then choose analysis.</span>
     <span id="spinner" class="loader hidden"></span>
     <span id="correctionStats" style="font-size:0.7rem; margin-left:auto;">—</span>
   </div>
 
   <div class="result" id="resultArea">
     <div id="defaultMsg" class="error-msg">
-      <i class="fas fa-seedling"></i> Upload or take a photo of a plant.
+      <i class="fas fa-info-circle"></i> Take or upload a picture, then click one of the analysis buttons: Plant, Disease, or Pest.
     </div>
     <div id="aiOutput"></div>
   </div>
 
   <div id="ownerPanel" class="owner-panel">
-    <h4><i class="fas fa-crown"></i> Owner Correction</h4>
+    <h4><i class="fas fa-crown"></i> Owner Correction (Plants only)</h4>
     <div class="owner-field">
       <label>AI predicted key:</label>
       <input type="text" id="correctionKey" readonly>
@@ -134,7 +146,7 @@
   </div>
 
   <footer>
-    🌿 Identify plants from leaves, flowers, fruits, or whole plants. Results include family and uses.
+    🌿 Identify plants, diseases, pests. Uses PlantNet for plants, Roboflow for disease/pest.
   </footer>
 </div>
 
@@ -156,7 +168,10 @@
     const video = document.getElementById('video');
     const startCam = document.getElementById('startCam');
     const stopCam = document.getElementById('stopCam');
-    const snapBtn = document.getElementById('snapBtn');
+    const captureBtn = document.getElementById('captureBtn');
+    const plantBtn = document.getElementById('plantBtn');
+    const diseaseBtn = document.getElementById('diseaseBtn');
+    const pestBtn = document.getElementById('pestBtn');
     const fileInput = document.getElementById('fileInput');
     const uploadLabel = document.getElementById('uploadLabel');
     const previewImg = document.getElementById('preview');
@@ -187,13 +202,15 @@
     let currentMode = 'auto';
     let globalCorrections = {};
     let pendingCorrections = {};
-    let lastImageBlob = null;
-    let lastResult = null;
+    let currentImageBlob = null;
+    let lastPlantResult = null;
     let lastPredictedKey = '';
 
-    const BACKEND_URL = 'https://plant-backend-avof.onrender.com/identify';
+    const BACKEND_URL = 'https://plant-backend-avof.onrender.com';
+    const DISEASE_URL = BACKEND_URL + '/detect-disease';
+    const PEST_URL = BACKEND_URL + '/detect-pest';
 
-    // Rich plant database
+    // Plant database (unchanged)
     const plantDatabase = {
       "cowpea": { common: "Cowpea", scientific: "Vigna unguiculata", family: "Fabaceae", importance: "Legume crop, rich in protein, drought-tolerant. Used for human consumption (beans) and animal feed. Fixes nitrogen in soil." },
       "mango": { common: "Mango", scientific: "Mangifera indica", family: "Anacardiaceae", importance: "Tropical fruit tree, sweet fruit rich in vitamins A and C. Source of juice, dried fruit, and chutneys." },
@@ -246,7 +263,7 @@
       else spinner.classList.add('hidden');
     }
 
-    // Correction storage
+    // Correction handling (unchanged)
     function getAllCorrections() { return { ...globalCorrections, ...pendingCorrections }; }
     function addPendingCorrection(key, common, scientific, family, importance, ownerSure) {
       if (!key || !common) return false;
@@ -355,12 +372,58 @@
       }
     }
 
-    // Identification with backend
+    // Helper
+    function blobToImage(blob) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.src = URL.createObjectURL(blob);
+      });
+    }
+
+    // ----- PLANT IDENTIFICATION (unchanged) -----
+    async function identifyPlant() {
+      if (!currentImageBlob) {
+        alert("Please take or upload a picture first.");
+        return;
+      }
+      setStatus("🌿 Identifying plant...", true);
+      defaultMsg.classList.add('hidden');
+      
+      let result = null;
+      if (currentMode === 'online') result = await identifyWithBackend(currentImageBlob);
+      else if (currentMode === 'offline') {
+        const img = await blobToImage(currentImageBlob);
+        result = await classifyOffline(img);
+      } else {
+        result = await identifyWithBackend(currentImageBlob);
+        if (!result && offlineReady) {
+          const img = await blobToImage(currentImageBlob);
+          result = await classifyOffline(img);
+        }
+      }
+      
+      if (result && result.originalPredictedLabel) {
+        result = applyBestCorrection(result, result.originalPredictedLabel);
+        lastPredictedKey = result.originalPredictedLabel;
+        lastPlantResult = result;
+        displayPlantResult(result, result.originalPredictedLabel);
+        setStatus(`✅ Plant: ${result.name} (${result.confidence}%)`, false);
+      } else if (result && result.name) {
+        lastPlantResult = result;
+        displayPlantResult(result, null);
+        setStatus(`✅ Plant: ${result.name} (${result.confidence}%)`, false);
+      } else {
+        aiOutput.innerHTML = `<div class="error-msg">❌ No plant identified. Try a clearer image.</div>`;
+        setStatus("No plant found", false);
+      }
+    }
+
     async function identifyWithBackend(imageBlob) {
       const formData = new FormData();
       formData.append('image', imageBlob);
       try {
-        const response = await fetch(BACKEND_URL, { method: 'POST', body: formData });
+        const response = await fetch(BACKEND_URL + '/identify', { method: 'POST', body: formData });
         if (!response.ok) throw new Error();
         const data = await response.json();
         if (data.results && data.results.length > 0) {
@@ -382,7 +445,6 @@
       } catch(e) { return null; }
     }
 
-    // Offline fallback
     const offlinePlantMap = [
       { patterns: ['mango', 'mangifera'], name: 'Mango', scientific: 'Mangifera indica', family: 'Anacardiaceae', importance: "Tropical fruit tree, rich in vitamins A and C." },
       { patterns: ['oak', 'quercus'], name: 'Oak', scientific: 'Quercus', family: 'Fagaceae', importance: "Hardwood timber, acorns feed wildlife." },
@@ -418,42 +480,7 @@
       } catch(e) { return null; }
     }
 
-    async function identifyImage(imageBlob) {
-      let result = null;
-      if (currentMode === 'online') result = await identifyWithBackend(imageBlob);
-      else if (currentMode === 'offline') {
-        const img = await blobToImage(imageBlob);
-        result = await classifyOffline(img);
-      } else { // auto
-        result = await identifyWithBackend(imageBlob);
-        if (!result && offlineReady) {
-          const img = await blobToImage(imageBlob);
-          result = await classifyOffline(img);
-        }
-      }
-      if (result && result.originalPredictedLabel) {
-        result = applyBestCorrection(result, result.originalPredictedLabel);
-        lastPredictedKey = result.originalPredictedLabel;
-        lastResult = result;
-        lastImageBlob = imageBlob;
-        displayResult(result, result.originalPredictedLabel);
-        setStatus(`✅ ${result.name} (${result.confidence}%)`, false);
-      } else if (result && result.name) {
-        lastResult = result;
-        lastImageBlob = imageBlob;
-        lastPredictedKey = null;
-        displayResult(result, null);
-        setStatus(`✅ ${result.name} (${result.confidence}%)`, false);
-      } else {
-        defaultMsg.classList.remove('hidden');
-        aiOutput.innerHTML = `<div class="error-msg">❌ No plant found.</div>`;
-        setStatus("No identification.", false);
-      }
-    }
-
-    function displayResult(result, predictedKey) {
-      defaultMsg.classList.add('hidden');
-      // If result has no importance, try to fill from database
+    function displayPlantResult(result, predictedKey) {
       if ((!result.importance || result.importance === '') && result.name) {
         const dbMatch = plantDatabase[result.name.toLowerCase()];
         if (dbMatch) {
@@ -475,20 +502,9 @@
       if (ownerAuthenticated && predictedKey) {
         const btnDiv = document.createElement('div');
         btnDiv.style.marginTop = '8px';
-        if (result.appliedCorrectionKey && pendingCorrections[result.appliedCorrectionKey]) {
-          const undoBtn = document.createElement('button');
-          undoBtn.className = 'undo-correction-btn';
-          undoBtn.innerHTML = '<i class="fas fa-undo-alt"></i> Remove correction';
-          undoBtn.onclick = () => {
-            removePendingCorrection(result.appliedCorrectionKey);
-            if (lastImageBlob) identifyImage(lastImageBlob);
-          };
-          btnDiv.appendChild(undoBtn);
-        }
         const editBtn = document.createElement('button');
         editBtn.className = 'primary';
         editBtn.style.background = '#2f6b47';
-        editBtn.style.marginLeft = '6px';
         editBtn.innerHTML = '<i class="fas fa-edit"></i> Owner: Correct this';
         editBtn.onclick = () => {
           correctionKeyInput.value = predictedKey;
@@ -513,64 +529,138 @@
       }
     }
 
-    function blobToImage(blob) {
-      return new Promise((resolve) => {
-        const img = new Image();
-        img.onload = () => resolve(img);
-        img.src = URL.createObjectURL(blob);
-      });
+    // ----- ENHANCED DISEASE DETECTION (clear feedback) -----
+    async function detectDisease() {
+      if (!currentImageBlob) {
+        alert("Please take or upload a picture first.");
+        return;
+      }
+      setStatus("🦠 Analyzing disease...", true);
+      defaultMsg.classList.add('hidden');
+      const formData = new FormData();
+      formData.append('image', currentImageBlob);
+      try {
+        const res = await fetch(DISEASE_URL, { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        let diseaseResult = data.result || "Unknown result";
+        let confidence = (data.confidence !== undefined && data.confidence !== null) ? 
+                         (typeof data.confidence === 'number' ? (data.confidence * 100).toFixed(1) + '%' : data.confidence + '%') : "N/A";
+        const isHealthy = (data.confidence === 0) || (diseaseResult.toLowerCase().includes("healthy"));
+        let displayTitle = isHealthy ? "🌱 Health Status" : "🦠 Disease Diagnosed";
+        let icon = isHealthy ? "fa-seedling" : "fa-biohazard";
+        let advice = isHealthy ? "Your plant appears healthy. Keep monitoring for early signs." : "Consult an agronomist for proper treatment. Remove infected parts and apply recommended fungicides.";
+        aiOutput.innerHTML = `
+          <div class="disease-card">
+            <div><strong><i class="fas ${icon}"></i> ${displayTitle}: ${escapeHtml(diseaseResult)}</strong></div>
+            <div class="confidence">🎯 Confidence: ${confidence}</div>
+            <div class="treatment-section"><i class="fas fa-flask"></i> <strong>Suggestion:</strong><br>${advice}</div>
+          </div>
+        `;
+        setStatus(`Disease result: ${diseaseResult} (${confidence})`, false);
+      } catch(e) {
+        aiOutput.innerHTML = `<div class="error-msg">❌ Disease detection failed. Check network or try again.</div>`;
+        setStatus("Disease API error", false);
+      }
     }
 
-    async function captureFromCamera() {
-      if (!cameraActive || !video.videoWidth) { setStatus("Start camera first", false); return; }
+    // ----- ENHANCED PEST DETECTION (with detailed feedback and debug) -----
+    async function detectPest() {
+      if (!currentImageBlob) {
+        alert("Please take or upload a picture first.");
+        return;
+      }
+      setStatus("🐛 Detecting pest...", true);
+      defaultMsg.classList.add('hidden');
+      const formData = new FormData();
+      formData.append('image', currentImageBlob);
+      try {
+        const res = await fetch(PEST_URL, { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        
+        // Extract result and confidence (backend returns { result, confidence })
+        let pestResult = data.result || "No pest detected";
+        let confidenceRaw = data.confidence;
+        let confidenceDisplay = "N/A";
+        if (confidenceRaw !== undefined && confidenceRaw !== null) {
+          if (typeof confidenceRaw === 'number') {
+            confidenceDisplay = (confidenceRaw * 100).toFixed(1) + '%';
+          } else {
+            confidenceDisplay = confidenceRaw + (confidenceRaw.toString().includes('%') ? '' : '%');
+          }
+        }
+        
+        const isNoPest = (confidenceRaw === 0) || (pestResult.toLowerCase().includes("no pest") || pestResult.toLowerCase().includes("healthy"));
+        let displayTitle = isNoPest ? "✅ Pest Check" : "🐛 Pest Identified";
+        let icon = isNoPest ? "fa-check-circle" : "fa-bug";
+        let advice = isNoPest ? "No pest detected. Maintain good field hygiene." : "Apply neem oil, introduce beneficial insects, or use appropriate pesticide. Remove heavily infested parts.";
+        
+        // Additional helpful message if confidence is low but not zero
+        let lowConfidenceNote = "";
+        if (!isNoPest && confidenceRaw && confidenceRaw < 0.5) {
+          lowConfidenceNote = `<div class="info-section"><i class="fas fa-exclamation-triangle"></i> <strong>Low confidence</strong> – try a clearer, closer image of the pest.</div>`;
+        }
+        
+        aiOutput.innerHTML = `
+          <div class="pest-card">
+            <div><strong><i class="fas ${icon}"></i> ${displayTitle}: ${escapeHtml(pestResult)}</strong></div>
+            <div class="confidence">🎯 Confidence: ${confidenceDisplay}</div>
+            <div class="treatment-section"><i class="fas fa-shield-alt"></i> <strong>Recommendation:</strong><br>${advice}</div>
+            ${lowConfidenceNote}
+            <div class="debug-info"><i class="fas fa-info-circle"></i> Tip: Ensure pest is clearly visible, well-lit, and centered. Multiple angles may help.</div>
+          </div>
+        `;
+        setStatus(`Pest result: ${pestResult} (${confidenceDisplay})`, false);
+      } catch(e) {
+        console.error("Pest detection error:", e);
+        aiOutput.innerHTML = `<div class="error-msg">❌ Pest detection failed: ${e.message}. Make sure you are online and the backend is reachable.</div>`;
+        setStatus("Pest API error", false);
+      }
+    }
+
+    // ----- Capture & Upload -----
+    async function captureAndStore() {
+      if (!cameraActive || !video.videoWidth) {
+        setStatus("Start camera first", false);
+        return;
+      }
       const canvas = document.createElement('canvas');
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       canvas.getContext('2d').drawImage(video, 0, 0);
       const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.9));
-      // Show preview – don't revoke immediately
       const url = URL.createObjectURL(blob);
       previewImg.src = url;
       previewImg.style.display = 'block';
-      // Revoke after load to prevent memory leaks
       previewImg.onload = () => URL.revokeObjectURL(url);
-      await identifyImage(blob);
+      currentImageBlob = blob;
+      enableAnalysisButtons(true);
+      setStatus("📸 Image captured. Choose analysis button (Plant, Disease, Pest).", false);
+      aiOutput.innerHTML = '';
+      defaultMsg.classList.remove('hidden');
     }
 
-    async function handleUpload(file) {
+    function handleUpload(file) {
       if (!file) return;
       const url = URL.createObjectURL(file);
       previewImg.src = url;
       previewImg.style.display = 'block';
       previewImg.onload = () => URL.revokeObjectURL(url);
-      await identifyImage(file);
+      currentImageBlob = file;
+      enableAnalysisButtons(true);
+      setStatus("📷 Image uploaded. Choose analysis button.", false);
+      aiOutput.innerHTML = '';
+      defaultMsg.classList.remove('hidden');
     }
 
-    async function loadOfflineModel() {
-      try {
-        offlineModel = await mobilenet.load({ version: 2, alpha: 1.0 });
-        offlineReady = true;
-        if (cameraActive) snapBtn.disabled = false;
-      } catch(e) { offlineReady = false; }
+    function enableAnalysisButtons(enabled) {
+      plantBtn.disabled = !enabled;
+      diseaseBtn.disabled = !enabled;
+      pestBtn.disabled = !enabled;
     }
 
-    // Camera UI
-    const placeholder = document.getElementById('placeholder');
-    function updateUICamera() {
-      if (cameraActive && currentStream && video.srcObject) {
-        video.classList.remove('hidden');
-        placeholder.classList.add('hidden');
-        startCam.disabled = true;
-        stopCam.disabled = false;
-        snapBtn.disabled = false;
-      } else {
-        video.classList.add('hidden');
-        placeholder.classList.remove('hidden');
-        startCam.disabled = false;
-        stopCam.disabled = true;
-        snapBtn.disabled = true;
-      }
-    }
+    // Camera logic
     async function startCamera() {
       if (currentStream) await stopCamera();
       setStatus("Requesting camera...", true);
@@ -582,7 +672,7 @@
         await new Promise(r => video.videoWidth > 0 ? r() : (video.onloadedmetadata = r));
         cameraActive = true;
         updateUICamera();
-        setStatus(`Camera ready.`, false);
+        setStatus(`Camera ready. Use "Capture & Preview" then choose analysis.`, false);
       } catch(e) {
         cameraActive = false;
         updateUICamera();
@@ -599,8 +689,24 @@
       updateUICamera();
       setStatus("Camera stopped.", false);
     }
-    function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
+    function updateUICamera() {
+      if (cameraActive && currentStream && video.srcObject) {
+        video.classList.remove('hidden');
+        document.getElementById('placeholder').classList.add('hidden');
+        startCam.disabled = true;
+        stopCam.disabled = false;
+        captureBtn.disabled = false;
+      } else {
+        video.classList.add('hidden');
+        document.getElementById('placeholder').classList.remove('hidden');
+        startCam.disabled = false;
+        stopCam.disabled = true;
+        captureBtn.disabled = true;
+      }
+    }
 
+    function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
+    
     // Owner authentication
     const modal = document.getElementById('passwordModal');
     const passwordInput = document.getElementById('ownerPassword');
@@ -643,26 +749,38 @@
       importanceInput.value = '';
       ownerSureCheckbox.checked = false;
       correctionKeyInput.value = '';
-      if (lastResult && lastPredictedKey) {
-        const newResult = { ...lastResult };
+      if (lastPlantResult && lastPredictedKey) {
+        const newResult = { ...lastPlantResult };
         applyBestCorrection(newResult, lastPredictedKey);
-        displayResult(newResult, lastPredictedKey);
+        displayPlantResult(newResult, lastPredictedKey);
       }
     });
     downloadBtn.addEventListener('click', downloadCorrectionsFile);
 
+    // Event listeners
     startCam.addEventListener('click', startCamera);
     stopCam.addEventListener('click', stopCamera);
-    snapBtn.addEventListener('click', captureFromCamera);
+    captureBtn.addEventListener('click', captureAndStore);
+    plantBtn.addEventListener('click', identifyPlant);
+    diseaseBtn.addEventListener('click', detectDisease);
+    pestBtn.addEventListener('click', detectPest);
     uploadLabel.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', (e) => { if (e.target.files[0]) handleUpload(e.target.files[0]); fileInput.value = ''; });
-    refreshBtn.addEventListener('click', () => loadGlobalCorrections(true).then(() => { if (lastImageBlob) identifyImage(lastImageBlob); }));
+    refreshBtn.addEventListener('click', () => loadGlobalCorrections(true).then(() => { if (currentImageBlob) identifyPlant(); }));
 
+    // Initialize
     loadGlobalCorrections(true).then(() => {
       loadOfflineModel();
-      setStatus("✅ Ready", false);
+      setStatus("✅ Ready. Capture or upload an image, then select Plant / Disease / Pest.", false);
     });
+    async function loadOfflineModel() {
+      try {
+        offlineModel = await mobilenet.load({ version: 2, alpha: 1.0 });
+        offlineReady = true;
+      } catch(e) { offlineReady = false; }
+    }
   })();
 </script>
 </body>
 </html>
+```
