@@ -1,6 +1,3 @@
-We have enhanced the pest detection to give clearer feedback when no pest is found, and added better error logging. Now you’ll see exactly why detection fails (e.g., low confidence, no prediction) and get actionable suggestions. The disease detection is also improved.
-
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -58,6 +55,7 @@ We have enhanced the pest detection to give clearer feedback when no pest is fou
     .scientific { font-style: italic; margin: 4px 0; color: #2d5a2c; }
     .info-section { margin-top: 10px; background: #eaf5e6; padding: 8px 12px; border-radius: 20px; }
     .treatment-section { background: #fbefdb; padding: 10px; border-radius: 20px; margin-top: 12px; font-size: 0.9rem; }
+    .tip-box { background: #fff3cd; border-left: 4px solid #ffc107; padding: 8px 12px; margin-top: 10px; border-radius: 12px; font-size: 0.8rem; }
     .debug-info { font-size: 0.7rem; color: #666; margin-top: 12px; border-top: 1px solid #ddd; padding-top: 8px; }
   </style>
 </head>
@@ -381,7 +379,7 @@ We have enhanced the pest detection to give clearer feedback when no pest is fou
       });
     }
 
-    // ----- PLANT IDENTIFICATION (unchanged) -----
+    // ----- PLANT IDENTIFICATION (unchanged logic) -----
     async function identifyPlant() {
       if (!currentImageBlob) {
         alert("Please take or upload a picture first.");
@@ -529,7 +527,7 @@ We have enhanced the pest detection to give clearer feedback when no pest is fou
       }
     }
 
-    // ----- ENHANCED DISEASE DETECTION (clear feedback) -----
+    // ----- DISEASE DETECTION (using new backend format: result, confidence as integer) -----
     async function detectDisease() {
       if (!currentImageBlob) {
         alert("Please take or upload a picture first.");
@@ -542,29 +540,48 @@ We have enhanced the pest detection to give clearer feedback when no pest is fou
       try {
         const res = await fetch(DISEASE_URL, { method: 'POST', body: formData });
         const data = await res.json();
-        if (data.error) throw new Error(data.error);
+        // Backend now returns { result, confidence } where confidence is 0-100 integer
         let diseaseResult = data.result || "Unknown result";
-        let confidence = (data.confidence !== undefined && data.confidence !== null) ? 
-                         (typeof data.confidence === 'number' ? (data.confidence * 100).toFixed(1) + '%' : data.confidence + '%') : "N/A";
-        const isHealthy = (data.confidence === 0) || (diseaseResult.toLowerCase().includes("healthy"));
-        let displayTitle = isHealthy ? "🌱 Health Status" : "🦠 Disease Diagnosed";
-        let icon = isHealthy ? "fa-seedling" : "fa-biohazard";
-        let advice = isHealthy ? "Your plant appears healthy. Keep monitoring for early signs." : "Consult an agronomist for proper treatment. Remove infected parts and apply recommended fungicides.";
-        aiOutput.innerHTML = `
-          <div class="disease-card">
-            <div><strong><i class="fas ${icon}"></i> ${displayTitle}: ${escapeHtml(diseaseResult)}</strong></div>
-            <div class="confidence">🎯 Confidence: ${confidence}</div>
-            <div class="treatment-section"><i class="fas fa-flask"></i> <strong>Suggestion:</strong><br>${advice}</div>
-          </div>
-        `;
-        setStatus(`Disease result: ${diseaseResult} (${confidence})`, false);
+        let confidenceValue = data.confidence;
+        let confidenceDisplay = (confidenceValue !== undefined && confidenceValue !== null) ? confidenceValue + '%' : 'N/A';
+        
+        // Detect if no disease or healthy plant (confidence 0 or result contains "healthy")
+        const isHealthy = (confidenceValue === 0) || 
+                           (diseaseResult.toLowerCase().includes("healthy") ||
+                            diseaseResult.toLowerCase().includes("no disease") ||
+                            diseaseResult === "🌱 Healthy plant (or AI unavailable)" ||
+                            diseaseResult === "🌱 Healthy plant");
+        
+        if (isHealthy) {
+          aiOutput.innerHTML = `
+            <div class="disease-card">
+              <div><strong><i class="fas fa-seedling"></i> 🌱 Health Status: ${escapeHtml(diseaseResult)}</strong></div>
+              <div class="confidence">🎯 Confidence: ${confidenceDisplay}</div>
+              <div class="treatment-section"><i class="fas fa-leaf"></i> <strong>Recommendation:</strong><br>Your plant appears healthy. Continue good agricultural practices.</div>
+              <div class="tip-box"><i class="fas fa-camera"></i> <strong>Tip:</strong> If you suspect a disease, photograph affected leaves/stems close-up with good lighting.</div>
+            </div>
+          `;
+          setStatus(`Disease: ${diseaseResult} (${confidenceDisplay})`, false);
+        } else {
+          let advice = "Consult an agronomist for proper treatment. Remove infected parts and apply recommended fungicides or cultural practices.";
+          aiOutput.innerHTML = `
+            <div class="disease-card">
+              <div><strong><i class="fas fa-biohazard"></i> 🦠 Disease Diagnosed: ${escapeHtml(diseaseResult)}</strong></div>
+              <div class="confidence">🎯 Confidence: ${confidenceDisplay}</div>
+              <div class="treatment-section"><i class="fas fa-flask"></i> <strong>Suggested Action:</strong><br>${advice}</div>
+              ${confidenceValue && confidenceValue < 50 ? `<div class="tip-box"><i class="fas fa-exclamation-triangle"></i> Moderate confidence – consider retaking the image or consulting an expert.</div>` : ''}
+            </div>
+          `;
+          setStatus(`Disease: ${diseaseResult} (${confidenceDisplay})`, false);
+        }
       } catch(e) {
+        console.error("Disease detection error:", e);
         aiOutput.innerHTML = `<div class="error-msg">❌ Disease detection failed. Check network or try again.</div>`;
         setStatus("Disease API error", false);
       }
     }
 
-    // ----- ENHANCED PEST DETECTION (with detailed feedback and debug) -----
+    // ----- PEST DETECTION (using new backend format) -----
     async function detectPest() {
       if (!currentImageBlob) {
         alert("Please take or upload a picture first.");
@@ -577,44 +594,46 @@ We have enhanced the pest detection to give clearer feedback when no pest is fou
       try {
         const res = await fetch(PEST_URL, { method: 'POST', body: formData });
         const data = await res.json();
-        if (data.error) throw new Error(data.error);
-        
-        // Extract result and confidence (backend returns { result, confidence })
         let pestResult = data.result || "No pest detected";
-        let confidenceRaw = data.confidence;
-        let confidenceDisplay = "N/A";
-        if (confidenceRaw !== undefined && confidenceRaw !== null) {
-          if (typeof confidenceRaw === 'number') {
-            confidenceDisplay = (confidenceRaw * 100).toFixed(1) + '%';
-          } else {
-            confidenceDisplay = confidenceRaw + (confidenceRaw.toString().includes('%') ? '' : '%');
-          }
+        let confidenceValue = data.confidence;
+        let confidenceDisplay = (confidenceValue !== undefined && confidenceValue !== null) ? confidenceValue + '%' : 'N/A';
+        
+        const isNoPest = (confidenceValue === 0) || 
+                          (pestResult.toLowerCase().includes("no pest") ||
+                           pestResult === "No pest detected 🟢" ||
+                           pestResult.toLowerCase().includes("ai unavailable"));
+        
+        if (isNoPest) {
+          aiOutput.innerHTML = `
+            <div class="pest-card">
+              <div><strong><i class="fas fa-check-circle"></i> ✅ ${escapeHtml(pestResult)}</strong></div>
+              <div class="confidence">🎯 Confidence: ${confidenceDisplay}</div>
+              <div class="treatment-section"><i class="fas fa-leaf"></i> <strong>Recommendation:</strong><br>No pest detected. Maintain good field hygiene and monitor regularly.</div>
+              <div class="tip-box"><i class="fas fa-lightbulb"></i> <strong>Tips for accurate pest detection:</strong><br>
+                • Ensure the pest is clearly visible and occupies a good portion of the image.<br>
+                • Use natural lighting and avoid shadows.<br>
+                • If infestation exists but not detected, try a closer shot or different angle.<br>
+                • Some pests may not be in the model's training set – consult an expert if needed.
+              </div>
+            </div>
+          `;
+          setStatus(`Pest: ${pestResult} (${confidenceDisplay})`, false);
+        } else {
+          let controlAdvice = "Apply neem oil, introduce beneficial insects, or use appropriate pesticide. Remove heavily infested parts.";
+          aiOutput.innerHTML = `
+            <div class="pest-card">
+              <div><strong><i class="fas fa-bug"></i> 🐛 Pest Identified: ${escapeHtml(pestResult)}</strong></div>
+              <div class="confidence">🎯 Confidence: ${confidenceDisplay}</div>
+              <div class="treatment-section"><i class="fas fa-shield-alt"></i> <strong>Control / Solution:</strong><br>${controlAdvice}</div>
+              ${confidenceValue && confidenceValue < 50 ? `<div class="tip-box"><i class="fas fa-exclamation-triangle"></i> Low confidence – verify with local expert or retake image closer to the pest.</div>` : ''}
+              <div class="debug-info"><i class="fas fa-microchip"></i> Powered by Roboflow insect detection model.</div>
+            </div>
+          `;
+          setStatus(`Pest: ${pestResult} (${confidenceDisplay})`, false);
         }
-        
-        const isNoPest = (confidenceRaw === 0) || (pestResult.toLowerCase().includes("no pest") || pestResult.toLowerCase().includes("healthy"));
-        let displayTitle = isNoPest ? "✅ Pest Check" : "🐛 Pest Identified";
-        let icon = isNoPest ? "fa-check-circle" : "fa-bug";
-        let advice = isNoPest ? "No pest detected. Maintain good field hygiene." : "Apply neem oil, introduce beneficial insects, or use appropriate pesticide. Remove heavily infested parts.";
-        
-        // Additional helpful message if confidence is low but not zero
-        let lowConfidenceNote = "";
-        if (!isNoPest && confidenceRaw && confidenceRaw < 0.5) {
-          lowConfidenceNote = `<div class="info-section"><i class="fas fa-exclamation-triangle"></i> <strong>Low confidence</strong> – try a clearer, closer image of the pest.</div>`;
-        }
-        
-        aiOutput.innerHTML = `
-          <div class="pest-card">
-            <div><strong><i class="fas ${icon}"></i> ${displayTitle}: ${escapeHtml(pestResult)}</strong></div>
-            <div class="confidence">🎯 Confidence: ${confidenceDisplay}</div>
-            <div class="treatment-section"><i class="fas fa-shield-alt"></i> <strong>Recommendation:</strong><br>${advice}</div>
-            ${lowConfidenceNote}
-            <div class="debug-info"><i class="fas fa-info-circle"></i> Tip: Ensure pest is clearly visible, well-lit, and centered. Multiple angles may help.</div>
-          </div>
-        `;
-        setStatus(`Pest result: ${pestResult} (${confidenceDisplay})`, false);
       } catch(e) {
         console.error("Pest detection error:", e);
-        aiOutput.innerHTML = `<div class="error-msg">❌ Pest detection failed: ${e.message}. Make sure you are online and the backend is reachable.</div>`;
+        aiOutput.innerHTML = `<div class="error-msg">❌ Pest detection failed: ${e.message}. Make sure backend is running and network is available.</div>`;
         setStatus("Pest API error", false);
       }
     }
@@ -707,7 +726,7 @@ We have enhanced the pest detection to give clearer feedback when no pest is fou
 
     function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
     
-    // Owner authentication
+    // Owner authentication modal
     const modal = document.getElementById('passwordModal');
     const passwordInput = document.getElementById('ownerPassword');
     const submitPassword = document.getElementById('submitPassword');
@@ -783,4 +802,3 @@ We have enhanced the pest detection to give clearer feedback when no pest is fou
 </script>
 </body>
 </html>
-```
