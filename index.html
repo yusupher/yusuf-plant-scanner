@@ -57,6 +57,53 @@
     .treatment-section { background: #fbefdb; padding: 10px; border-radius: 20px; margin-top: 12px; font-size: 0.9rem; }
     .tip-box { background: #fff3cd; border-left: 4px solid #ffc107; padding: 8px 12px; margin-top: 10px; border-radius: 12px; font-size: 0.8rem; }
     .raw-json { background: #f0f0f0; padding: 10px; border-radius: 12px; font-family: monospace; font-size: 0.7rem; white-space: pre-wrap; word-break: break-all; margin-top: 12px; overflow-x: auto; }
+
+    /* ===== SEARCH INFO BUTTON ===== */
+    .search-info-inline-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: linear-gradient(135deg, #1a5276, #2980b9);
+      color: white; border: none; border-radius: 40px;
+      padding: 9px 18px; font-size: 0.8rem; font-weight: 700;
+      cursor: pointer; margin-top: 12px; transition: opacity 0.2s;
+      box-shadow: 0 3px 10px rgba(26,82,118,0.3);
+    }
+    .search-info-inline-btn:hover { opacity: 0.88; }
+
+    /* ===== COMPREHENSIVE INFO MODAL ===== */
+    .info-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.75); align-items: center; justify-content: center; z-index: 2000; padding: 14px; }
+    .info-modal.open { display: flex; }
+    .info-modal-box { background: white; border-radius: 28px; width: 100%; max-width: 680px; max-height: 92vh; overflow-y: auto; box-shadow: 0 30px 60px rgba(0,0,0,0.4); animation: slideUp 0.3s ease; }
+    @keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .info-modal-header { background: linear-gradient(135deg, #1a3c2a 0%, #2d6a4f 100%); color: white; padding: 20px 24px 16px; border-radius: 28px 28px 0 0; display: flex; justify-content: space-between; align-items: flex-start; }
+    .info-modal-header h2 { font-size: 1.15rem; margin: 0; }
+    .info-modal-header .subtitle { font-size: 0.73rem; opacity: 0.8; margin-top: 4px; font-style: italic; }
+    .info-modal-close { background: rgba(255,255,255,0.2); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-left: 12px; }
+    .info-modal-close:hover { background: rgba(255,255,255,0.35); }
+    .info-modal-body { padding: 18px 22px 24px; }
+    .info-type-badge { display: inline-block; padding: 4px 14px; border-radius: 40px; font-size: 0.72rem; font-weight: bold; margin-bottom: 12px; }
+    .badge-crop { background: #d4edda; color: #1a5c2d; }
+    .badge-tree { background: #d0e9ff; color: #0a4c7a; }
+    .badge-weed { background: #fde8d8; color: #7a2e00; }
+    .badge-other { background: #e8e8e8; color: #444; }
+    .info-section-block { background: #f7fbf5; border-radius: 16px; padding: 14px 16px; margin-bottom: 12px; border-left: 4px solid #3b8b5a; }
+    .info-section-block.weed-block { border-left-color: #c4682c; background: #fff8f2; }
+    .info-section-block.disease-block { border-left-color: #9e6b3e; background: #fffaf4; }
+    .info-section-block.pest-block { border-left-color: #7a5d3c; background: #fdf5ec; }
+    .info-section-block h3 { font-size: 0.87rem; color: #1a3c2a; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+    .info-section-block p, .info-section-block li { font-size: 0.82rem; color: #333; line-height: 1.65; }
+    .info-section-block ul { padding-left: 18px; margin-top: 4px; }
+    .info-section-block li { margin-bottom: 4px; }
+    .info-loading { text-align: center; padding: 44px 20px; color: #2f6b47; }
+    .info-loading .big-loader { width: 42px; height: 42px; border: 4px solid #c8e0bc; border-top-color: #2f6b47; border-radius: 50%; animation: spin 0.7s linear infinite; margin: 0 auto 14px; }
+    .info-loading p { font-size: 0.85rem; color: #555; margin-top: 6px; }
+    .taxonomy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+    .taxonomy-item { background: #f0f7eb; border-radius: 10px; padding: 7px 11px; font-size: 0.79rem; }
+    .taxonomy-item span { display: block; color: #888; font-size: 0.67rem; margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.03em; }
+    .ipm-tag { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 0.67rem; font-weight: bold; margin-right: 4px; margin-bottom: 6px; }
+    .ipm-tag.bio { background: #c8e6c9; color: #1b5e20; }
+    .ipm-tag.chem { background: #ffe0b2; color: #7c4300; }
+    .ipm-tag.cult { background: #bbdefb; color: #0d3c6e; }
+    .ipm-tag.mech { background: #e1bee7; color: #4a148c; }
   </style>
 </head>
 <body>
@@ -86,7 +133,7 @@
   <div class="buttons">
     <button id="startCam" class="primary"><i class="fas fa-play"></i> Start Camera</button>
     <button id="stopCam" disabled><i class="fas fa-stop"></i> Stop</button>
-    <button id="captureBtn" disabled><i class="fas fa-camera"></i> Capture & Preview</button>
+    <button id="captureBtn" disabled><i class="fas fa-camera"></i> Capture &amp; Preview</button>
     <button id="plantBtn" class="primary" disabled><i class="fas fa-seedling"></i> 🌿 Identify Plant</button>
     <button id="diseaseBtn" class="disease-btn" disabled><i class="fas fa-biohazard"></i> 🦠 Disease</button>
     <button id="pestBtn" class="pest-btn" disabled><i class="fas fa-bug"></i> 🐛 Pest</button>
@@ -144,10 +191,11 @@
   </div>
 
   <footer>
-    🌿 Plant ID: PlantNet | Disease: Roboflow/Plant.id | Pest: Roboflow
+    🌿 Plant ID: PlantNet | Disease: Roboflow/Plant.id | Pest: Roboflow | 🤖 Info: Claude AI
   </footer>
 </div>
 
+<!-- Owner password modal -->
 <div id="passwordModal" class="modal">
   <div class="modal-content">
     <h3><i class="fas fa-key"></i> Owner Access</h3>
@@ -156,670 +204,600 @@
   </div>
 </div>
 
+<!-- COMPREHENSIVE INFO MODAL -->
+<div id="infoModal" class="info-modal">
+  <div class="info-modal-box">
+    <div class="info-modal-header">
+      <div>
+        <h2 id="infoModalTitle">Information</h2>
+        <div class="subtitle" id="infoModalSubtitle"></div>
+      </div>
+      <button class="info-modal-close" id="infoModalClose"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="info-modal-body" id="infoModalBody">
+      <div class="info-loading">
+        <div class="big-loader"></div>
+        <p>Fetching comprehensive information...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
-  (function() {
-    // Backend URL (your working backend)
-    const BACKEND_URL = "https://plant-backend-avof.onrender.com";
-    const PEST_URL = BACKEND_URL + '/detect-pest';  // pest endpoint (assumed to be separate)
-    const OWNER_PASSWORD = 'yusupher01';
-    let ownerAuthenticated = false;
+(function() {
+  const BACKEND_URL = "https://plant-backend-avof.onrender.com";
+  const PEST_URL = BACKEND_URL + '/detect-pest';
+  const OWNER_PASSWORD = 'yusupher01';
+  let ownerAuthenticated = false;
 
-    // DOM elements
-    const video = document.getElementById('video');
-    const startCam = document.getElementById('startCam');
-    const stopCam = document.getElementById('stopCam');
-    const captureBtn = document.getElementById('captureBtn');
-    const plantBtn = document.getElementById('plantBtn');
-    const diseaseBtn = document.getElementById('diseaseBtn');
-    const pestBtn = document.getElementById('pestBtn');
-    const fileInput = document.getElementById('fileInput');
-    const uploadLabel = document.getElementById('uploadLabel');
-    const previewImg = document.getElementById('preview');
-    const statusSpan = document.getElementById('statusMsg');
-    const spinner = document.getElementById('spinner');
-    const defaultMsg = document.getElementById('defaultMsg');
-    const aiOutput = document.getElementById('aiOutput');
-    const correctionStatsSpan = document.getElementById('correctionStats');
-    const refreshBtn = document.getElementById('refreshCorrectionsBtn');
-    const ownerLoginBtn = document.getElementById('ownerLoginBtn');
-    const logoutBtn = document.getElementById('logoutBtn');
-    const ownerPanel = document.getElementById('ownerPanel');
-    const correctionKeyInput = document.getElementById('correctionKey');
-    const commonNameInput = document.getElementById('commonName');
-    const scientificNameInput = document.getElementById('scientificName');
-    const familyNameInput = document.getElementById('familyName');
-    const importanceInput = document.getElementById('importance');
-    const ownerSureCheckbox = document.getElementById('ownerSure');
-    const saveCorrectionBtn = document.getElementById('saveCorrectionBtn');
-    const downloadBtn = document.getElementById('downloadCorrectionsBtn');
-    const correctionsListDiv = document.getElementById('correctionsList');
-    const autoFillBtn = document.getElementById('autoFillBtn');
+  const video = document.getElementById('video');
+  const startCam = document.getElementById('startCam');
+  const stopCam = document.getElementById('stopCam');
+  const captureBtn = document.getElementById('captureBtn');
+  const plantBtn = document.getElementById('plantBtn');
+  const diseaseBtn = document.getElementById('diseaseBtn');
+  const pestBtn = document.getElementById('pestBtn');
+  const fileInput = document.getElementById('fileInput');
+  const uploadLabel = document.getElementById('uploadLabel');
+  const previewImg = document.getElementById('preview');
+  const statusSpan = document.getElementById('statusMsg');
+  const spinner = document.getElementById('spinner');
+  const defaultMsg = document.getElementById('defaultMsg');
+  const aiOutput = document.getElementById('aiOutput');
+  const correctionStatsSpan = document.getElementById('correctionStats');
+  const refreshBtn = document.getElementById('refreshCorrectionsBtn');
+  const ownerLoginBtn = document.getElementById('ownerLoginBtn');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const ownerPanel = document.getElementById('ownerPanel');
+  const correctionKeyInput = document.getElementById('correctionKey');
+  const commonNameInput = document.getElementById('commonName');
+  const scientificNameInput = document.getElementById('scientificName');
+  const familyNameInput = document.getElementById('familyName');
+  const importanceInput = document.getElementById('importance');
+  const ownerSureCheckbox = document.getElementById('ownerSure');
+  const saveCorrectionBtn = document.getElementById('saveCorrectionBtn');
+  const downloadBtn = document.getElementById('downloadCorrectionsBtn');
+  const correctionsListDiv = document.getElementById('correctionsList');
+  const autoFillBtn = document.getElementById('autoFillBtn');
+  const infoModal = document.getElementById('infoModal');
+  const infoModalTitle = document.getElementById('infoModalTitle');
+  const infoModalSubtitle = document.getElementById('infoModalSubtitle');
+  const infoModalBody = document.getElementById('infoModalBody');
+  const infoModalClose = document.getElementById('infoModalClose');
 
-    let currentStream = null;
-    let cameraActive = false;
-    let offlineModel = null;
-    let offlineReady = false;
-    let currentMode = 'auto';
-    let globalCorrections = {};
-    let pendingCorrections = {};
-    let currentImageBlob = null;
-    let lastPlantResult = null;
-    let lastPredictedKey = '';
+  let currentStream = null;
+  let cameraActive = false;
+  let offlineModel = null;
+  let offlineReady = false;
+  let currentMode = 'auto';
+  let globalCorrections = {};
+  let pendingCorrections = {};
+  let currentImageBlob = null;
+  let lastPlantResult = null;
+  let lastPredictedKey = '';
 
-    const plantDatabase = {
-      "cowpea": { common: "Cowpea", scientific: "Vigna unguiculata", family: "Fabaceae", importance: "Legume crop, rich in protein, drought-tolerant." },
-      "mango": { common: "Mango", scientific: "Mangifera indica", family: "Anacardiaceae", importance: "Tropical fruit tree." },
-      "tomato": { common: "Tomato", scientific: "Solanum lycopersicum", family: "Solanaceae", importance: "Fruit vegetable." },
-      "maize": { common: "Maize", scientific: "Zea mays", family: "Poaceae", importance: "Staple grain." }
-    };
+  const plantDatabase = {
+    "cowpea": { common: "Cowpea", scientific: "Vigna unguiculata", family: "Fabaceae", importance: "Legume crop, rich in protein, drought-tolerant." },
+    "mango": { common: "Mango", scientific: "Mangifera indica", family: "Anacardiaceae", importance: "Tropical fruit tree." },
+    "tomato": { common: "Tomato", scientific: "Solanum lycopersicum", family: "Solanaceae", importance: "Fruit vegetable." },
+    "maize": { common: "Maize", scientific: "Zea mays", family: "Poaceae", importance: "Staple grain." }
+  };
 
-    function autoFill(targetCommon, targetSci, targetFamily, targetImportance) {
-      const raw = targetCommon.value.trim().toLowerCase();
-      if (plantDatabase[raw]) {
-        const p = plantDatabase[raw];
-        targetSci.value = p.scientific;
-        targetFamily.value = p.family;
-        targetImportance.value = p.importance;
-        setStatus(`✅ Auto-filled: ${p.common}`, false);
-      } else {
-        setStatus(`❌ No entry for "${raw}"`, false);
-      }
-    }
-    autoFillBtn.addEventListener('click', () => {
-      autoFill(commonNameInput, scientificNameInput, familyNameInput, importanceInput);
+  // ========== CLAUDE AI COMPREHENSIVE INFO (via backend proxy) ==========
+  async function fetchComprehensiveInfo(query, type) {
+    const response = await fetch(BACKEND_URL + "/claude-info", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query, type })
     });
+    if (!response.ok) throw new Error(`Backend error ${response.status}`);
+    const data = await response.json();
+    if (!data.success) throw new Error(data.error || "Backend returned failure");
+    return data.data;
+  }
 
-    const modeAuto = document.getElementById('modeAuto');
-    const modeOnline = document.getElementById('modeOnline');
-    const modeOffline = document.getElementById('modeOffline');
-    function setActiveMode(mode) {
-      modeAuto.classList.remove('active');
-      modeOnline.classList.remove('active');
-      modeOffline.classList.remove('active');
-      if (mode === 'auto') modeAuto.classList.add('active');
-      else if (mode === 'online') modeOnline.classList.add('active');
-      else if (mode === 'offline') modeOffline.classList.add('active');
-      currentMode = mode;
-    }
-    modeAuto.addEventListener('click', () => setActiveMode('auto'));
-    modeOnline.addEventListener('click', () => setActiveMode('online'));
-    modeOffline.addEventListener('click', () => setActiveMode('offline'));
+  function esc(str) { if (!str) return ''; return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 
-    function setStatus(msg, loading = false) {
-      statusSpan.innerText = msg;
-      if (loading) spinner.classList.remove('hidden');
-      else spinner.classList.add('hidden');
+  function renderPlantInfo(info) {
+    const isWeed = info.isWeed || info.category === 'weed';
+    const cat = (info.category || 'other').toLowerCase();
+    const emoji = isWeed ? '🌾' : (cat === 'tree' ? '🌳' : (cat === 'crop' ? '🌾' : '🪴'));
+    const badgeClass = isWeed ? 'badge-weed' : (cat === 'tree' ? 'badge-tree' : (cat === 'crop' ? 'badge-crop' : 'badge-other'));
+    let html = `<span class="info-type-badge ${badgeClass}">${emoji} ${esc(cat.toUpperCase())}</span>`;
+    html += `<div class="taxonomy-grid">
+      <div class="taxonomy-item"><span>Family</span>${esc(info.family||'—')}</div>
+      <div class="taxonomy-item"><span>Order</span>${esc(info.order||'—')}</div>
+      <div class="taxonomy-item"><span>Class</span>${esc(info.class||'—')}</div>
+      <div class="taxonomy-item"><span>Origin</span>${esc(info.origin||'—')}</div>
+    </div>`;
+    if (info.description) html += `<div class="info-section-block"><h3>📖 Description</h3><p>${esc(info.description)}</p></div>`;
+    if (info.uses && info.uses.length) html += `<div class="info-section-block"><h3>🔧 Uses &amp; Importance</h3><ul>${info.uses.map(u=>`<li>${esc(u)}</li>`).join('')}</ul></div>`;
+    if (info.nutritionalValue) html += `<div class="info-section-block"><h3>🥗 Nutritional Value</h3><p>${esc(info.nutritionalValue)}</p></div>`;
+    if (info.economicImportance) html += `<div class="info-section-block"><h3>💰 Economic Importance</h3><p>${esc(info.economicImportance)}</p></div>`;
+    if (info.ecologicalRole) html += `<div class="info-section-block"><h3>🌍 Ecological Role</h3><p>${esc(info.ecologicalRole)}</p></div>`;
+    if (info.growingConditions) {
+      const g = info.growingConditions;
+      html += `<div class="info-section-block"><h3>🌱 Growing Conditions</h3>
+        ${g.climate?`<p><strong>Climate:</strong> ${esc(g.climate)}</p>`:''}
+        ${g.soil?`<p><strong>Soil:</strong> ${esc(g.soil)}</p>`:''}
+        ${g.rainfall?`<p><strong>Rainfall:</strong> ${esc(g.rainfall)}</p>`:''}
+        ${g.temperature?`<p><strong>Temperature:</strong> ${esc(g.temperature)}</p>`:''}
+      </div>`;
     }
+    if (isWeed && info.weedControl) {
+      const wc = info.weedControl;
+      html += `<div class="info-section-block weed-block"><h3>⚠️ IPM Weed Control</h3>
+        ${wc.ipmSummary?`<p style="margin-bottom:10px;">${esc(wc.ipmSummary)}</p>`:''}
+        ${wc.cultural&&wc.cultural.length?`<p><span class="ipm-tag cult">Cultural</span></p><ul>${wc.cultural.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+        ${wc.mechanical&&wc.mechanical.length?`<p style="margin-top:8px;"><span class="ipm-tag mech">Mechanical</span></p><ul>${wc.mechanical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+        ${wc.biological&&wc.biological.length?`<p style="margin-top:8px;"><span class="ipm-tag bio">Biological</span></p><ul>${wc.biological.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+        ${wc.chemical&&wc.chemical.length?`<p style="margin-top:8px;"><span class="ipm-tag chem">Chemical</span></p><ul>${wc.chemical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+      </div>`;
+    }
+    if (info.interestingFacts && info.interestingFacts.length) html += `<div class="info-section-block"><h3>💡 Interesting Facts</h3><ul>${info.interestingFacts.map(f=>`<li>${esc(f)}</li>`).join('')}</ul></div>`;
+    return html;
+  }
 
-    // Correction handling (silent)
-    function getAllCorrections() { return { ...globalCorrections, ...pendingCorrections }; }
-    function addPendingCorrection(key, common, scientific, family, importance, ownerSure) {
-      if (!key || !common) return false;
-      const normalizedKey = key.toLowerCase().trim();
-      pendingCorrections[normalizedKey] = {
-        name: common.trim(),
-        scientific: scientific.trim() || '',
-        family: family.trim() || '',
-        importance: importance.trim() || '',
-        ownerSure: ownerSure || false
-      };
-      setStatus(`✅ Correction added (pending)`, false);
-      updateCorrectionUI();
-      return true;
-    }
-    function removePendingCorrection(key) {
-      const normalizedKey = key.toLowerCase().trim();
-      if (pendingCorrections[normalizedKey]) {
-        delete pendingCorrections[normalizedKey];
-        setStatus(`🗑️ Removed pending correction`, false);
-        updateCorrectionUI();
-        return true;
-      }
-      return false;
-    }
-    function applyBestCorrection(result, predictedKey) {
-      if (!predictedKey) return result;
-      const key = predictedKey.toLowerCase().trim();
-      const all = getAllCorrections();
-      if (all[key]) {
-        const c = all[key];
-        result.name = c.name || result.name;
-        result.scientific = c.scientific || result.scientific;
-        result.family = c.family || result.family;
-        result.importance = c.importance || '';
-        if (c.ownerSure === true) result.confidence = '100';
-        result.correctionNote = `✨ Correction: "${key}" → "${c.name}"`;
-      }
-      return result;
-    }
-    async function loadGlobalCorrections() {
-      try {
-        const response = await fetch('corrections.json?t=' + Date.now());
-        if (response.ok) {
-          const data = await response.json();
-          if (typeof data === 'object') globalCorrections = data;
-        }
-      } catch(e) { /* ignore */ }
-      pendingCorrections = {};
-      updateCorrectionUI();
-    }
-    function downloadCorrectionsFile() {
-      const merged = getAllCorrections();
-      const dataStr = JSON.stringify(merged, null, 2);
-      const blob = new Blob([dataStr], {type: 'application/json'});
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'corrections.json';
-      a.click();
-      URL.revokeObjectURL(blob);
-      setStatus("Downloaded corrections.json", false);
-    }
-    function updateCorrectionUI() {
-      const pendingCount = Object.keys(pendingCorrections).length;
-      const globalCount = Object.keys(globalCorrections).length;
-      correctionStatsSpan.innerHTML = `${globalCount + pendingCount} total`;
-      renderCorrectionsList();
-    }
-    function renderCorrectionsList() {
-      if (!correctionsListDiv) return;
-      const all = getAllCorrections();
-      const entries = Object.entries(all);
-      if (entries.length === 0) {
-        correctionsListDiv.innerHTML = '<i>No corrections yet.</i>';
-        return;
-      }
-      correctionsListDiv.innerHTML = '';
-      for (const [key, val] of entries) {
-        const isPending = !!pendingCorrections[key];
-        const div = document.createElement('div');
-        div.className = 'correction-item';
-        div.innerHTML = `
-          <div><span class="correction-key">${escapeHtml(key)}</span> → <span class="correction-value">${escapeHtml(val.name)}</span> ${isPending ? '<span style="background:#f4a261; color:black; padding:2px 6px; border-radius:40px;">pending</span>' : ''}</div>
-          ${ownerAuthenticated ? `<button class="delete-correction" data-key="${escapeHtml(key)}"><i class="fas fa-trash"></i> Delete</button>` : ''}
-        `;
-        if (ownerAuthenticated) {
-          const delBtn = div.querySelector('.delete-correction');
-          delBtn.addEventListener('click', () => {
-            if (pendingCorrections[key]) removePendingCorrection(key);
-            else setStatus(`Global correction can only be removed by editing corrections.json.`, false);
-          });
-        }
-        correctionsListDiv.appendChild(div);
-      }
-    }
+  function renderDiseaseInfo(info) {
+    const c = info.control || {};
+    let html = `<div class="taxonomy-grid">
+      <div class="taxonomy-item"><span>Pathogen Type</span>${esc(info.pathogenType||'—')}</div>
+      <div class="taxonomy-item"><span>Pathogen</span>${esc(info.pathogenName||'—')}</div>
+    </div>`;
+    if (info.affectedPlants && info.affectedPlants.length) html += `<div class="info-section-block disease-block"><h3>🌿 Affected Plants</h3><p>${info.affectedPlants.map(p=>esc(p)).join(', ')}</p></div>`;
+    if (info.symptoms && info.symptoms.length) html += `<div class="info-section-block disease-block"><h3>🔍 Symptoms</h3><ul>${info.symptoms.map(s=>`<li>${esc(s)}</li>`).join('')}</ul></div>`;
+    if (info.spreadMechanism) html += `<div class="info-section-block disease-block"><h3>🔄 How It Spreads</h3><p>${esc(info.spreadMechanism)}</p></div>`;
+    if (info.favorableConditions) html += `<div class="info-section-block disease-block"><h3>🌡️ Favorable Conditions</h3><p>${esc(info.favorableConditions)}</p></div>`;
+    if (info.economicImpact) html += `<div class="info-section-block disease-block"><h3>💸 Economic Impact</h3><p>${esc(info.economicImpact)}</p></div>`;
+    html += `<div class="info-section-block disease-block"><h3>💊 Disease Control (IPM)</h3>
+      ${c.ipmSummary?`<p style="margin-bottom:10px;">${esc(c.ipmSummary)}</p>`:''}
+      ${c.cultural&&c.cultural.length?`<p><span class="ipm-tag cult">Cultural</span></p><ul>${c.cultural.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+      ${c.biological&&c.biological.length?`<p style="margin-top:8px;"><span class="ipm-tag bio">Biological</span></p><ul>${c.biological.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+      ${c.chemical&&c.chemical.length?`<p style="margin-top:8px;"><span class="ipm-tag chem">Chemical</span></p><ul>${c.chemical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+      ${c.resistant_varieties&&c.resistant_varieties.length?`<p style="margin-top:8px;"><span class="ipm-tag mech">Resistant Varieties</span></p><ul>${c.resistant_varieties.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+    </div>`;
+    if (info.preventionTips && info.preventionTips.length) html += `<div class="info-section-block disease-block"><h3>🛡️ Prevention Tips</h3><ul>${info.preventionTips.map(t=>`<li>${esc(t)}</li>`).join('')}</ul></div>`;
+    return html;
+  }
 
-    function blobToImage(blob) {
-      return new Promise((resolve) => {
-        const img = new Image();
-        img.onload = () => resolve(img);
-        img.src = URL.createObjectURL(blob);
-      });
-    }
+  function renderPestInfo(info) {
+    const c = info.control || {};
+    let html = `<div class="taxonomy-grid">
+      <div class="taxonomy-item"><span>Pest Type</span>${esc(info.pestType||'—')}</div>
+      <div class="taxonomy-item"><span>Scientific Name</span><em>${esc(info.scientificName||'—')}</em></div>
+    </div>`;
+    if (info.affectedPlants && info.affectedPlants.length) html += `<div class="info-section-block pest-block"><h3>🌿 Affected Plants</h3><p>${info.affectedPlants.map(p=>esc(p)).join(', ')}</p></div>`;
+    if (info.damageDescription) html += `<div class="info-section-block pest-block"><h3>💥 Damage Caused</h3><p>${esc(info.damageDescription)}</p></div>`;
+    if (info.peakActivity) html += `<div class="info-section-block pest-block"><h3>📅 Peak Activity</h3><p>${esc(info.peakActivity)}</p></div>`;
+    if (info.economicThreshold) html += `<div class="info-section-block pest-block"><h3>📊 Economic Threshold</h3><p>${esc(info.economicThreshold)}</p></div>`;
+    html += `<div class="info-section-block pest-block"><h3>🐛 Pest Control (IPM)</h3>
+      ${c.ipmSummary?`<p style="margin-bottom:10px;">${esc(c.ipmSummary)}</p>`:''}
+      ${c.cultural&&c.cultural.length?`<p><span class="ipm-tag cult">Cultural</span></p><ul>${c.cultural.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+      ${c.biological&&c.biological.length?`<p style="margin-top:8px;"><span class="ipm-tag bio">Biological</span></p><ul>${c.biological.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+      ${c.mechanical&&c.mechanical.length?`<p style="margin-top:8px;"><span class="ipm-tag mech">Mechanical / Traps</span></p><ul>${c.mechanical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+      ${c.chemical&&c.chemical.length?`<p style="margin-top:8px;"><span class="ipm-tag chem">Chemical</span></p><ul>${c.chemical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+    </div>`;
+    if (info.safetyNotes) html += `<div class="info-section-block pest-block"><h3>⚠️ Safety Notes</h3><p>${esc(info.safetyNotes)}</p></div>`;
+    return html;
+  }
 
-    // ========== PLANT IDENTIFICATION (parses backend wrapper) ==========
-    async function identifyPlantWithBackend(imageBlob) {
-      try {
-        const formData = new FormData();
-        formData.append("image", imageBlob);
-        const response = await fetch(BACKEND_URL + "/identify", {
-          method: "POST",
-          body: formData
+  async function openInfoModal(query, type, title, subtitle) {
+    infoModalTitle.textContent = title;
+    infoModalSubtitle.textContent = subtitle || '';
+    infoModalBody.innerHTML = `<div class="info-loading"><div class="big-loader"></div><p>Fetching comprehensive information…</p><p style="font-size:0.74rem;color:#888;margin-top:5px;">Powered by Claude AI</p></div>`;
+    infoModal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    try {
+      const info = await fetchComprehensiveInfo(query, type);
+      let html = '';
+      if (type === 'plant') html = renderPlantInfo(info);
+      else if (type === 'disease') html = renderDiseaseInfo(info);
+      else if (type === 'pest') html = renderPestInfo(info);
+      infoModalBody.innerHTML = html || '<p>No information returned.</p>';
+    } catch(err) {
+      infoModalBody.innerHTML = `<div class="error-msg"><i class="fas fa-exclamation-triangle"></i><br>Could not fetch info: ${esc(err.message)}<br><small>Check connection and try again.</small></div>`;
+    }
+  }
+
+  function closeInfoModal() { infoModal.classList.remove('open'); document.body.style.overflow = ''; }
+  infoModalClose.addEventListener('click', closeInfoModal);
+  infoModal.addEventListener('click', e => { if (e.target === infoModal) closeInfoModal(); });
+
+  function makeSearchBtn(query, type, title, subtitle) {
+    const btn = document.createElement('button');
+    btn.className = 'search-info-inline-btn';
+    btn.innerHTML = '<i class="fas fa-search"></i> Search Comprehensive Info';
+    btn.addEventListener('click', () => openInfoModal(query, type, title, subtitle));
+    return btn;
+  }
+
+  // ========== ALL ORIGINAL FUNCTIONS (unchanged) ==========
+  function autoFillFn() {
+    const raw = commonNameInput.value.trim().toLowerCase();
+    if (plantDatabase[raw]) {
+      const p = plantDatabase[raw];
+      scientificNameInput.value = p.scientific;
+      familyNameInput.value = p.family;
+      importanceInput.value = p.importance;
+      setStatus(`✅ Auto-filled: ${p.common}`, false);
+    } else setStatus(`❌ No entry for "${raw}"`, false);
+  }
+  autoFillBtn.addEventListener('click', autoFillFn);
+
+  const modeAuto = document.getElementById('modeAuto');
+  const modeOnline = document.getElementById('modeOnline');
+  const modeOffline = document.getElementById('modeOffline');
+  function setActiveMode(mode) {
+    modeAuto.classList.remove('active'); modeOnline.classList.remove('active'); modeOffline.classList.remove('active');
+    if (mode === 'auto') modeAuto.classList.add('active');
+    else if (mode === 'online') modeOnline.classList.add('active');
+    else if (mode === 'offline') modeOffline.classList.add('active');
+    currentMode = mode;
+  }
+  modeAuto.addEventListener('click', () => setActiveMode('auto'));
+  modeOnline.addEventListener('click', () => setActiveMode('online'));
+  modeOffline.addEventListener('click', () => setActiveMode('offline'));
+
+  function setStatus(msg, loading=false) {
+    statusSpan.innerText = msg;
+    loading ? spinner.classList.remove('hidden') : spinner.classList.add('hidden');
+  }
+
+  function getAllCorrections() { return { ...globalCorrections, ...pendingCorrections }; }
+  function addPendingCorrection(key, common, scientific, family, importance, ownerSure) {
+    if (!key || !common) return false;
+    const k = key.toLowerCase().trim();
+    pendingCorrections[k] = { name: common.trim(), scientific: scientific.trim()||'', family: family.trim()||'', importance: importance.trim()||'', ownerSure: ownerSure||false };
+    setStatus('✅ Correction added (pending)', false);
+    updateCorrectionUI(); return true;
+  }
+  function removePendingCorrection(key) {
+    const k = key.toLowerCase().trim();
+    if (pendingCorrections[k]) { delete pendingCorrections[k]; setStatus('🗑️ Removed pending correction', false); updateCorrectionUI(); return true; }
+    return false;
+  }
+  function applyBestCorrection(result, predictedKey) {
+    if (!predictedKey) return result;
+    const key = predictedKey.toLowerCase().trim();
+    const all = getAllCorrections();
+    if (all[key]) {
+      const c = all[key];
+      result.name = c.name || result.name;
+      result.scientific = c.scientific || result.scientific;
+      result.family = c.family || result.family;
+      result.importance = c.importance || '';
+      if (c.ownerSure === true) result.confidence = '100';
+      result.correctionNote = `✨ Correction: "${key}" → "${c.name}"`;
+    }
+    return result;
+  }
+  async function loadGlobalCorrections() {
+    try {
+      const r = await fetch('corrections.json?t=' + Date.now());
+      if (r.ok) { const d = await r.json(); if (typeof d === 'object') globalCorrections = d; }
+    } catch(e) {}
+    pendingCorrections = {}; updateCorrectionUI();
+  }
+  function downloadCorrectionsFile() {
+    const merged = getAllCorrections();
+    const blob = new Blob([JSON.stringify(merged, null, 2)], {type:'application/json'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'corrections.json'; a.click();
+    URL.revokeObjectURL(blob); setStatus("Downloaded corrections.json", false);
+  }
+  function updateCorrectionUI() {
+    correctionStatsSpan.innerHTML = `${Object.keys(globalCorrections).length + Object.keys(pendingCorrections).length} total`;
+    renderCorrectionsList();
+  }
+  function renderCorrectionsList() {
+    if (!correctionsListDiv) return;
+    const all = getAllCorrections(); const entries = Object.entries(all);
+    if (!entries.length) { correctionsListDiv.innerHTML = '<i>No corrections yet.</i>'; return; }
+    correctionsListDiv.innerHTML = '';
+    for (const [key, val] of entries) {
+      const isPending = !!pendingCorrections[key];
+      const div = document.createElement('div'); div.className = 'correction-item';
+      div.innerHTML = `<div><span>${esc(key)}</span> → <span>${esc(val.name)}</span> ${isPending ? '<span style="background:#f4a261;color:black;padding:2px 6px;border-radius:40px;">pending</span>' : ''}</div>
+        ${ownerAuthenticated ? `<button class="delete-correction" data-key="${esc(key)}"><i class="fas fa-trash"></i> Delete</button>` : ''}`;
+      if (ownerAuthenticated) {
+        div.querySelector('.delete-correction').addEventListener('click', () => {
+          if (pendingCorrections[key]) removePendingCorrection(key);
+          else setStatus('Global correction can only be removed by editing corrections.json.', false);
         });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = await response.json();
-        console.log("Plant API full response:", data);
-
-        // Backend returns { success, source, data: PlantNetResponse }
-        if (data.success && data.data && data.data.results && data.data.results.length > 0) {
-          const best = data.data.results[0];
-          const commonName = best.species?.commonNames?.[0] || '';
-          const scientificName = best.species?.scientificNameWithoutAuthor || best.species?.scientificName || '';
-          const confidence = (best.score * 100).toFixed(1);
-          const rawLabel = scientificName || commonName || best.species?.id || "unknown";
-          return {
-            name: commonName || scientificName || "Identified plant",
-            scientific: scientificName,
-            confidence: confidence,
-            family: '—',
-            importance: '',
-            originalPredictedLabel: rawLabel,
-            rawData: data
-          };
-        }
-        // If unexpected format, return raw for debugging
-        return { error: true, rawData: data };
-      } catch (err) {
-        console.error("Plant identification error", err);
-        return { error: true, message: err.message };
       }
+      correctionsListDiv.appendChild(div);
     }
+  }
 
-    // Offline fallback (simple)
-    const offlinePlantMap = [
-      { patterns: ['mango', 'mangifera'], name: 'Mango', scientific: 'Mangifera indica', family: 'Anacardiaceae', importance: "Tropical fruit." },
-      { patterns: ['tomato', 'solanum'], name: 'Tomato', scientific: 'Solanum lycopersicum', family: 'Solanaceae', importance: "Fruit vegetable." },
-      { patterns: ['maize', 'corn', 'zea'], name: 'Maize', scientific: 'Zea mays', family: 'Poaceae', importance: "Staple grain." }
-    ];
-    function matchOffline(label) {
-      const lower = label.toLowerCase();
-      for (let p of offlinePlantMap) if (p.patterns.some(pat => lower.includes(pat))) return p;
-      let generic = label.split(',')[0].replace(/_/g,' ');
-      generic = generic.replace(/(^\w|\s\w)/g, c=>c.toUpperCase());
-      return { name: generic, scientific: '—', family: 'Unknown', importance: '' };
-    }
-    async function classifyOffline(imgElement) {
-      if (!offlineModel) return null;
-      try {
-        const tensor = tf.browser.fromPixels(imgElement).resizeNearestNeighbor([224,224]).toFloat();
-        const expanded = tensor.expandDims(0);
-        const preds = await offlineModel.classify(expanded);
-        tensor.dispose(); expanded.dispose();
-        if (preds && preds[0]) {
-          const plant = matchOffline(preds[0].className);
-          return {
-            name: plant.name,
-            scientific: plant.scientific,
-            confidence: (preds[0].probability*100).toFixed(1),
-            family: plant.family,
-            importance: plant.importance || '',
-            originalPredictedLabel: preds[0].className
-          };
-        }
-        return null;
-      } catch(e) { return null; }
-    }
+  function blobToImage(blob) {
+    return new Promise(resolve => { const img = new Image(); img.onload = () => resolve(img); img.src = URL.createObjectURL(blob); });
+  }
 
-    async function identifyPlant() {
-      if (!currentImageBlob) {
-        alert("Please take or upload a picture first.");
-        return;
+  async function identifyPlantWithBackend(imageBlob) {
+    try {
+      const fd = new FormData(); fd.append("image", imageBlob);
+      const r = await fetch(BACKEND_URL + "/identify", { method:"POST", body:fd });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const data = await r.json();
+      console.log("Plant API:", data);
+      if (data.success && data.data && data.data.results && data.data.results.length > 0) {
+        const best = data.data.results[0];
+        const commonName = best.species?.commonNames?.[0] || '';
+        const scientificName = best.species?.scientificNameWithoutAuthor || best.species?.scientificName || '';
+        const confidence = (best.score * 100).toFixed(1);
+        const rawLabel = scientificName || commonName || best.species?.id || "unknown";
+        return { name: commonName||scientificName||"Identified plant", scientific: scientificName, confidence, family:'—', importance:'', originalPredictedLabel: rawLabel, rawData: data };
       }
-      setStatus("🌿 Identifying plant...", true);
-      defaultMsg.classList.add('hidden');
-      let result = null;
-      if (currentMode === 'offline' && offlineReady) {
-        const img = await blobToImage(currentImageBlob);
-        result = await classifyOffline(img);
+      return { error: true, rawData: data };
+    } catch(err) { return { error: true, message: err.message }; }
+  }
+
+  const offlinePlantMap = [
+    { patterns: ['mango','mangifera'], name:'Mango', scientific:'Mangifera indica', family:'Anacardiaceae', importance:"Tropical fruit." },
+    { patterns: ['tomato','solanum'], name:'Tomato', scientific:'Solanum lycopersicum', family:'Solanaceae', importance:"Fruit vegetable." },
+    { patterns: ['maize','corn','zea'], name:'Maize', scientific:'Zea mays', family:'Poaceae', importance:"Staple grain." }
+  ];
+  function matchOffline(label) {
+    const lower = label.toLowerCase();
+    for (let p of offlinePlantMap) if (p.patterns.some(pat => lower.includes(pat))) return p;
+    let g = label.split(',')[0].replace(/_/g,' ').replace(/(^\w|\s\w)/g, c=>c.toUpperCase());
+    return { name:g, scientific:'—', family:'Unknown', importance:'' };
+  }
+  async function classifyOffline(imgEl) {
+    if (!offlineModel) return null;
+    try {
+      const t = tf.browser.fromPixels(imgEl).resizeNearestNeighbor([224,224]).toFloat().expandDims(0);
+      const preds = await offlineModel.classify(t); t.dispose();
+      if (preds && preds[0]) {
+        const plant = matchOffline(preds[0].className);
+        return { name:plant.name, scientific:plant.scientific, confidence:(preds[0].probability*100).toFixed(1), family:plant.family, importance:plant.importance||'', originalPredictedLabel:preds[0].className };
+      }
+      return null;
+    } catch(e) { return null; }
+  }
+
+  async function identifyPlant() {
+    if (!currentImageBlob) { alert("Please take or upload a picture first."); return; }
+    setStatus("🌿 Identifying plant...", true);
+    defaultMsg.classList.add('hidden');
+    let result = null;
+    if (currentMode === 'offline' && offlineReady) {
+      const img = await blobToImage(currentImageBlob);
+      result = await classifyOffline(img);
+    } else result = await identifyPlantWithBackend(currentImageBlob);
+
+    if (result && result.error) {
+      const rawJson = result.rawData ? JSON.stringify(result.rawData, null, 2) : (result.message || "No data");
+      aiOutput.innerHTML = `<div class="plant-card"><div><strong>⚠️ Could not parse plant name</strong></div><div class="raw-json"><strong>Raw API response:</strong><br>${esc(rawJson)}</div><div class="tip-box">💡 Your backend returned this. The plant name is likely inside the "data" field.</div></div>`;
+      setStatus("Plant API responded but name not found.", false); return;
+    }
+    if (result && result.name) {
+      if (result.originalPredictedLabel) { result = applyBestCorrection(result, result.originalPredictedLabel); lastPredictedKey = result.originalPredictedLabel; }
+      else { lastPredictedKey = result.name.toLowerCase(); result = applyBestCorrection(result, lastPredictedKey); }
+      lastPlantResult = result;
+      displayPlantResult(result, lastPredictedKey);
+      setStatus(`✅ Plant: ${result.name} (${result.confidence}%)`, false);
+    } else {
+      aiOutput.innerHTML = `<div class="error-msg">❌ No plant identified. Try a clearer image.</div>`;
+      setStatus("No plant found", false);
+    }
+  }
+
+  async function detectDiseaseWithBackend(imageBlob) {
+    try {
+      const fd = new FormData(); fd.append("image", imageBlob);
+      const r = await fetch(BACKEND_URL + "/disease", { method:"POST", body:fd });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const data = await r.json();
+      console.log("Disease API:", data);
+      if (!data.success) return { error:true, rawData:data };
+      if (data.source === "Roboflow" && data.data && data.data.predictions) {
+        const preds = data.data.predictions;
+        if (preds.length > 0) {
+          const top = preds.reduce((max,p) => p.confidence > max.confidence ? p : max, preds[0]);
+          const name = top.class || "Unknown disease";
+          const conf = Math.round(top.confidence * 100);
+          return { result: name, confidence: conf, isHealthy: name.toLowerCase().includes("healthy") || conf < 30, rawData: data };
+        }
+        return { result:"No disease detected", confidence:100, isHealthy:true, rawData:data };
+      } else if (data.source === "Plant.id (fallback)" && data.data?.health_assessment) {
+        const diseases = data.data.health_assessment.diseases;
+        if (diseases && diseases.length > 0) return { result: diseases[0].name||"Unknown disease", confidence: Math.round((diseases[0].probability||0)*100), isHealthy:false, rawData:data };
+        return { result:"Healthy plant", confidence:85, isHealthy:true, rawData:data };
+      }
+      return { error:true, rawData:data };
+    } catch(err) { return { error:true, message:err.message }; }
+  }
+
+  async function detectDisease() {
+    if (!currentImageBlob) { alert("Please take or upload a picture first."); return; }
+    setStatus("🦠 Analyzing disease...", true);
+    defaultMsg.classList.add('hidden');
+    const diseaseData = await detectDiseaseWithBackend(currentImageBlob);
+    if (!diseaseData || diseaseData.error) {
+      const raw = diseaseData?.rawData ? JSON.stringify(diseaseData.rawData, null, 2) : "No response";
+      aiOutput.innerHTML = `<div class="disease-card"><div><strong>⚠️ Disease detection failed</strong></div><div class="raw-json">${esc(raw)}</div><div class="tip-box">Check console for details.</div></div>`;
+      setStatus("Disease API error", false); return;
+    }
+    const diseaseResult = diseaseData.result;
+    const confVal = diseaseData.confidence;
+    const confDisp = (confVal != null) ? confVal + '%' : 'N/A';
+    const isHealthy = diseaseData.isHealthy || (confVal===0) || diseaseResult.toLowerCase().includes("healthy");
+
+    const wrapper = document.createElement('div');
+    if (isHealthy) {
+      wrapper.innerHTML = `<div class="disease-card"><div><strong><i class="fas fa-seedling"></i> 🌱 Health Status: ${esc(diseaseResult)}</strong></div><div class="confidence">🎯 Confidence: ${confDisp}</div><div class="treatment-section">✅ Your plant appears healthy. Continue good practices.</div></div>`;
+    } else {
+      wrapper.innerHTML = `<div class="disease-card"><div><strong><i class="fas fa-biohazard"></i> 🦠 Disease: ${esc(diseaseResult)}</strong></div><div class="confidence">🎯 Confidence: ${confDisp}</div><div class="treatment-section"><strong>Suggested Action:</strong><br>Consult an agronomist. Remove infected parts and apply recommended treatment.</div></div>`;
+    }
+    // Add search button
+    wrapper.appendChild(makeSearchBtn(diseaseResult, 'disease', `🦠 ${diseaseResult}`, 'Plant Disease — Full Information & Control'));
+    aiOutput.innerHTML = '';
+    aiOutput.appendChild(wrapper);
+    setStatus(`Disease: ${diseaseResult} (${confDisp})`, false);
+  }
+
+  async function detectPest() {
+    if (!currentImageBlob) { alert("Please take or upload a picture first."); return; }
+    setStatus("🐛 Detecting pest...", true);
+    defaultMsg.classList.add('hidden');
+    const fd = new FormData(); fd.append('image', currentImageBlob);
+    try {
+      const res = await fetch(PEST_URL, { method:'POST', body:fd });
+      const data = await res.json();
+      const pestResult = data.result || "No pest detected";
+      const confVal = data.confidence;
+      const confDisp = (confVal != null) ? confVal + '%' : 'N/A';
+      const isNoPest = (confVal === 0) || pestResult.toLowerCase().includes("no pest");
+
+      const wrapper = document.createElement('div');
+      if (isNoPest) {
+        wrapper.innerHTML = `<div class="pest-card"><div><strong><i class="fas fa-check-circle"></i> ✅ ${esc(pestResult)}</strong></div><div class="confidence">🎯 Confidence: ${confDisp}</div><div class="treatment-section">No pest detected. Maintain good hygiene.</div></div>`;
       } else {
-        result = await identifyPlantWithBackend(currentImageBlob);
+        wrapper.innerHTML = `<div class="pest-card"><div><strong><i class="fas fa-bug"></i> 🐛 Pest: ${esc(pestResult)}</strong></div><div class="confidence">🎯 Confidence: ${confDisp}</div><div class="treatment-section"><strong>Control:</strong> Apply neem oil or appropriate pesticide.</div></div>`;
       }
-      
-      if (result && result.error) {
-        const rawJson = result.rawData ? JSON.stringify(result.rawData, null, 2) : (result.message || "No data");
-        aiOutput.innerHTML = `
-          <div class="plant-card">
-            <div><strong>⚠️ Could not parse plant name</strong></div>
-            <div class="raw-json"><strong>Raw API response:</strong><br>${escapeHtml(rawJson)}</div>
-            <div class="tip-box">💡 Your backend returned this. The plant name is likely inside the "data" field.</div>
-          </div>
-        `;
-        setStatus("Plant API responded but name not found. See raw output.", false);
-        return;
-      }
-      
-      if (result && result.name) {
-        if (result.originalPredictedLabel) {
-          result = applyBestCorrection(result, result.originalPredictedLabel);
-          lastPredictedKey = result.originalPredictedLabel;
-        } else if (result.name) {
-          lastPredictedKey = result.name.toLowerCase();
-          result = applyBestCorrection(result, lastPredictedKey);
-        }
-        lastPlantResult = result;
-        displayPlantResult(result, lastPredictedKey);
-        setStatus(`✅ Plant: ${result.name} (${result.confidence}%)`, false);
-      } else {
-        aiOutput.innerHTML = `<div class="error-msg">❌ No plant identified. Try a clearer image.</div>`;
-        setStatus("No plant found", false);
-      }
-    }
-
-    // ========== DISEASE DETECTION (parses Roboflow or Plant.id from backend) ==========
-    async function detectDiseaseWithBackend(imageBlob) {
-      try {
-        const formData = new FormData();
-        formData.append("image", imageBlob);
-        const response = await fetch(BACKEND_URL + "/disease", {
-          method: "POST",
-          body: formData
-        });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = await response.json();
-        console.log("Disease API full response:", data);
-
-        // Backend returns { success, source, data }
-        if (!data.success) {
-          return { error: true, rawData: data };
-        }
-
-        // Handle Roboflow response
-        if (data.source === "Roboflow" && data.data && data.data.predictions) {
-          const predictions = data.data.predictions;
-          if (predictions.length > 0) {
-            // Find top prediction (highest confidence)
-            const top = predictions.reduce((max, p) => (p.confidence > max.confidence ? p : max), predictions[0]);
-            const diseaseName = top.class || "Unknown disease";
-            const confidence = Math.round(top.confidence * 100);
-            const isHealthy = diseaseName.toLowerCase().includes("healthy") || confidence < 30;
-            return { result: diseaseName, confidence: confidence, isHealthy: isHealthy, rawData: data };
-          } else {
-            return { result: "No disease detected", confidence: 100, isHealthy: true, rawData: data };
-          }
-        }
-        // Handle Plant.id fallback (if implemented)
-        else if (data.source === "Plant.id (fallback)" && data.data && data.data.health_assessment) {
-          const diseases = data.data.health_assessment.diseases;
-          if (diseases && diseases.length > 0) {
-            const top = diseases[0];
-            const diseaseName = top.name || "Unknown disease";
-            const confidence = Math.round((top.probability || 0) * 100);
-            return { result: diseaseName, confidence: confidence, isHealthy: false, rawData: data };
-          } else {
-            return { result: "Healthy plant", confidence: 85, isHealthy: true, rawData: data };
-          }
-        }
-        // Unknown format
-        return { error: true, rawData: data };
-      } catch (err) {
-        console.error("Disease detection error", err);
-        return { error: true, message: err.message };
-      }
-    }
-
-    async function detectDisease() {
-      if (!currentImageBlob) {
-        alert("Please take or upload a picture first.");
-        return;
-      }
-      setStatus("🦠 Analyzing disease...", true);
-      defaultMsg.classList.add('hidden');
-      let diseaseData = await detectDiseaseWithBackend(currentImageBlob);
-      if (!diseaseData || diseaseData.error) {
-        const raw = diseaseData?.rawData ? JSON.stringify(diseaseData.rawData, null, 2) : "No response";
-        aiOutput.innerHTML = `
-          <div class="disease-card">
-            <div><strong>⚠️ Disease detection failed</strong></div>
-            <div class="raw-json"><strong>Raw API response:</strong><br>${escapeHtml(raw)}</div>
-            <div class="tip-box">Check console for details.</div>
-          </div>
-        `;
-        setStatus("Disease API error", false);
-        return;
-      }
-      const diseaseResult = diseaseData.result;
-      const confidenceValue = diseaseData.confidence;
-      const confidenceDisplay = (confidenceValue !== undefined && confidenceValue !== null) ? confidenceValue + '%' : 'N/A';
-      const isHealthy = diseaseData.isHealthy || (confidenceValue === 0) || (diseaseResult.toLowerCase().includes("healthy"));
-      
-      if (isHealthy) {
-        aiOutput.innerHTML = `
-          <div class="disease-card">
-            <div><strong><i class="fas fa-seedling"></i> 🌱 Health Status: ${escapeHtml(diseaseResult)}</strong></div>
-            <div class="confidence">🎯 Confidence: ${confidenceDisplay}</div>
-            <div class="treatment-section">✅ Your plant appears healthy. Continue good practices.</div>
-          </div>
-        `;
-      } else {
-        let advice = "Consult an agronomist. Remove infected parts and apply recommended treatment.";
-        aiOutput.innerHTML = `
-          <div class="disease-card">
-            <div><strong><i class="fas fa-biohazard"></i> 🦠 Disease: ${escapeHtml(diseaseResult)}</strong></div>
-            <div class="confidence">🎯 Confidence: ${confidenceDisplay}</div>
-            <div class="treatment-section"><strong>Suggested Action:</strong><br>${advice}</div>
-          </div>
-        `;
-      }
-      setStatus(`Disease: ${diseaseResult} (${confidenceDisplay})`, false);
-    }
-
-    // ========== PEST DETECTION (separate endpoint, same as before) ==========
-    async function detectPest() {
-      if (!currentImageBlob) {
-        alert("Please take or upload a picture first.");
-        return;
-      }
-      setStatus("🐛 Detecting pest...", true);
-      defaultMsg.classList.add('hidden');
-      const formData = new FormData();
-      formData.append('image', currentImageBlob);
-      try {
-        const res = await fetch(PEST_URL, { method: 'POST', body: formData });
-        const data = await res.json();
-        let pestResult = data.result || "No pest detected";
-        let confidenceValue = data.confidence;
-        let confidenceDisplay = (confidenceValue !== undefined && confidenceValue !== null) ? confidenceValue + '%' : 'N/A';
-        const isNoPest = (confidenceValue === 0) || (pestResult.toLowerCase().includes("no pest"));
-        if (isNoPest) {
-          aiOutput.innerHTML = `
-            <div class="pest-card">
-              <div><strong><i class="fas fa-check-circle"></i> ✅ ${escapeHtml(pestResult)}</strong></div>
-              <div class="confidence">🎯 Confidence: ${confidenceDisplay}</div>
-              <div class="treatment-section">No pest detected. Maintain good hygiene.</div>
-            </div>
-          `;
-        } else {
-          aiOutput.innerHTML = `
-            <div class="pest-card">
-              <div><strong><i class="fas fa-bug"></i> 🐛 Pest: ${escapeHtml(pestResult)}</strong></div>
-              <div class="confidence">🎯 Confidence: ${confidenceDisplay}</div>
-              <div class="treatment-section"><strong>Control:</strong> Apply neem oil or appropriate pesticide.</div>
-            </div>
-          `;
-        }
-        setStatus(`Pest: ${pestResult} (${confidenceDisplay})`, false);
-      } catch(e) {
-        aiOutput.innerHTML = `<div class="error-msg">❌ Pest detection failed: ${e.message}</div>`;
-        setStatus("Pest API error", false);
-      }
-    }
-
-    // ----- Camera & upload functions (unchanged) -----
-    async function captureAndStore() {
-      if (!cameraActive || !video.videoWidth) {
-        setStatus("Start camera first", false);
-        return;
-      }
-      const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      canvas.getContext('2d').drawImage(video, 0, 0);
-      const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.9));
-      const url = URL.createObjectURL(blob);
-      previewImg.src = url;
-      previewImg.style.display = 'block';
-      previewImg.onload = () => URL.revokeObjectURL(url);
-      currentImageBlob = blob;
-      enableAnalysisButtons(true);
-      setStatus("📸 Image captured. Choose analysis.", false);
+      // Add search button
+      wrapper.appendChild(makeSearchBtn(pestResult, 'pest', `🐛 ${pestResult}`, 'Pest — Full Information & IPM Control'));
       aiOutput.innerHTML = '';
-      defaultMsg.classList.remove('hidden');
+      aiOutput.appendChild(wrapper);
+      setStatus(`Pest: ${pestResult} (${confDisp})`, false);
+    } catch(e) {
+      aiOutput.innerHTML = `<div class="error-msg">❌ Pest detection failed: ${e.message}</div>`;
+      setStatus("Pest API error", false);
     }
+  }
 
-    function handleUpload(file) {
-      if (!file) return;
-      const url = URL.createObjectURL(file);
-      previewImg.src = url;
-      previewImg.style.display = 'block';
-      previewImg.onload = () => URL.revokeObjectURL(url);
-      currentImageBlob = file;
-      enableAnalysisButtons(true);
-      setStatus("📷 Image uploaded. Choose analysis.", false);
-      aiOutput.innerHTML = '';
-      defaultMsg.classList.remove('hidden');
-    }
+  async function captureAndStore() {
+    if (!cameraActive || !video.videoWidth) { setStatus("Start camera first", false); return; }
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.9));
+    previewImg.src = URL.createObjectURL(blob); previewImg.style.display = 'block';
+    previewImg.onload = () => URL.revokeObjectURL(previewImg.src);
+    currentImageBlob = blob; enableAnalysisButtons(true);
+    setStatus("📸 Image captured. Choose analysis.", false);
+    aiOutput.innerHTML = ''; defaultMsg.classList.remove('hidden');
+  }
 
-    function enableAnalysisButtons(enabled) {
-      plantBtn.disabled = !enabled;
-      diseaseBtn.disabled = !enabled;
-      pestBtn.disabled = !enabled;
-    }
+  function handleUpload(file) {
+    if (!file) return;
+    previewImg.src = URL.createObjectURL(file); previewImg.style.display = 'block';
+    previewImg.onload = () => URL.revokeObjectURL(previewImg.src);
+    currentImageBlob = file; enableAnalysisButtons(true);
+    setStatus("📷 Image uploaded. Choose analysis.", false);
+    aiOutput.innerHTML = ''; defaultMsg.classList.remove('hidden');
+  }
 
-    async function startCamera() {
-      if (currentStream) await stopCamera();
-      setStatus("Requesting camera...", true);
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-        currentStream = stream;
-        video.srcObject = stream;
-        await video.play();
-        await new Promise(r => video.videoWidth > 0 ? r() : (video.onloadedmetadata = r));
-        cameraActive = true;
-        updateUICamera();
-        setStatus(`Camera ready. Capture & Preview.`, false);
-      } catch(e) {
-        cameraActive = false;
-        updateUICamera();
-        setStatus("Camera permission denied. Use upload.", false);
-      }
-    }
-    async function stopCamera() {
-      if (currentStream) {
-        currentStream.getTracks().forEach(t => t.stop());
-        currentStream = null;
-      }
-      video.srcObject = null;
-      cameraActive = false;
-      updateUICamera();
-      setStatus("Camera stopped.", false);
-    }
-    function updateUICamera() {
-      if (cameraActive && currentStream && video.srcObject) {
-        video.classList.remove('hidden');
-        document.getElementById('placeholder').classList.add('hidden');
-        startCam.disabled = true;
-        stopCam.disabled = false;
-        captureBtn.disabled = false;
-      } else {
-        video.classList.add('hidden');
-        document.getElementById('placeholder').classList.remove('hidden');
-        startCam.disabled = false;
-        stopCam.disabled = true;
-        captureBtn.disabled = true;
-      }
-    }
+  function enableAnalysisButtons(enabled) { plantBtn.disabled = !enabled; diseaseBtn.disabled = !enabled; pestBtn.disabled = !enabled; }
 
-    function displayPlantResult(result, predictedKey) {
-      if ((!result.importance || result.importance === '') && result.name) {
-        const dbMatch = plantDatabase[result.name.toLowerCase()];
-        if (dbMatch) {
-          result.family = dbMatch.family;
-          result.importance = dbMatch.importance;
-        }
-      }
-      let importanceHtml = result.importance ? `<div class="info-section"><i class="fas fa-info-circle"></i> <strong>Uses:</strong><br>${escapeHtml(result.importance)}</div>` : '';
-      aiOutput.innerHTML = `
-        <div class="plant-card">
-          <div><strong>🌿 ${escapeHtml(result.name)}</strong></div>
-          <div class="scientific">${escapeHtml(result.scientific || '')}</div>
-          <div class="confidence">🎯 Confidence: ${result.confidence}%</div>
-          <div>🌱 Family: ${escapeHtml(result.family)}</div>
-          ${importanceHtml}
-          ${result.correctionNote ? `<div style="font-size:0.7rem;">${escapeHtml(result.correctionNote)}</div>` : ''}
-        </div>
-      `;
-      if (ownerAuthenticated && predictedKey) {
-        const btnDiv = document.createElement('div');
-        btnDiv.style.marginTop = '8px';
-        const editBtn = document.createElement('button');
-        editBtn.className = 'primary';
-        editBtn.innerHTML = '<i class="fas fa-edit"></i> Owner: Correct this';
-        editBtn.onclick = () => {
-          correctionKeyInput.value = predictedKey;
-          const dbEntry = plantDatabase[predictedKey.toLowerCase()];
-          if (dbEntry) {
-            commonNameInput.value = dbEntry.common;
-            scientificNameInput.value = dbEntry.scientific;
-            familyNameInput.value = dbEntry.family;
-            importanceInput.value = dbEntry.importance;
-          } else {
-            commonNameInput.value = result.name;
-            scientificNameInput.value = result.scientific || '';
-            familyNameInput.value = result.family || '';
-            importanceInput.value = result.importance || '';
-          }
-          ownerSureCheckbox.checked = false;
-          ownerPanel.classList.add('visible');
-          ownerPanel.scrollIntoView({ behavior: 'smooth' });
-        };
-        btnDiv.appendChild(editBtn);
-        aiOutput.appendChild(btnDiv);
-      }
+  async function startCamera() {
+    if (currentStream) await stopCamera();
+    setStatus("Requesting camera...", true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode:'environment' } });
+      currentStream = stream; video.srcObject = stream;
+      await video.play();
+      await new Promise(r => video.videoWidth > 0 ? r() : (video.onloadedmetadata = r));
+      cameraActive = true; updateUICamera();
+      setStatus('Camera ready. Capture & Preview.', false);
+    } catch(e) { cameraActive = false; updateUICamera(); setStatus("Camera permission denied. Use upload.", false); }
+  }
+  async function stopCamera() {
+    if (currentStream) { currentStream.getTracks().forEach(t=>t.stop()); currentStream = null; }
+    video.srcObject = null; cameraActive = false; updateUICamera();
+    setStatus("Camera stopped.", false);
+  }
+  function updateUICamera() {
+    if (cameraActive && currentStream && video.srcObject) {
+      video.classList.remove('hidden'); document.getElementById('placeholder').classList.add('hidden');
+      startCam.disabled = true; stopCam.disabled = false; captureBtn.disabled = false;
+    } else {
+      video.classList.add('hidden'); document.getElementById('placeholder').classList.remove('hidden');
+      startCam.disabled = false; stopCam.disabled = true; captureBtn.disabled = true;
     }
+  }
 
-    function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
-    
-    // Owner modal
-    const modal = document.getElementById('passwordModal');
-    const passwordInput = document.getElementById('ownerPassword');
-    const submitPassword = document.getElementById('submitPassword');
-    function showPasswordModal() { modal.style.display = 'flex'; }
-    function hideModal() { modal.style.display = 'none'; }
-    function setOwnerMode(active) {
-      ownerAuthenticated = active;
-      if (active) {
+  function displayPlantResult(result, predictedKey) {
+    if ((!result.importance || result.importance==='') && result.name) {
+      const dbM = plantDatabase[result.name.toLowerCase()];
+      if (dbM) { result.family = dbM.family; result.importance = dbM.importance; }
+    }
+    const importanceHtml = result.importance ? `<div class="info-section"><i class="fas fa-info-circle"></i> <strong>Uses:</strong><br>${esc(result.importance)}</div>` : '';
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = `
+      <div class="plant-card">
+        <div><strong>🌿 ${esc(result.name)}</strong></div>
+        <div class="scientific">${esc(result.scientific||'')}</div>
+        <div class="confidence">🎯 Confidence: ${result.confidence}%</div>
+        <div>🌱 Family: ${esc(result.family)}</div>
+        ${importanceHtml}
+        ${result.correctionNote ? `<div style="font-size:0.7rem;">${esc(result.correctionNote)}</div>` : ''}
+      </div>`;
+
+    aiOutput.innerHTML = '';
+    aiOutput.appendChild(wrapper);
+
+    // Add search button
+    const searchQuery = result.scientific || result.name;
+    wrapper.appendChild(makeSearchBtn(searchQuery, 'plant', `🌿 ${result.name}`, result.scientific || ''));
+
+    if (ownerAuthenticated && predictedKey) {
+      const editBtn = document.createElement('button');
+      editBtn.className = 'primary';
+      editBtn.style.marginTop = '8px';
+      editBtn.innerHTML = '<i class="fas fa-edit"></i> Owner: Correct this';
+      editBtn.onclick = () => {
+        correctionKeyInput.value = predictedKey;
+        const dbE = plantDatabase[predictedKey.toLowerCase()];
+        if (dbE) { commonNameInput.value = dbE.common; scientificNameInput.value = dbE.scientific; familyNameInput.value = dbE.family; importanceInput.value = dbE.importance; }
+        else { commonNameInput.value = result.name; scientificNameInput.value = result.scientific||''; familyNameInput.value = result.family||''; importanceInput.value = result.importance||''; }
+        ownerSureCheckbox.checked = false;
         ownerPanel.classList.add('visible');
-        ownerLoginBtn.style.display = 'none';
-        logoutBtn.style.display = 'inline-block';
-        setStatus("🔓 Owner mode", false);
-      } else {
-        ownerPanel.classList.remove('visible');
-        ownerLoginBtn.style.display = 'inline-block';
-        logoutBtn.style.display = 'none';
-        setStatus("User mode", false);
-      }
+        ownerPanel.scrollIntoView({ behavior:'smooth' });
+      };
+      wrapper.appendChild(editBtn);
     }
-    submitPassword.addEventListener('click', () => {
-      if (passwordInput.value === OWNER_PASSWORD) {
-        setOwnerMode(true);
-        hideModal();
-        passwordInput.value = '';
-      } else alert("Wrong password");
-    });
-    ownerLoginBtn.addEventListener('click', showPasswordModal);
-    logoutBtn.addEventListener('click', () => { setOwnerMode(false); });
-    modal.addEventListener('click', (e) => { if (e.target === modal) hideModal(); });
+  }
 
-    saveCorrectionBtn.addEventListener('click', () => {
-      const key = correctionKeyInput.value.trim();
-      const common = commonNameInput.value.trim();
-      if (!key || !common) { alert("Enter predicted key and common name"); return; }
-      addPendingCorrection(key, common, scientificNameInput.value.trim(), familyNameInput.value.trim(), importanceInput.value.trim(), ownerSureCheckbox.checked);
-      commonNameInput.value = '';
-      scientificNameInput.value = '';
-      familyNameInput.value = '';
-      importanceInput.value = '';
-      ownerSureCheckbox.checked = false;
-      correctionKeyInput.value = '';
-      if (lastPlantResult && lastPredictedKey) {
-        const newResult = { ...lastPlantResult };
-        applyBestCorrection(newResult, lastPredictedKey);
-        displayPlantResult(newResult, lastPredictedKey);
-      }
-    });
-    downloadBtn.addEventListener('click', downloadCorrectionsFile);
-    startCam.addEventListener('click', startCamera);
-    stopCam.addEventListener('click', stopCamera);
-    captureBtn.addEventListener('click', captureAndStore);
-    plantBtn.addEventListener('click', identifyPlant);
-    diseaseBtn.addEventListener('click', detectDisease);
-    pestBtn.addEventListener('click', detectPest);
-    uploadLabel.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', (e) => { if (e.target.files[0]) handleUpload(e.target.files[0]); fileInput.value = ''; });
-    refreshBtn.addEventListener('click', () => {
-      loadGlobalCorrections();
-      if (currentImageBlob) identifyPlant();
-    });
+  // Owner modal
+  const modal = document.getElementById('passwordModal');
+  const passwordInput = document.getElementById('ownerPassword');
+  const submitPassword = document.getElementById('submitPassword');
+  function showPasswordModal() { modal.style.display = 'flex'; }
+  function hideModal() { modal.style.display = 'none'; }
+  function setOwnerMode(active) {
+    ownerAuthenticated = active;
+    if (active) { ownerPanel.classList.add('visible'); ownerLoginBtn.style.display = 'none'; logoutBtn.style.display = 'inline-block'; setStatus("🔓 Owner mode", false); }
+    else { ownerPanel.classList.remove('visible'); ownerLoginBtn.style.display = 'inline-block'; logoutBtn.style.display = 'none'; setStatus("User mode", false); }
+  }
+  submitPassword.addEventListener('click', () => { if (passwordInput.value === OWNER_PASSWORD) { setOwnerMode(true); hideModal(); passwordInput.value = ''; } else alert("Wrong password"); });
+  ownerLoginBtn.addEventListener('click', showPasswordModal);
+  logoutBtn.addEventListener('click', () => setOwnerMode(false));
+  modal.addEventListener('click', e => { if (e.target === modal) hideModal(); });
 
-    loadGlobalCorrections();
-    async function loadOfflineModel() {
-      try {
-        offlineModel = await mobilenet.load({ version: 2, alpha: 1.0 });
-        offlineReady = true;
-      } catch(e) { offlineReady = false; }
-    }
-    loadOfflineModel();
-    setStatus("✅ Ready. Take/upload a photo, then click Plant / Disease / Pest.", false);
-  })();
+  saveCorrectionBtn.addEventListener('click', () => {
+    const key = correctionKeyInput.value.trim(); const common = commonNameInput.value.trim();
+    if (!key || !common) { alert("Enter predicted key and common name"); return; }
+    addPendingCorrection(key, common, scientificNameInput.value.trim(), familyNameInput.value.trim(), importanceInput.value.trim(), ownerSureCheckbox.checked);
+    commonNameInput.value = ''; scientificNameInput.value = ''; familyNameInput.value = ''; importanceInput.value = ''; ownerSureCheckbox.checked = false; correctionKeyInput.value = '';
+    if (lastPlantResult && lastPredictedKey) { const r2 = {...lastPlantResult}; applyBestCorrection(r2, lastPredictedKey); displayPlantResult(r2, lastPredictedKey); }
+  });
+  downloadBtn.addEventListener('click', downloadCorrectionsFile);
+  startCam.addEventListener('click', startCamera);
+  stopCam.addEventListener('click', stopCamera);
+  captureBtn.addEventListener('click', captureAndStore);
+  plantBtn.addEventListener('click', identifyPlant);
+  diseaseBtn.addEventListener('click', detectDisease);
+  pestBtn.addEventListener('click', detectPest);
+  uploadLabel.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', e => { if (e.target.files[0]) handleUpload(e.target.files[0]); fileInput.value=''; });
+  refreshBtn.addEventListener('click', () => { loadGlobalCorrections(); if (currentImageBlob) identifyPlant(); });
+
+  loadGlobalCorrections();
+  async function loadOfflineModel() { try { offlineModel = await mobilenet.load({ version:2, alpha:1.0 }); offlineReady = true; } catch(e) { offlineReady = false; } }
+  loadOfflineModel();
+  setStatus("✅ Ready. Take/upload a photo, then click Plant / Disease / Pest.", false);
+})();
 </script>
 </body>
 </html>
