@@ -189,7 +189,7 @@
       <button class="wiki-search-btn" id="manualSearchBtn"><i class="fab fa-wikipedia-w"></i> Wikipedia</button>
     </div>
     <div id="wikipediaResultContainer">
-      <div class="wikipedia-result"><i>Enter a plant, disease, or pest name above and click Wikipedia. After a scan, the name is filled automatically.</i></div>
+      <div class="wikipedia-result"><i>Enter a plant, disease, or pest name above and click Wikipedia.</i></div>
     </div>
   </div>
 
@@ -257,111 +257,14 @@
 
 <script>
 (function() {
-
   // ========================
-  // LOCAL NAMES DICTIONARY (Yoruba, Hausa, Igbo)
+  // CONFIGURATION
   // ========================
-  const localNamesDB = {
-    "coffee":        { yoruba: "Kọfí",            hausa: "Kofi",         igbo: "Kọfị" },
-    "maize":         { yoruba: "Àgbàdo",           hausa: "Masara",       igbo: "Ọka" },
-    "cassava":       { yoruba: "Ẹ̀gẹ́",             hausa: "Rogo",         igbo: "Akpu" },
-    "yam":           { yoruba: "Iṣu",              hausa: "Doya",         igbo: "Ji" },
-    "cocoa":         { yoruba: "Koko",             hausa: "Koko",         igbo: "Koko" },
-    "cashew":        { yoruba: "Kàjù",             hausa: "Kanju",        igbo: "Kachu" },
-    "mango":         { yoruba: "Mángoro",          hausa: "Mangwaro",     igbo: "Mango" },
-    "tomato":        { yoruba: "Tòmátì",           hausa: "Tumatir",      igbo: "Tọmati" },
-    "cowpea":        { yoruba: "Ẹ̀wà",             hausa: "Wake",         igbo: "Agwa" },
-    "groundnut":     { yoruba: "Ẹ̀pa",             hausa: "Gyada",        igbo: "Ahu" },
-    "rice":          { yoruba: "Ìrẹsì",            hausa: "Shinkafa",     igbo: "Osikapa" },
-    "sorghum":       { yoruba: "Oka bàbà",         hausa: "Dawa",         igbo: "Oka" },
-    "plantain":      { yoruba: "Ogede agbagba",    hausa: "Ayaba",        igbo: "Unere" },
-    "banana":        { yoruba: "Ogede",            hausa: "Ayaba",        igbo: "Unere" },
-    "okra":          { yoruba: "Ilá",              hausa: "Kubewa",       igbo: "Okuru" },
-    "pepper":        { yoruba: "Ata",              hausa: "Barkono",      igbo: "Ose" },
-    "late blight":   { yoruba: "Àrùn Tomato",      hausa: "Cutar Tomato", igbo: "Ọrịa Tomato" },
-    "cassava mosaic":{ yoruba: "Àrùn Ẹ̀gẹ́",       hausa: "Cutar Rogo",   igbo: "Ọrịa Akpu" },
-    "maize streak":  { yoruba: "Àrùn Àgbàdo",      hausa: "Cutar Masara", igbo: "Ọrịa Ọka" },
-    "fall armyworm": { yoruba: "Kòkòrò jagunjagun",hausa: "Kwaro Soja",   igbo: "Ahụhụ agha" },
-    "locust":        { yoruba: "Ẹṣú",              hausa: "Fara",         igbo: "Igurube" },
-    "aphid":         { yoruba: "Kòkòrò ọmọ",       hausa: "Kwaro",        igbo: "Ahụhụ" },
-    "whitefly":      { yoruba: "Eṣinṣin funfun",   hausa: "Ƙwaro fari",   igbo: "Ahụhụ ọcha" }
-  };
-
-  function getLocalNames(query) {
-    const q = query.toLowerCase().trim();
-    if (localNamesDB[q]) return localNamesDB[q];
-    for (let key in localNamesDB) {
-      if (q.includes(key) || key.includes(q)) return localNamesDB[key];
-    }
-    return null;
-  }
-
-  // ========================
-  // WIKIPEDIA SEARCH
-  // ========================
-  async function searchWikipedia(query, typeHint) {
-    const container = document.getElementById('wikipediaResultContainer');
-    if (!query.trim()) { container.innerHTML = `<div class="wikipedia-result">⚠️ Please enter a name.</div>`; return; }
-    container.innerHTML = `<div class="wikipedia-result">🔄 Searching Wikipedia for "<strong>${esc(query)}</strong>"… <span class="loader" style="display:inline-block;margin-left:8px;"></span></div>`;
-    try {
-      let searchQuery = query;
-      if (typeHint === 'disease') searchQuery += ' plant disease';
-      if (typeHint === 'pest') searchQuery += ' pest insect';
-      const searchRes = await fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(searchQuery)}&format=json&origin=*`);
-      const searchData = await searchRes.json();
-      if (!searchData.query?.search?.length) {
-        container.innerHTML = `<div class="wikipedia-result error-msg">❌ No Wikipedia article found for "<strong>${esc(query)}</strong>". Try a different name.</div>`; return;
-      }
-      const pageTitle = searchData.query.search[0].title;
-      // Get extract
-      const extractRes = await fetch(`https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exintro=true&explaintext=true&titles=${encodeURIComponent(pageTitle)}&format=json&origin=*`);
-      const extractData = await extractRes.json();
-      const pages = extractData.query.pages;
-      let extract = pages[Object.keys(pages)[0]].extract || "No summary available.";
-      if (extract.length > 1000) extract = extract.substring(0, 1000) + '…';
-      // Get thumbnail
-      const thumbRes = await fetch(`https://en.wikipedia.org/w/api.php?action=query&prop=pageimages&pithumbsize=150&titles=${encodeURIComponent(pageTitle)}&format=json&origin=*`);
-      const thumbData = await thumbRes.json();
-      const thumbPages = thumbData.query.pages;
-      const thumbnail = thumbPages[Object.keys(thumbPages)[0]]?.thumbnail?.source || null;
-      // Local names
-      const local = getLocalNames(query);
-      const localHtml = local ? `<div class="local-names">
-        <span><i class="fas fa-language"></i> Yorùbá: <strong>${esc(local.yoruba||'—')}</strong></span>
-        <span><i class="fas fa-language"></i> Hausa: <strong>${esc(local.hausa||'—')}</strong></span>
-        <span><i class="fas fa-language"></i> Igbo: <strong>${esc(local.igbo||'—')}</strong></span>
-      </div>` : '';
-      container.innerHTML = `<div class="wikipedia-result">
-        ${thumbnail ? `<img src="${esc(thumbnail)}" style="max-width:120px;border-radius:12px;float:right;margin-left:12px;margin-bottom:8px;" alt="">` : ''}
-        <div style="font-weight:700;font-size:0.95rem;margin-bottom:6px;">📖 ${esc(pageTitle)}</div>
-        ${localHtml}
-        <div style="margin-top:6px;">${esc(extract)}</div>
-        <div style="margin-top:10px;font-size:0.72rem;clear:both;">
-          <a href="https://en.wikipedia.org/wiki/${encodeURIComponent(pageTitle)}" target="_blank">🔗 Read full article on Wikipedia →</a>
-        </div>
-      </div>`;
-    } catch(err) {
-      container.innerHTML = `<div class="wikipedia-result error-msg">🌐 Network error: ${esc(err.message)}</div>`;
-    }
-  }
-
-  // ========================
-  // ESCAPE HTML
-  // ========================
-  function esc(str) {
-    if (!str) return '';
-    return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-  }
-
-  // ========================
-  // CONFIG
-  // ========================
-  const BACKEND_URL = "https://plant-backend-avof.onrender.com";
-  const PEST_URL = BACKEND_URL + '/detect-pest';
+  const BACKEND_URL = "https://plant-backend-avof.onrender.com";  // Your backend with fixed Claude model
   const OWNER_PASSWORD = 'yusupher01';
   let ownerAuthenticated = false;
 
-  // DOM
+  // DOM elements
   const video = document.getElementById('video');
   const startCam = document.getElementById('startCam');
   const stopCam = document.getElementById('stopCam');
@@ -411,7 +314,77 @@
   };
 
   // ========================
-  // CLAUDE AI COMPREHENSIVE INFO
+  // LOCAL NAMES & WIKIPEDIA
+  // ========================
+  const localNamesDB = {
+    "coffee": { yoruba: "Kọfí", hausa: "Kofi", igbo: "Kọfị" },
+    "maize": { yoruba: "Àgbàdo", hausa: "Masara", igbo: "Ọka" },
+    "cassava": { yoruba: "Ẹ̀gẹ́", hausa: "Rogo", igbo: "Akpu" },
+    "yam": { yoruba: "Iṣu", hausa: "Doya", igbo: "Ji" },
+    "cowpea": { yoruba: "Ẹ̀wà", hausa: "Wake", igbo: "Agwa" },
+    "mango": { yoruba: "Mángoro", hausa: "Mangwaro", igbo: "Mango" },
+    "tomato": { yoruba: "Tòmátì", hausa: "Tumatir", igbo: "Tọmati" },
+    "fall armyworm": { yoruba: "Kòkòrò jagunjagun", hausa: "Kwaro Soja", igbo: "Ahụhụ agha" },
+    "late blight": { yoruba: "Àrùn Tomato", hausa: "Cutar Tomato", igbo: "Ọrịa Tomato" }
+  };
+
+  function getLocalNames(query) {
+    const q = query.toLowerCase().trim();
+    if (localNamesDB[q]) return localNamesDB[q];
+    for (let key in localNamesDB) if (q.includes(key) || key.includes(q)) return localNamesDB[key];
+    return null;
+  }
+
+  async function searchWikipedia(query, typeHint) {
+    const container = document.getElementById('wikipediaResultContainer');
+    if (!query.trim()) { container.innerHTML = `<div class="wikipedia-result">⚠️ Please enter a name.</div>`; return; }
+    container.innerHTML = `<div class="wikipedia-result">🔄 Searching Wikipedia for "<strong>${esc(query)}</strong>"… <span class="loader" style="display:inline-block;margin-left:8px;"></span></div>`;
+    try {
+      let searchQuery = query;
+      if (typeHint === 'disease') searchQuery += ' plant disease';
+      if (typeHint === 'pest') searchQuery += ' pest insect';
+      const searchRes = await fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(searchQuery)}&format=json&origin=*`);
+      const searchData = await searchRes.json();
+      if (!searchData.query?.search?.length) {
+        container.innerHTML = `<div class="wikipedia-result error-msg">❌ No Wikipedia article found for "<strong>${esc(query)}</strong>". Try a different name.</div>`; return;
+      }
+      const pageTitle = searchData.query.search[0].title;
+      const extractRes = await fetch(`https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exintro=true&explaintext=true&titles=${encodeURIComponent(pageTitle)}&format=json&origin=*`);
+      const extractData = await extractRes.json();
+      const pages = extractData.query.pages;
+      let extract = pages[Object.keys(pages)[0]].extract || "No summary available.";
+      if (extract.length > 1000) extract = extract.substring(0, 1000) + '…';
+      const thumbRes = await fetch(`https://en.wikipedia.org/w/api.php?action=query&prop=pageimages&pithumbsize=150&titles=${encodeURIComponent(pageTitle)}&format=json&origin=*`);
+      const thumbData = await thumbRes.json();
+      const thumbPages = thumbData.query.pages;
+      const thumbnail = thumbPages[Object.keys(thumbPages)[0]]?.thumbnail?.source || null;
+      const local = getLocalNames(query);
+      const localHtml = local ? `<div class="local-names">
+        <span><i class="fas fa-language"></i> Yorùbá: <strong>${esc(local.yoruba||'—')}</strong></span>
+        <span><i class="fas fa-language"></i> Hausa: <strong>${esc(local.hausa||'—')}</strong></span>
+        <span><i class="fas fa-language"></i> Igbo: <strong>${esc(local.igbo||'—')}</strong></span>
+      </div>` : '';
+      container.innerHTML = `<div class="wikipedia-result">
+        ${thumbnail ? `<img src="${esc(thumbnail)}" style="max-width:120px;border-radius:12px;float:right;margin-left:12px;margin-bottom:8px;" alt="">` : ''}
+        <div style="font-weight:700;font-size:0.95rem;margin-bottom:6px;">📖 ${esc(pageTitle)}</div>
+        ${localHtml}
+        <div style="margin-top:6px;">${esc(extract)}</div>
+        <div style="margin-top:10px;font-size:0.72rem;clear:both;">
+          <a href="https://en.wikipedia.org/wiki/${encodeURIComponent(pageTitle)}" target="_blank">🔗 Read full article on Wikipedia →</a>
+        </div>
+      </div>`;
+    } catch(err) {
+      container.innerHTML = `<div class="wikipedia-result error-msg">🌐 Network error: ${esc(err.message)}</div>`;
+    }
+  }
+
+  function esc(str) { if (!str) return ''; return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+  function setStatus(msg, loading=false) { statusSpan.innerText = msg; loading ? spinner.classList.remove('hidden') : spinner.classList.add('hidden'); }
+  function blobToImage(blob) { return new Promise(resolve => { const img = new Image(); img.onload = () => resolve(img); img.src = URL.createObjectURL(blob); }); }
+  function enableAnalysisButtons(enabled) { plantBtn.disabled = !enabled; diseaseBtn.disabled = !enabled; pestBtn.disabled = !enabled; }
+
+  // ========================
+  // CLAUDE AI COMPREHENSIVE INFO (via backend, fixed model)
   // ========================
   async function fetchComprehensiveInfo(query, type) {
     const response = await fetch(BACKEND_URL + "/claude-info", {
@@ -425,6 +398,7 @@
     return data.data;
   }
 
+  // Rendering functions (full detailed display)
   function renderPlantInfo(info) {
     const isWeed = info.isWeed || info.category === 'weed';
     const cat = (info.category || 'other').toLowerCase();
@@ -444,22 +418,11 @@
     if (info.ecologicalRole) html += `<div class="info-section-block"><h3>🌍 Ecological Role</h3><p>${esc(info.ecologicalRole)}</p></div>`;
     if (info.growingConditions) {
       const g = info.growingConditions;
-      html += `<div class="info-section-block"><h3>🌱 Growing Conditions</h3>
-        ${g.climate?`<p><strong>Climate:</strong> ${esc(g.climate)}</p>`:''}
-        ${g.soil?`<p><strong>Soil:</strong> ${esc(g.soil)}</p>`:''}
-        ${g.rainfall?`<p><strong>Rainfall:</strong> ${esc(g.rainfall)}</p>`:''}
-        ${g.temperature?`<p><strong>Temperature:</strong> ${esc(g.temperature)}</p>`:''}
-      </div>`;
+      html += `<div class="info-section-block"><h3>🌱 Growing Conditions</h3>${g.climate?`<p><strong>Climate:</strong> ${esc(g.climate)}</p>`:''}${g.soil?`<p><strong>Soil:</strong> ${esc(g.soil)}</p>`:''}${g.rainfall?`<p><strong>Rainfall:</strong> ${esc(g.rainfall)}</p>`:''}${g.temperature?`<p><strong>Temperature:</strong> ${esc(g.temperature)}</p>`:''}</div>`;
     }
     if (isWeed && info.weedControl) {
       const wc = info.weedControl;
-      html += `<div class="info-section-block weed-block"><h3>⚠️ IPM Weed Control</h3>
-        ${wc.ipmSummary?`<p style="margin-bottom:10px;">${esc(wc.ipmSummary)}</p>`:''}
-        ${wc.cultural?.length?`<p><span class="ipm-tag cult">Cultural</span></p><ul>${wc.cultural.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
-        ${wc.mechanical?.length?`<p style="margin-top:8px;"><span class="ipm-tag mech">Mechanical</span></p><ul>${wc.mechanical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
-        ${wc.biological?.length?`<p style="margin-top:8px;"><span class="ipm-tag bio">Biological</span></p><ul>${wc.biological.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
-        ${wc.chemical?.length?`<p style="margin-top:8px;"><span class="ipm-tag chem">Chemical</span></p><ul>${wc.chemical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
-      </div>`;
+      html += `<div class="info-section-block weed-block"><h3>⚠️ IPM Weed Control</h3>${wc.ipmSummary?`<p>${esc(wc.ipmSummary)}</p>`:''}${wc.cultural?.length?`<p><span class="ipm-tag cult">Cultural</span></p><ul>${wc.cultural.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}${wc.mechanical?.length?`<p><span class="ipm-tag mech">Mechanical</span></p><ul>${wc.mechanical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}${wc.biological?.length?`<p><span class="ipm-tag bio">Biological</span></p><ul>${wc.biological.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}${wc.chemical?.length?`<p><span class="ipm-tag chem">Chemical</span></p><ul>${wc.chemical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}</div>`;
     }
     if (info.interestingFacts?.length) html += `<div class="info-section-block"><h3>💡 Interesting Facts</h3><ul>${info.interestingFacts.map(f=>`<li>${esc(f)}</li>`).join('')}</ul></div>`;
     return html;
@@ -467,44 +430,26 @@
 
   function renderDiseaseInfo(info) {
     const c = info.control || {};
-    let html = `<div class="taxonomy-grid">
-      <div class="taxonomy-item"><span>Pathogen Type</span>${esc(info.pathogenType||'—')}</div>
-      <div class="taxonomy-item"><span>Pathogen</span>${esc(info.pathogenName||'—')}</div>
-    </div>`;
+    let html = `<div class="taxonomy-grid"><div class="taxonomy-item"><span>Pathogen Type</span>${esc(info.pathogenType||'—')}</div><div class="taxonomy-item"><span>Pathogen</span>${esc(info.pathogenName||'—')}</div></div>`;
     if (info.affectedPlants?.length) html += `<div class="info-section-block disease-block"><h3>🌿 Affected Plants</h3><p>${info.affectedPlants.map(p=>esc(p)).join(', ')}</p></div>`;
     if (info.symptoms?.length) html += `<div class="info-section-block disease-block"><h3>🔍 Symptoms</h3><ul>${info.symptoms.map(s=>`<li>${esc(s)}</li>`).join('')}</ul></div>`;
     if (info.spreadMechanism) html += `<div class="info-section-block disease-block"><h3>🔄 How It Spreads</h3><p>${esc(info.spreadMechanism)}</p></div>`;
     if (info.favorableConditions) html += `<div class="info-section-block disease-block"><h3>🌡️ Favorable Conditions</h3><p>${esc(info.favorableConditions)}</p></div>`;
     if (info.economicImpact) html += `<div class="info-section-block disease-block"><h3>💸 Economic Impact</h3><p>${esc(info.economicImpact)}</p></div>`;
-    html += `<div class="info-section-block disease-block"><h3>💊 Disease Control (IPM)</h3>
-      ${c.ipmSummary?`<p style="margin-bottom:10px;">${esc(c.ipmSummary)}</p>`:''}
-      ${c.cultural?.length?`<p><span class="ipm-tag cult">Cultural</span></p><ul>${c.cultural.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
-      ${c.biological?.length?`<p style="margin-top:8px;"><span class="ipm-tag bio">Biological</span></p><ul>${c.biological.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
-      ${c.chemical?.length?`<p style="margin-top:8px;"><span class="ipm-tag chem">Chemical</span></p><ul>${c.chemical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
-      ${c.resistant_varieties?.length?`<p style="margin-top:8px;"><span class="ipm-tag mech">Resistant Varieties</span></p><ul>${c.resistant_varieties.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
-    </div>`;
+    html += `<div class="info-section-block disease-block"><h3>💊 Disease Control (IPM)</h3>${c.ipmSummary?`<p>${esc(c.ipmSummary)}</p>`:''}${c.cultural?.length?`<p><span class="ipm-tag cult">Cultural</span></p><ul>${c.cultural.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}${c.biological?.length?`<p><span class="ipm-tag bio">Biological</span></p><ul>${c.biological.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}${c.chemical?.length?`<p><span class="ipm-tag chem">Chemical</span></p><ul>${c.chemical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}${c.resistant_varieties?.length?`<p><span class="ipm-tag mech">Resistant Varieties</span></p><ul>${c.resistant_varieties.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}</div>`;
     if (info.preventionTips?.length) html += `<div class="info-section-block disease-block"><h3>🛡️ Prevention Tips</h3><ul>${info.preventionTips.map(t=>`<li>${esc(t)}</li>`).join('')}</ul></div>`;
     return html;
   }
 
   function renderPestInfo(info) {
     const c = info.control || {};
-    let html = `<div class="taxonomy-grid">
-      <div class="taxonomy-item"><span>Pest Type</span>${esc(info.pestType||'—')}</div>
-      <div class="taxonomy-item"><span>Scientific Name</span><em>${esc(info.scientificName||'—')}</em></div>
-    </div>`;
+    let html = `<div class="taxonomy-grid"><div class="taxonomy-item"><span>Pest Type</span>${esc(info.pestType||'—')}</div><div class="taxonomy-item"><span>Scientific Name</span><em>${esc(info.scientificName||'—')}</em></div></div>`;
     if (info.affectedPlants?.length) html += `<div class="info-section-block pest-block"><h3>🌿 Affected Plants</h3><p>${info.affectedPlants.map(p=>esc(p)).join(', ')}</p></div>`;
     if (info.damageDescription) html += `<div class="info-section-block pest-block"><h3>💥 Damage Caused</h3><p>${esc(info.damageDescription)}</p></div>`;
     if (info.lifeStages?.length) html += `<div class="info-section-block pest-block"><h3>🔄 Life Stages</h3><ul>${info.lifeStages.map(s=>`<li>${esc(s)}</li>`).join('')}</ul></div>`;
     if (info.peakActivity) html += `<div class="info-section-block pest-block"><h3>📅 Peak Activity</h3><p>${esc(info.peakActivity)}</p></div>`;
     if (info.economicThreshold) html += `<div class="info-section-block pest-block"><h3>📊 Economic Threshold</h3><p>${esc(info.economicThreshold)}</p></div>`;
-    html += `<div class="info-section-block pest-block"><h3>🐛 Pest Control (IPM)</h3>
-      ${c.ipmSummary?`<p style="margin-bottom:10px;">${esc(c.ipmSummary)}</p>`:''}
-      ${c.cultural?.length?`<p><span class="ipm-tag cult">Cultural</span></p><ul>${c.cultural.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
-      ${c.biological?.length?`<p style="margin-top:8px;"><span class="ipm-tag bio">Biological</span></p><ul>${c.biological.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
-      ${c.mechanical?.length?`<p style="margin-top:8px;"><span class="ipm-tag mech">Mechanical / Traps</span></p><ul>${c.mechanical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
-      ${c.chemical?.length?`<p style="margin-top:8px;"><span class="ipm-tag chem">Chemical</span></p><ul>${c.chemical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
-    </div>`;
+    html += `<div class="info-section-block pest-block"><h3>🐛 Pest Control (IPM)</h3>${c.ipmSummary?`<p>${esc(c.ipmSummary)}</p>`:''}${c.cultural?.length?`<p><span class="ipm-tag cult">Cultural</span></p><ul>${c.cultural.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}${c.biological?.length?`<p><span class="ipm-tag bio">Biological</span></p><ul>${c.biological.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}${c.mechanical?.length?`<p><span class="ipm-tag mech">Mechanical / Traps</span></p><ul>${c.mechanical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}${c.chemical?.length?`<p><span class="ipm-tag chem">Chemical</span></p><ul>${c.chemical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}</div>`;
     if (info.safetyNotes) html += `<div class="info-section-block pest-block"><h3>⚠️ Safety Notes</h3><p>${esc(info.safetyNotes)}</p></div>`;
     return html;
   }
@@ -527,7 +472,7 @@
         <i class="fas fa-exclamation-triangle"></i><br>
         <strong>Could not load information</strong><br>
         <small>${esc(err.message)}</small><br><br>
-        <small>Make sure your backend is running at:<br><strong>plant-backend-avof.onrender.com</strong></small>
+        <small>Make sure your backend is running at:<br><strong>${BACKEND_URL}</strong></small>
       </div>`;
     }
   }
@@ -536,7 +481,6 @@
   infoModalClose.addEventListener('click', closeInfoModal);
   infoModal.addEventListener('click', e => { if (e.target === infoModal) closeInfoModal(); });
 
-  // Build action buttons for results
   function makeSearchBtn(query, type, title, subtitle) {
     const btn = document.createElement('button');
     btn.className = 'search-info-inline-btn';
@@ -558,82 +502,7 @@
   }
 
   // ========================
-  // CORRECTIONS
-  // ========================
-  function getAllCorrections() { return { ...globalCorrections, ...pendingCorrections }; }
-  function addPendingCorrection(key, common, scientific, family, importance, ownerSure) {
-    if (!key || !common) return false;
-    const k = key.toLowerCase().trim();
-    pendingCorrections[k] = { name: common.trim(), scientific: scientific.trim()||'', family: family.trim()||'', importance: importance.trim()||'', ownerSure: ownerSure||false };
-    setStatus('✅ Correction added (pending)', false); updateCorrectionUI(); return true;
-  }
-  function removePendingCorrection(key) {
-    const k = key.toLowerCase().trim();
-    if (pendingCorrections[k]) { delete pendingCorrections[k]; setStatus('🗑️ Removed pending correction', false); updateCorrectionUI(); return true; }
-    return false;
-  }
-  function applyBestCorrection(result, predictedKey) {
-    if (!predictedKey) return result;
-    const key = predictedKey.toLowerCase().trim();
-    const all = getAllCorrections();
-    if (all[key]) {
-      const c = all[key];
-      result.name = c.name || result.name;
-      result.scientific = c.scientific || result.scientific;
-      result.family = c.family || result.family;
-      result.importance = c.importance || '';
-      if (c.ownerSure === true) result.confidence = '100';
-      result.correctionNote = `✨ Correction: "${key}" → "${c.name}"`;
-    }
-    return result;
-  }
-  async function loadGlobalCorrections() {
-    try {
-      const r = await fetch('corrections.json?t=' + Date.now());
-      if (r.ok) { const d = await r.json(); if (typeof d === 'object') globalCorrections = d; }
-    } catch(e) { /* silent — expected when running from local file */ }
-    pendingCorrections = {}; updateCorrectionUI();
-  }
-  function downloadCorrectionsFile() {
-    const blob = new Blob([JSON.stringify(getAllCorrections(), null, 2)], {type:'application/json'});
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'corrections.json'; a.click();
-    URL.revokeObjectURL(blob); setStatus("Downloaded corrections.json", false);
-  }
-  function updateCorrectionUI() {
-    correctionStatsSpan.innerHTML = `${Object.keys(globalCorrections).length + Object.keys(pendingCorrections).length} total`;
-    renderCorrectionsList();
-  }
-  function renderCorrectionsList() {
-    if (!correctionsListDiv) return;
-    const all = getAllCorrections(); const entries = Object.entries(all);
-    if (!entries.length) { correctionsListDiv.innerHTML = '<i>No corrections yet.</i>'; return; }
-    correctionsListDiv.innerHTML = '';
-    for (const [key, val] of entries) {
-      const isPending = !!pendingCorrections[key];
-      const div = document.createElement('div'); div.className = 'correction-item';
-      div.innerHTML = `<div><span>${esc(key)}</span> → <span>${esc(val.name)}</span> ${isPending ? '<span style="background:#f4a261;color:black;padding:2px 6px;border-radius:40px;">pending</span>' : ''}</div>
-        ${ownerAuthenticated ? `<button class="delete-correction" data-key="${esc(key)}"><i class="fas fa-trash"></i> Delete</button>` : ''}`;
-      if (ownerAuthenticated) {
-        div.querySelector('.delete-correction').addEventListener('click', () => {
-          if (pendingCorrections[key]) removePendingCorrection(key);
-          else setStatus('Global correction can only be removed by editing corrections.json.', false);
-        });
-      }
-      correctionsListDiv.appendChild(div);
-    }
-  }
-
-  function setStatus(msg, loading=false) {
-    statusSpan.innerText = msg;
-    loading ? spinner.classList.remove('hidden') : spinner.classList.add('hidden');
-  }
-
-  function blobToImage(blob) {
-    return new Promise(resolve => { const img = new Image(); img.onload = () => resolve(img); img.src = URL.createObjectURL(blob); });
-  }
-
-  // ========================
-  // PLANT IDENTIFICATION
+  // PLANT IDENTIFICATION (BACKEND + OFFLINE)
   // ========================
   async function identifyPlantWithBackend(imageBlob) {
     try {
@@ -655,8 +524,8 @@
 
   const offlinePlantMap = [
     { patterns: ['mango','mangifera'], name:'Mango', scientific:'Mangifera indica', family:'Anacardiaceae', importance:"Tropical fruit." },
-    { patterns: ['tomato','solanum'],  name:'Tomato', scientific:'Solanum lycopersicum', family:'Solanaceae', importance:"Fruit vegetable." },
-    { patterns: ['maize','corn','zea'],name:'Maize', scientific:'Zea mays', family:'Poaceae', importance:"Staple grain." }
+    { patterns: ['tomato','solanum'], name:'Tomato', scientific:'Solanum lycopersicum', family:'Solanaceae', importance:"Fruit vegetable." },
+    { patterns: ['maize','corn','zea'], name:'Maize', scientific:'Zea mays', family:'Poaceae', importance:"Staple grain." }
   ];
   function matchOffline(label) {
     const lower = label.toLowerCase();
@@ -686,7 +555,6 @@
       const img = await blobToImage(currentImageBlob);
       result = await classifyOffline(img);
     } else result = await identifyPlantWithBackend(currentImageBlob);
-
     if (result?.error) {
       const rawJson = result.rawData ? JSON.stringify(result.rawData, null, 2) : (result.message || "No data");
       aiOutput.innerHTML = `<div class="plant-card"><strong>⚠️ Could not parse plant name</strong><div class="raw-json">${esc(rawJson)}</div><div class="tip-box">💡 The plant name is likely inside the "data" field.</div></div>`;
@@ -697,7 +565,6 @@
       else { lastPredictedKey = result.name.toLowerCase(); result = applyBestCorrection(result, lastPredictedKey); }
       lastPlantResult = result;
       displayPlantResult(result, lastPredictedKey);
-      // Auto-fill Wikipedia search
       manualSearchInput.value = result.name;
       setStatus(`✅ Plant: ${result.name} (${result.confidence}%)`, false);
     } else {
@@ -707,7 +574,7 @@
   }
 
   // ========================
-  // DISEASE DETECTION
+  // DISEASE DETECTION (via backend)
   // ========================
   async function detectDiseaseWithBackend(imageBlob) {
     try {
@@ -748,7 +615,6 @@
     const confVal = diseaseData.confidence;
     const confDisp = (confVal != null) ? confVal + '%' : 'N/A';
     const isHealthy = diseaseData.isHealthy || confVal===0 || diseaseResult.toLowerCase().includes("healthy");
-
     const wrapper = document.createElement('div');
     if (isHealthy) {
       wrapper.innerHTML = `<div class="disease-card"><strong><i class="fas fa-seedling"></i> 🌱 Health Status: ${esc(diseaseResult)}</strong><div class="confidence">🎯 Confidence: ${confDisp}</div><div class="treatment-section">✅ Your plant appears healthy. Continue good practices.</div></div>`;
@@ -757,14 +623,13 @@
     }
     wrapper.appendChild(makeSearchBtn(diseaseResult, 'disease', `🦠 ${diseaseResult}`, 'Plant Disease — Full Information & Control'));
     wrapper.appendChild(makeWikiBtn(diseaseResult, 'disease'));
-    aiOutput.innerHTML = '';
-    aiOutput.appendChild(wrapper);
+    aiOutput.innerHTML = ''; aiOutput.appendChild(wrapper);
     manualSearchInput.value = diseaseResult;
     setStatus(`Disease: ${diseaseResult} (${confDisp})`, false);
   }
 
   // ========================
-  // PEST DETECTION
+  // PEST DETECTION (via backend)
   // ========================
   async function detectPest() {
     if (!currentImageBlob) { alert("Please take or upload a picture first."); return; }
@@ -772,13 +637,12 @@
     defaultMsg.classList.add('hidden');
     const fd = new FormData(); fd.append('image', currentImageBlob);
     try {
-      const res = await fetch(PEST_URL, { method:'POST', body:fd });
+      const res = await fetch(BACKEND_URL + "/detect-pest", { method:'POST', body:fd });
       const data = await res.json();
       const pestResult = data.result || "No pest detected";
       const confVal = data.confidence;
       const confDisp = (confVal != null) ? confVal + '%' : 'N/A';
       const isNoPest = confVal === 0 || pestResult.toLowerCase().includes("no pest");
-
       const wrapper = document.createElement('div');
       if (isNoPest) {
         wrapper.innerHTML = `<div class="pest-card"><strong><i class="fas fa-check-circle"></i> ✅ ${esc(pestResult)}</strong><div class="confidence">🎯 Confidence: ${confDisp}</div><div class="treatment-section">No pest detected. Maintain good hygiene.</div></div>`;
@@ -787,8 +651,7 @@
       }
       wrapper.appendChild(makeSearchBtn(pestResult, 'pest', `🐛 ${pestResult}`, 'Pest — Full Information & IPM Control'));
       wrapper.appendChild(makeWikiBtn(pestResult, 'pest'));
-      aiOutput.innerHTML = '';
-      aiOutput.appendChild(wrapper);
+      aiOutput.innerHTML = ''; aiOutput.appendChild(wrapper);
       manualSearchInput.value = pestResult;
       setStatus(`Pest: ${pestResult} (${confDisp})`, false);
     } catch(e) {
@@ -820,7 +683,6 @@
     setStatus("📷 Image uploaded. Choose analysis.", false);
     aiOutput.innerHTML = ''; defaultMsg.classList.remove('hidden');
   }
-  function enableAnalysisButtons(enabled) { plantBtn.disabled = !enabled; diseaseBtn.disabled = !enabled; pestBtn.disabled = !enabled; }
   async function startCamera() {
     if (currentStream) await stopCamera();
     setStatus("Requesting camera...", true);
@@ -849,8 +711,70 @@
   }
 
   // ========================
-  // DISPLAY PLANT RESULT
+  // CORRECTIONS & OWNER PANEL
   // ========================
+  function getAllCorrections() { return { ...globalCorrections, ...pendingCorrections }; }
+  function addPendingCorrection(key, common, scientific, family, importance, ownerSure) {
+    if (!key || !common) return false;
+    const k = key.toLowerCase().trim();
+    pendingCorrections[k] = { name: common.trim(), scientific: scientific.trim()||'', family: family.trim()||'', importance: importance.trim()||'', ownerSure: ownerSure||false };
+    setStatus('✅ Correction added (pending)', false); updateCorrectionUI(); return true;
+  }
+  function removePendingCorrection(key) {
+    const k = key.toLowerCase().trim();
+    if (pendingCorrections[k]) { delete pendingCorrections[k]; setStatus('🗑️ Removed pending correction', false); updateCorrectionUI(); return true; }
+    return false;
+  }
+  function applyBestCorrection(result, predictedKey) {
+    if (!predictedKey) return result;
+    const key = predictedKey.toLowerCase().trim();
+    const all = getAllCorrections();
+    if (all[key]) {
+      const c = all[key];
+      result.name = c.name || result.name;
+      result.scientific = c.scientific || result.scientific;
+      result.family = c.family || result.family;
+      result.importance = c.importance || '';
+      if (c.ownerSure === true) result.confidence = '100';
+      result.correctionNote = `✨ Correction: "${key}" → "${c.name}"`;
+    }
+    return result;
+  }
+  async function loadGlobalCorrections() {
+    try {
+      const r = await fetch('corrections.json?t=' + Date.now());
+      if (r.ok) { const d = await r.json(); if (typeof d === 'object') globalCorrections = d; }
+    } catch(e) { /* silent */ }
+    pendingCorrections = {}; updateCorrectionUI();
+  }
+  function downloadCorrectionsFile() {
+    const blob = new Blob([JSON.stringify(getAllCorrections(), null, 2)], {type:'application/json'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'corrections.json'; a.click();
+    URL.revokeObjectURL(blob); setStatus("Downloaded corrections.json", false);
+  }
+  function updateCorrectionUI() {
+    correctionStatsSpan.innerHTML = `${Object.keys(globalCorrections).length + Object.keys(pendingCorrections).length} total`;
+    renderCorrectionsList();
+  }
+  function renderCorrectionsList() {
+    if (!correctionsListDiv) return;
+    const all = getAllCorrections(); const entries = Object.entries(all);
+    if (!entries.length) { correctionsListDiv.innerHTML = '<i>No corrections yet.</i>'; return; }
+    correctionsListDiv.innerHTML = '';
+    for (const [key, val] of entries) {
+      const isPending = !!pendingCorrections[key];
+      const div = document.createElement('div'); div.className = 'correction-item';
+      div.innerHTML = `<div><span>${esc(key)}</span> → <span>${esc(val.name)}</span> ${isPending ? '<span style="background:#f4a261;color:black;padding:2px 6px;border-radius:40px;">pending</span>' : ''}</div>${ownerAuthenticated ? `<button class="delete-correction" data-key="${esc(key)}"><i class="fas fa-trash"></i> Delete</button>` : ''}`;
+      if (ownerAuthenticated) {
+        div.querySelector('.delete-correction').addEventListener('click', () => {
+          if (pendingCorrections[key]) removePendingCorrection(key);
+          else setStatus('Global correction can only be removed by editing corrections.json.', false);
+        });
+      }
+      correctionsListDiv.appendChild(div);
+    }
+  }
+
   function displayPlantResult(result, predictedKey) {
     if ((!result.importance || result.importance==='') && result.name) {
       const dbM = plantDatabase[result.name.toLowerCase()];
@@ -858,20 +782,11 @@
     }
     const importanceHtml = result.importance ? `<div class="info-section"><i class="fas fa-info-circle"></i> <strong>Uses:</strong><br>${esc(result.importance)}</div>` : '';
     const wrapper = document.createElement('div');
-    wrapper.innerHTML = `<div class="plant-card">
-      <div><strong>🌿 ${esc(result.name)}</strong></div>
-      <div class="scientific">${esc(result.scientific||'')}</div>
-      <div class="confidence">🎯 Confidence: ${result.confidence}%</div>
-      <div>🌱 Family: ${esc(result.family)}</div>
-      ${importanceHtml}
-      ${result.correctionNote ? `<div style="font-size:0.7rem;">${esc(result.correctionNote)}</div>` : ''}
-    </div>`;
-    aiOutput.innerHTML = '';
-    aiOutput.appendChild(wrapper);
+    wrapper.innerHTML = `<div class="plant-card"><div><strong>🌿 ${esc(result.name)}</strong></div><div class="scientific">${esc(result.scientific||'')}</div><div class="confidence">🎯 Confidence: ${result.confidence}%</div><div>🌱 Family: ${esc(result.family)}</div>${importanceHtml}${result.correctionNote ? `<div style="font-size:0.7rem;">${esc(result.correctionNote)}</div>` : ''}</div>`;
+    aiOutput.innerHTML = ''; aiOutput.appendChild(wrapper);
     const searchQuery = result.scientific || result.name;
     wrapper.appendChild(makeSearchBtn(searchQuery, 'plant', `🌿 ${result.name}`, result.scientific || ''));
     wrapper.appendChild(makeWikiBtn(result.name, 'plant'));
-
     if (ownerAuthenticated && predictedKey) {
       const editBtn = document.createElement('button');
       editBtn.className = 'primary'; editBtn.style.marginTop = '8px';
@@ -942,7 +857,7 @@
   modeOffline.addEventListener('click', () => setActiveMode('offline'));
 
   // ========================
-  // ALL EVENT LISTENERS
+  // EVENT LISTENERS
   // ========================
   startCam.addEventListener('click', startCamera);
   stopCam.addEventListener('click', stopCamera);
@@ -953,11 +868,7 @@
   uploadLabel.addEventListener('click', () => fileInput.click());
   fileInput.addEventListener('change', e => { if (e.target.files[0]) handleUpload(e.target.files[0]); fileInput.value=''; });
   refreshBtn.addEventListener('click', () => { loadGlobalCorrections(); if (currentImageBlob) identifyPlant(); });
-  manualSearchBtn.addEventListener('click', () => {
-    const q = manualSearchInput.value.trim();
-    if (q) searchWikipedia(q, 'plant');
-    else document.getElementById('wikipediaResultContainer').innerHTML = '<div class="wikipedia-result">⚠️ Please enter a name.</div>';
-  });
+  manualSearchBtn.addEventListener('click', () => { const q = manualSearchInput.value.trim(); if (q) searchWikipedia(q, 'plant'); else document.getElementById('wikipediaResultContainer').innerHTML = '<div class="wikipedia-result">⚠️ Please enter a name.</div>'; });
   manualSearchInput.addEventListener('keypress', e => { if (e.key === 'Enter') manualSearchBtn.click(); });
 
   // ========================
@@ -967,7 +878,6 @@
   async function loadOfflineModel() { try { offlineModel = await mobilenet.load({ version:2, alpha:1.0 }); offlineReady = true; } catch(e) { offlineReady = false; } }
   loadOfflineModel();
   setStatus("✅ Ready. Take/upload a photo, then click Plant / Disease / Pest.", false);
-
 })();
 </script>
 </body>
