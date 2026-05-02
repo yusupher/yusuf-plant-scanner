@@ -58,7 +58,7 @@
     .tip-box { background: #fff3cd; border-left: 4px solid #ffc107; padding: 8px 12px; margin-top: 10px; border-radius: 12px; font-size: 0.8rem; }
     .raw-json { background: #f0f0f0; padding: 10px; border-radius: 12px; font-family: monospace; font-size: 0.7rem; white-space: pre-wrap; word-break: break-all; margin-top: 12px; overflow-x: auto; }
 
-    /* ===== SEARCH INFO BUTTON (original) ===== */
+    /* ===== SEARCH INFO BUTTON ===== */
     .search-info-inline-btn {
       display: inline-flex; align-items: center; gap: 6px;
       background: linear-gradient(135deg, #1a5276, #2980b9);
@@ -69,7 +69,17 @@
     }
     .search-info-inline-btn:hover { opacity: 0.88; }
 
-    /* ===== COMPREHENSIVE INFO MODAL (Claude) ===== */
+    /* ===== WIKIPEDIA BUTTON ===== */
+    .wiki-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: #2c5f8a; color: white; border: none;
+      border-radius: 40px; padding: 8px 16px; font-size: 0.75rem;
+      font-weight: 600; cursor: pointer; margin-top: 8px; margin-left: 6px;
+      transition: opacity 0.2s;
+    }
+    .wiki-btn:hover { opacity: 0.85; }
+
+    /* ===== COMPREHENSIVE INFO MODAL ===== */
     .info-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.75); align-items: center; justify-content: center; z-index: 2000; padding: 14px; }
     .info-modal.open { display: flex; }
     .info-modal-box { background: white; border-radius: 28px; width: 100%; max-width: 680px; max-height: 92vh; overflow-y: auto; box-shadow: 0 30px 60px rgba(0,0,0,0.4); animation: slideUp 0.3s ease; }
@@ -105,74 +115,18 @@
     .ipm-tag.cult { background: #bbdefb; color: #0d3c6e; }
     .ipm-tag.mech { background: #e1bee7; color: #4a148c; }
 
-    /* ===== NEW MANUAL SEARCH PANEL STYLES ===== */
-    .manual-search-panel {
-      background: #fef9ef;
-      border-radius: 24px;
-      margin: 10px 16px 16px 16px;
-      padding: 16px;
-      border: 1px solid #d9efcd;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    }
-    .manual-search-panel h3 {
-      color: #1a3c2a;
-      font-size: 1.1rem;
-      margin-bottom: 12px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .search-row {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-bottom: 12px;
-    }
-    .search-row input {
-      flex: 3;
-      padding: 10px 14px;
-      border: 1px solid #c8e0bc;
-      border-radius: 60px;
-      font-size: 0.9rem;
-      background: white;
-    }
-    .search-row button {
-      flex: 0 0 auto;
-      background: #2f6b47;
-      color: white;
-      border: none;
-      padding: 0 18px;
-      border-radius: 60px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    .search-row button:hover {
-      background: #1e4a2f;
-    }
-    .wikipedia-result {
-      background: #f9fcf7;
-      border-radius: 20px;
-      padding: 12px;
-      font-size: 0.85rem;
-      line-height: 1.5;
-      margin-top: 8px;
-    }
-    .local-names {
-      background: #e2eed9;
-      border-radius: 16px;
-      padding: 10px;
-      margin-bottom: 10px;
-      font-weight: 500;
-    }
-    .local-names span {
-      display: inline-block;
-      margin-right: 15px;
-      font-size: 0.8rem;
-    }
-    .local-names i {
-      margin-right: 4px;
-      color: #4a6e3c;
-    }
+    /* ===== MANUAL SEARCH PANEL ===== */
+    .manual-search-panel { background: #fef9ef; border-radius: 24px; margin: 10px 16px 16px 16px; padding: 16px; border: 1px solid #d9efcd; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .manual-search-panel h3 { color: #1a3c2a; font-size: 1rem; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .search-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+    .search-row input { flex: 3; padding: 10px 14px; border: 1px solid #c8e0bc; border-radius: 60px; font-size: 0.9rem; background: white; outline: none; }
+    .search-row .wiki-search-btn { flex: 0 0 auto; background: #2f6b47; color: white; border: none; padding: 10px 18px; border-radius: 60px; font-weight: bold; cursor: pointer; font-size: 0.85rem; }
+    .search-row .wiki-search-btn:hover { background: #1e4a2f; }
+    .wikipedia-result { background: #f9fcf7; border-radius: 20px; padding: 12px; font-size: 0.85rem; line-height: 1.6; margin-top: 8px; color: #333; }
+    .wikipedia-result a { color: #2980b9; }
+    .local-names { background: #e2eed9; border-radius: 16px; padding: 10px; margin-bottom: 10px; font-weight: 500; }
+    .local-names span { display: inline-block; margin-right: 15px; font-size: 0.8rem; }
+    .local-names i { margin-right: 4px; color: #4a6e3c; }
   </style>
 </head>
 <body>
@@ -227,15 +181,15 @@
     <div id="aiOutput"></div>
   </div>
 
-  <!-- ========== MANUAL SEARCH PANEL (Wikipedia + Local Names) ========== -->
+  <!-- MANUAL SEARCH PANEL -->
   <div class="manual-search-panel">
-    <h3><i class="fas fa-globe"></i> 🔍 For More Information</h3>
+    <h3><i class="fas fa-globe"></i> 🔍 Search for More Information</h3>
     <div class="search-row">
-      <input type="text" id="manualSearchInput" placeholder="e.g., maize, cassava mosaic, fall armyworm" value="coffee">
-      <button id="manualSearchBtn">Search Wikipedia</button>
+      <input type="text" id="manualSearchInput" placeholder="e.g. maize, cassava mosaic, fall armyworm">
+      <button class="wiki-search-btn" id="manualSearchBtn"><i class="fab fa-wikipedia-w"></i> Wikipedia</button>
     </div>
     <div id="wikipediaResultContainer">
-      <div class="wikipedia-result"><i>Enter a name above and click Search. Local names (Yorùbá / Hausa / Igbo) will appear if available.</i></div>
+      <div class="wikipedia-result"><i>Enter a plant, disease, or pest name above and click Wikipedia. After a scan, the name is filled automatically.</i></div>
     </div>
   </div>
 
@@ -272,7 +226,7 @@
   </div>
 
   <footer>
-    🌿 Powered by D-pious Smart World
+    🌿 Powered by D-pious Smart World | Plant ID: PlantNet | Disease &amp; Pest: Roboflow | Info: Claude AI
   </footer>
 </div>
 
@@ -285,7 +239,7 @@
   </div>
 </div>
 
-<!-- COMPREHENSIVE INFO MODAL (Claude) -->
+<!-- COMPREHENSIVE INFO MODAL -->
 <div id="infoModal" class="info-modal">
   <div class="info-modal-box">
     <div class="info-modal-header">
@@ -296,41 +250,41 @@
       <button class="info-modal-close" id="infoModalClose"><i class="fas fa-times"></i></button>
     </div>
     <div class="info-modal-body" id="infoModalBody">
-      <div class="info-loading">
-        <div class="big-loader"></div>
-        <p>Fetching comprehensive information...</p>
-      </div>
+      <div class="info-loading"><div class="big-loader"></div><p>Fetching comprehensive information...</p></div>
     </div>
   </div>
 </div>
 
 <script>
 (function() {
+
   // ========================
   // LOCAL NAMES DICTIONARY (Yoruba, Hausa, Igbo)
   // ========================
   const localNamesDB = {
-    // Plants
-    "coffee": { yoruba: "Kọfí", hausa: "Kofi", igbo: "Kọfị" },
-    "maize": { yoruba: "Àgbàdo", hausa: "Masara", igbo: "Ọka" },
-    "cassava": { yoruba: "Ẹ̀gẹ́", hausa: "Rogo", igbo: "Akpu" },
-    "yam": { yoruba: "Iṣu", hausa: "Doya", igbo: "Ji" },
-    "cocoa": { yoruba: "Koko", hausa: "Koko", igbo: "Koko" },
-    "cashew": { yoruba: "Kàjù", hausa: "Kanju", igbo: "Kachu" },
-    "mango": { yoruba: "Mángoro", hausa: "Mangwaro", igbo: "Mango" },
-    "tomato": { yoruba: "Tòmátì", hausa: "Tumatir", igbo: "Tọmati" },
-    "cowpea": { yoruba: "Ẹ̀wà", hausa: "Wake", igbo: "Agwa" },
-    "groundnut": { yoruba: "Ẹ̀pa", hausa: "Gyada", igbo: "Ahu" },
-    "rice": { yoruba: "Ìrẹsì", hausa: "Shinkafa", igbo: "Osikapa" },
-    "sorghum": { yoruba: "Oka bàbà", hausa: "Dawa", igbo: "Oka" },
-    // Diseases
-    "late blight": { yoruba: "Àrùn Tomato", hausa: "Cutar Tomato", igbo: "Ọrịa Tomato" },
-    "cassava mosaic": { yoruba: "Àrùn Ẹ̀gẹ́", hausa: "Cutar Rogo", igbo: "Ọrịa Akpu" },
-    "maize streak": { yoruba: "Àrùn Àgbàdo", hausa: "Cutar Masara", igbo: "Ọrịa Ọka" },
-    // Pests
-    "fall armyworm": { yoruba: "Kòkòrò jagunjagun", hausa: "Kwaro Soja", igbo: "Ahụhụ agha" },
-    "locust": { yoruba: "Ẹṣú", hausa: "Fara", igbo: "Igurube" },
-    "aphid": { yoruba: "Kòkòrò ọmọ", hausa: "Kwaro", igbo: "Ahụhụ" }
+    "coffee":        { yoruba: "Kọfí",            hausa: "Kofi",         igbo: "Kọfị" },
+    "maize":         { yoruba: "Àgbàdo",           hausa: "Masara",       igbo: "Ọka" },
+    "cassava":       { yoruba: "Ẹ̀gẹ́",             hausa: "Rogo",         igbo: "Akpu" },
+    "yam":           { yoruba: "Iṣu",              hausa: "Doya",         igbo: "Ji" },
+    "cocoa":         { yoruba: "Koko",             hausa: "Koko",         igbo: "Koko" },
+    "cashew":        { yoruba: "Kàjù",             hausa: "Kanju",        igbo: "Kachu" },
+    "mango":         { yoruba: "Mángoro",          hausa: "Mangwaro",     igbo: "Mango" },
+    "tomato":        { yoruba: "Tòmátì",           hausa: "Tumatir",      igbo: "Tọmati" },
+    "cowpea":        { yoruba: "Ẹ̀wà",             hausa: "Wake",         igbo: "Agwa" },
+    "groundnut":     { yoruba: "Ẹ̀pa",             hausa: "Gyada",        igbo: "Ahu" },
+    "rice":          { yoruba: "Ìrẹsì",            hausa: "Shinkafa",     igbo: "Osikapa" },
+    "sorghum":       { yoruba: "Oka bàbà",         hausa: "Dawa",         igbo: "Oka" },
+    "plantain":      { yoruba: "Ogede agbagba",    hausa: "Ayaba",        igbo: "Unere" },
+    "banana":        { yoruba: "Ogede",            hausa: "Ayaba",        igbo: "Unere" },
+    "okra":          { yoruba: "Ilá",              hausa: "Kubewa",       igbo: "Okuru" },
+    "pepper":        { yoruba: "Ata",              hausa: "Barkono",      igbo: "Ose" },
+    "late blight":   { yoruba: "Àrùn Tomato",      hausa: "Cutar Tomato", igbo: "Ọrịa Tomato" },
+    "cassava mosaic":{ yoruba: "Àrùn Ẹ̀gẹ́",       hausa: "Cutar Rogo",   igbo: "Ọrịa Akpu" },
+    "maize streak":  { yoruba: "Àrùn Àgbàdo",      hausa: "Cutar Masara", igbo: "Ọrịa Ọka" },
+    "fall armyworm": { yoruba: "Kòkòrò jagunjagun",hausa: "Kwaro Soja",   igbo: "Ahụhụ agha" },
+    "locust":        { yoruba: "Ẹṣú",              hausa: "Fara",         igbo: "Igurube" },
+    "aphid":         { yoruba: "Kòkòrò ọmọ",       hausa: "Kwaro",        igbo: "Ahụhụ" },
+    "whitefly":      { yoruba: "Eṣinṣin funfun",   hausa: "Ƙwaro fari",   igbo: "Ahụhụ ọcha" }
   };
 
   function getLocalNames(query) {
@@ -343,80 +297,71 @@
   }
 
   // ========================
-  // WIKIPEDIA SEARCH FUNCTION (with local names)
+  // WIKIPEDIA SEARCH
   // ========================
-  async function searchWikipedia(query, typeHint = "plant") {
+  async function searchWikipedia(query, typeHint) {
     const container = document.getElementById('wikipediaResultContainer');
-    if (!query.trim()) {
-      container.innerHTML = `<div class="wikipedia-result">⚠️ Please enter a name.</div>`;
-      return;
-    }
-    container.innerHTML = `<div class="wikipedia-result">🔄 Searching Wikipedia for "${escapeHtml(query)}"... <span class="loader" style="display:inline-block; margin-left:8px;"></span></div>`;
+    if (!query.trim()) { container.innerHTML = `<div class="wikipedia-result">⚠️ Please enter a name.</div>`; return; }
+    container.innerHTML = `<div class="wikipedia-result">🔄 Searching Wikipedia for "<strong>${esc(query)}</strong>"… <span class="loader" style="display:inline-block;margin-left:8px;"></span></div>`;
     try {
       let searchQuery = query;
-      if (typeHint === "disease") searchQuery = `${query} disease`;
-      if (typeHint === "pest") searchQuery = `${query} pest`;
-      const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(searchQuery)}&format=json&origin=*`;
-      const searchRes = await fetch(searchUrl);
+      if (typeHint === 'disease') searchQuery += ' plant disease';
+      if (typeHint === 'pest') searchQuery += ' pest insect';
+      const searchRes = await fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(searchQuery)}&format=json&origin=*`);
       const searchData = await searchRes.json();
-      if (!searchData.query || !searchData.query.search || searchData.query.search.length === 0) {
-        container.innerHTML = `<div class="wikipedia-result error-msg">❌ No Wikipedia article found for "${escapeHtml(query)}". Try a different name.</div>`;
-        return;
+      if (!searchData.query?.search?.length) {
+        container.innerHTML = `<div class="wikipedia-result error-msg">❌ No Wikipedia article found for "<strong>${esc(query)}</strong>". Try a different name.</div>`; return;
       }
-      const topResult = searchData.query.search[0];
-      const pageTitle = topResult.title;
-      const extractUrl = `https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exintro=true&explaintext=true&titles=${encodeURIComponent(pageTitle)}&format=json&origin=*`;
-      const extractRes = await fetch(extractUrl);
+      const pageTitle = searchData.query.search[0].title;
+      // Get extract
+      const extractRes = await fetch(`https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exintro=true&explaintext=true&titles=${encodeURIComponent(pageTitle)}&format=json&origin=*`);
       const extractData = await extractRes.json();
       const pages = extractData.query.pages;
-      const pageId = Object.keys(pages)[0];
-      const page = pages[pageId];
-      let extract = page.extract || "No summary available.";
-      if (extract.length > 900) extract = extract.substring(0, 900) + '…';
+      let extract = pages[Object.keys(pages)[0]].extract || "No summary available.";
+      if (extract.length > 1000) extract = extract.substring(0, 1000) + '…';
       // Get thumbnail
-      const thumbUrl = `https://en.wikipedia.org/w/api.php?action=query&prop=pageimages&pithumbsize=150&titles=${encodeURIComponent(pageTitle)}&format=json&origin=*`;
-      const thumbRes = await fetch(thumbUrl);
+      const thumbRes = await fetch(`https://en.wikipedia.org/w/api.php?action=query&prop=pageimages&pithumbsize=150&titles=${encodeURIComponent(pageTitle)}&format=json&origin=*`);
       const thumbData = await thumbRes.json();
       const thumbPages = thumbData.query.pages;
-      const thumbPage = thumbPages[Object.keys(thumbPages)[0]];
-      const thumbnail = thumbPage.thumbnail ? thumbPage.thumbnail.source : null;
+      const thumbnail = thumbPages[Object.keys(thumbPages)[0]]?.thumbnail?.source || null;
       // Local names
       const local = getLocalNames(query);
-      let localHtml = '';
-      if (local) {
-        localHtml = `<div class="local-names">
-          <span><i class="fas fa-language"></i> Yorùbá: ${escapeHtml(local.yoruba || '—')}</span>
-          <span><i class="fas fa-language"></i> Hausa: ${escapeHtml(local.hausa || '—')}</span>
-          <span><i class="fas fa-language"></i> Igbo: ${escapeHtml(local.igbo || '—')}</span>
-        </div>`;
-      }
-      const html = `<div class="wikipedia-result">
-        ${thumbnail ? `<img src="${escapeHtml(thumbnail)}" style="max-width:120px; border-radius:12px; float:right; margin-left:12px; margin-bottom:8px;">` : ''}
-        <div><strong>📖 ${escapeHtml(pageTitle)}</strong></div>
+      const localHtml = local ? `<div class="local-names">
+        <span><i class="fas fa-language"></i> Yorùbá: <strong>${esc(local.yoruba||'—')}</strong></span>
+        <span><i class="fas fa-language"></i> Hausa: <strong>${esc(local.hausa||'—')}</strong></span>
+        <span><i class="fas fa-language"></i> Igbo: <strong>${esc(local.igbo||'—')}</strong></span>
+      </div>` : '';
+      container.innerHTML = `<div class="wikipedia-result">
+        ${thumbnail ? `<img src="${esc(thumbnail)}" style="max-width:120px;border-radius:12px;float:right;margin-left:12px;margin-bottom:8px;" alt="">` : ''}
+        <div style="font-weight:700;font-size:0.95rem;margin-bottom:6px;">📖 ${esc(pageTitle)}</div>
         ${localHtml}
-        <div style="margin-top:8px;">${escapeHtml(extract)}</div>
-        <div style="margin-top:10px; font-size:0.7rem;"><a href="https://en.wikipedia.org/wiki/${encodeURIComponent(pageTitle)}" target="_blank">🔗 Read full article on Wikipedia →</a></div>
+        <div style="margin-top:6px;">${esc(extract)}</div>
+        <div style="margin-top:10px;font-size:0.72rem;clear:both;">
+          <a href="https://en.wikipedia.org/wiki/${encodeURIComponent(pageTitle)}" target="_blank">🔗 Read full article on Wikipedia →</a>
+        </div>
       </div>`;
-      container.innerHTML = html;
-    } catch (err) {
-      console.error(err);
-      container.innerHTML = `<div class="wikipedia-result error-msg">🌐 Network error: ${escapeHtml(err.message)}</div>`;
+    } catch(err) {
+      container.innerHTML = `<div class="wikipedia-result error-msg">🌐 Network error: ${esc(err.message)}</div>`;
     }
   }
 
-  function escapeHtml(str) {
+  // ========================
+  // ESCAPE HTML
+  // ========================
+  function esc(str) {
     if (!str) return '';
-    return String(str).replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m] || m);
+    return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   }
 
   // ========================
-  // ORIGINAL GLOBAL VARIABLES (unchanged)
+  // CONFIG
   // ========================
   const BACKEND_URL = "https://plant-backend-avof.onrender.com";
   const PEST_URL = BACKEND_URL + '/detect-pest';
   const OWNER_PASSWORD = 'yusupher01';
   let ownerAuthenticated = false;
 
+  // DOM
   const video = document.getElementById('video');
   const startCam = document.getElementById('startCam');
   const stopCam = document.getElementById('stopCam');
@@ -451,31 +396,23 @@
   const infoModalSubtitle = document.getElementById('infoModalSubtitle');
   const infoModalBody = document.getElementById('infoModalBody');
   const infoModalClose = document.getElementById('infoModalClose');
-
-  // Manual search elements
   const manualSearchInput = document.getElementById('manualSearchInput');
   const manualSearchBtn = document.getElementById('manualSearchBtn');
 
-  let currentStream = null;
-  let cameraActive = false;
-  let offlineModel = null;
-  let offlineReady = false;
-  let currentMode = 'auto';
-  let globalCorrections = {};
-  let pendingCorrections = {};
-  let currentImageBlob = null;
-  let lastPlantResult = null;
-  let lastPredictedKey = '';
-  let lastDetectedName = '';   // stores last identified plant/disease/pest name for auto-fill
+  let currentStream = null, cameraActive = false, offlineModel = null, offlineReady = false;
+  let currentMode = 'auto', globalCorrections = {}, pendingCorrections = {};
+  let currentImageBlob = null, lastPlantResult = null, lastPredictedKey = '';
 
   const plantDatabase = {
     "cowpea": { common: "Cowpea", scientific: "Vigna unguiculata", family: "Fabaceae", importance: "Legume crop, rich in protein, drought-tolerant." },
-    "mango": { common: "Mango", scientific: "Mangifera indica", family: "Anacardiaceae", importance: "Tropical fruit tree." },
+    "mango":  { common: "Mango",  scientific: "Mangifera indica",  family: "Anacardiaceae", importance: "Tropical fruit tree." },
     "tomato": { common: "Tomato", scientific: "Solanum lycopersicum", family: "Solanaceae", importance: "Fruit vegetable." },
-    "maize": { common: "Maize", scientific: "Zea mays", family: "Poaceae", importance: "Staple grain." }
+    "maize":  { common: "Maize",  scientific: "Zea mays",          family: "Poaceae", importance: "Staple grain." }
   };
 
-  // ========== CLAUDE AI COMPREHENSIVE INFO (unchanged) ==========
+  // ========================
+  // CLAUDE AI COMPREHENSIVE INFO
+  // ========================
   async function fetchComprehensiveInfo(query, type) {
     const response = await fetch(BACKEND_URL + "/claude-info", {
       method: "POST",
@@ -491,83 +428,84 @@
   function renderPlantInfo(info) {
     const isWeed = info.isWeed || info.category === 'weed';
     const cat = (info.category || 'other').toLowerCase();
-    const emoji = isWeed ? '🌾' : (cat === 'tree' ? '🌳' : (cat === 'crop' ? '🌾' : '🪴'));
+    const emoji = cat === 'tree' ? '🌳' : (isWeed ? '🌾' : (cat === 'crop' ? '🌾' : '🪴'));
     const badgeClass = isWeed ? 'badge-weed' : (cat === 'tree' ? 'badge-tree' : (cat === 'crop' ? 'badge-crop' : 'badge-other'));
-    let html = `<span class="info-type-badge ${badgeClass}">${emoji} ${escapeHtml(cat.toUpperCase())}</span>`;
+    let html = `<span class="info-type-badge ${badgeClass}">${emoji} ${esc(cat.toUpperCase())}</span>`;
     html += `<div class="taxonomy-grid">
-      <div class="taxonomy-item"><span>Family</span>${escapeHtml(info.family||'—')}</div>
-      <div class="taxonomy-item"><span>Order</span>${escapeHtml(info.order||'—')}</div>
-      <div class="taxonomy-item"><span>Class</span>${escapeHtml(info.class||'—')}</div>
-      <div class="taxonomy-item"><span>Origin</span>${escapeHtml(info.origin||'—')}</div>
+      <div class="taxonomy-item"><span>Family</span>${esc(info.family||'—')}</div>
+      <div class="taxonomy-item"><span>Order</span>${esc(info.order||'—')}</div>
+      <div class="taxonomy-item"><span>Class</span>${esc(info.class||'—')}</div>
+      <div class="taxonomy-item"><span>Origin</span>${esc(info.origin||'—')}</div>
     </div>`;
-    if (info.description) html += `<div class="info-section-block"><h3>📖 Description</h3><p>${escapeHtml(info.description)}</p></div>`;
-    if (info.uses && info.uses.length) html += `<div class="info-section-block"><h3>🔧 Uses &amp; Importance</h3><ul>${info.uses.map(u=>`<li>${escapeHtml(u)}</li>`).join('')}</ul></div>`;
-    if (info.nutritionalValue) html += `<div class="info-section-block"><h3>🥗 Nutritional Value</h3><p>${escapeHtml(info.nutritionalValue)}</p></div>`;
-    if (info.economicImportance) html += `<div class="info-section-block"><h3>💰 Economic Importance</h3><p>${escapeHtml(info.economicImportance)}</p></div>`;
-    if (info.ecologicalRole) html += `<div class="info-section-block"><h3>🌍 Ecological Role</h3><p>${escapeHtml(info.ecologicalRole)}</p></div>`;
+    if (info.description) html += `<div class="info-section-block"><h3>📖 Description</h3><p>${esc(info.description)}</p></div>`;
+    if (info.uses?.length) html += `<div class="info-section-block"><h3>🔧 Uses &amp; Importance</h3><ul>${info.uses.map(u=>`<li>${esc(u)}</li>`).join('')}</ul></div>`;
+    if (info.nutritionalValue) html += `<div class="info-section-block"><h3>🥗 Nutritional Value</h3><p>${esc(info.nutritionalValue)}</p></div>`;
+    if (info.economicImportance) html += `<div class="info-section-block"><h3>💰 Economic Importance</h3><p>${esc(info.economicImportance)}</p></div>`;
+    if (info.ecologicalRole) html += `<div class="info-section-block"><h3>🌍 Ecological Role</h3><p>${esc(info.ecologicalRole)}</p></div>`;
     if (info.growingConditions) {
       const g = info.growingConditions;
       html += `<div class="info-section-block"><h3>🌱 Growing Conditions</h3>
-        ${g.climate?`<p><strong>Climate:</strong> ${escapeHtml(g.climate)}</p>`:''}
-        ${g.soil?`<p><strong>Soil:</strong> ${escapeHtml(g.soil)}</p>`:''}
-        ${g.rainfall?`<p><strong>Rainfall:</strong> ${escapeHtml(g.rainfall)}</p>`:''}
-        ${g.temperature?`<p><strong>Temperature:</strong> ${escapeHtml(g.temperature)}</p>`:''}
+        ${g.climate?`<p><strong>Climate:</strong> ${esc(g.climate)}</p>`:''}
+        ${g.soil?`<p><strong>Soil:</strong> ${esc(g.soil)}</p>`:''}
+        ${g.rainfall?`<p><strong>Rainfall:</strong> ${esc(g.rainfall)}</p>`:''}
+        ${g.temperature?`<p><strong>Temperature:</strong> ${esc(g.temperature)}</p>`:''}
       </div>`;
     }
     if (isWeed && info.weedControl) {
       const wc = info.weedControl;
       html += `<div class="info-section-block weed-block"><h3>⚠️ IPM Weed Control</h3>
-        ${wc.ipmSummary?`<p style="margin-bottom:10px;">${escapeHtml(wc.ipmSummary)}</p>`:''}
-        ${wc.cultural&&wc.cultural.length?`<p><span class="ipm-tag cult">Cultural</span></p><ul>${wc.cultural.map(m=>`<li>${escapeHtml(m)}</li>`).join('')}</ul>`:''}
-        ${wc.mechanical&&wc.mechanical.length?`<p style="margin-top:8px;"><span class="ipm-tag mech">Mechanical</span></p><ul>${wc.mechanical.map(m=>`<li>${escapeHtml(m)}</li>`).join('')}</ul>`:''}
-        ${wc.biological&&wc.biological.length?`<p style="margin-top:8px;"><span class="ipm-tag bio">Biological</span></p><ul>${wc.biological.map(m=>`<li>${escapeHtml(m)}</li>`).join('')}</ul>`:''}
-        ${wc.chemical&&wc.chemical.length?`<p style="margin-top:8px;"><span class="ipm-tag chem">Chemical</span></p><ul>${wc.chemical.map(m=>`<li>${escapeHtml(m)}</li>`).join('')}</ul>`:''}
+        ${wc.ipmSummary?`<p style="margin-bottom:10px;">${esc(wc.ipmSummary)}</p>`:''}
+        ${wc.cultural?.length?`<p><span class="ipm-tag cult">Cultural</span></p><ul>${wc.cultural.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+        ${wc.mechanical?.length?`<p style="margin-top:8px;"><span class="ipm-tag mech">Mechanical</span></p><ul>${wc.mechanical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+        ${wc.biological?.length?`<p style="margin-top:8px;"><span class="ipm-tag bio">Biological</span></p><ul>${wc.biological.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+        ${wc.chemical?.length?`<p style="margin-top:8px;"><span class="ipm-tag chem">Chemical</span></p><ul>${wc.chemical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
       </div>`;
     }
-    if (info.interestingFacts && info.interestingFacts.length) html += `<div class="info-section-block"><h3>💡 Interesting Facts</h3><ul>${info.interestingFacts.map(f=>`<li>${escapeHtml(f)}</li>`).join('')}</ul></div>`;
+    if (info.interestingFacts?.length) html += `<div class="info-section-block"><h3>💡 Interesting Facts</h3><ul>${info.interestingFacts.map(f=>`<li>${esc(f)}</li>`).join('')}</ul></div>`;
     return html;
   }
 
   function renderDiseaseInfo(info) {
     const c = info.control || {};
     let html = `<div class="taxonomy-grid">
-      <div class="taxonomy-item"><span>Pathogen Type</span>${escapeHtml(info.pathogenType||'—')}</div>
-      <div class="taxonomy-item"><span>Pathogen</span>${escapeHtml(info.pathogenName||'—')}</div>
+      <div class="taxonomy-item"><span>Pathogen Type</span>${esc(info.pathogenType||'—')}</div>
+      <div class="taxonomy-item"><span>Pathogen</span>${esc(info.pathogenName||'—')}</div>
     </div>`;
-    if (info.affectedPlants && info.affectedPlants.length) html += `<div class="info-section-block disease-block"><h3>🌿 Affected Plants</h3><p>${info.affectedPlants.map(p=>escapeHtml(p)).join(', ')}</p></div>`;
-    if (info.symptoms && info.symptoms.length) html += `<div class="info-section-block disease-block"><h3>🔍 Symptoms</h3><ul>${info.symptoms.map(s=>`<li>${escapeHtml(s)}</li>`).join('')}</ul></div>`;
-    if (info.spreadMechanism) html += `<div class="info-section-block disease-block"><h3>🔄 How It Spreads</h3><p>${escapeHtml(info.spreadMechanism)}</p></div>`;
-    if (info.favorableConditions) html += `<div class="info-section-block disease-block"><h3>🌡️ Favorable Conditions</h3><p>${escapeHtml(info.favorableConditions)}</p></div>`;
-    if (info.economicImpact) html += `<div class="info-section-block disease-block"><h3>💸 Economic Impact</h3><p>${escapeHtml(info.economicImpact)}</p></div>`;
+    if (info.affectedPlants?.length) html += `<div class="info-section-block disease-block"><h3>🌿 Affected Plants</h3><p>${info.affectedPlants.map(p=>esc(p)).join(', ')}</p></div>`;
+    if (info.symptoms?.length) html += `<div class="info-section-block disease-block"><h3>🔍 Symptoms</h3><ul>${info.symptoms.map(s=>`<li>${esc(s)}</li>`).join('')}</ul></div>`;
+    if (info.spreadMechanism) html += `<div class="info-section-block disease-block"><h3>🔄 How It Spreads</h3><p>${esc(info.spreadMechanism)}</p></div>`;
+    if (info.favorableConditions) html += `<div class="info-section-block disease-block"><h3>🌡️ Favorable Conditions</h3><p>${esc(info.favorableConditions)}</p></div>`;
+    if (info.economicImpact) html += `<div class="info-section-block disease-block"><h3>💸 Economic Impact</h3><p>${esc(info.economicImpact)}</p></div>`;
     html += `<div class="info-section-block disease-block"><h3>💊 Disease Control (IPM)</h3>
-      ${c.ipmSummary?`<p style="margin-bottom:10px;">${escapeHtml(c.ipmSummary)}</p>`:''}
-      ${c.cultural&&c.cultural.length?`<p><span class="ipm-tag cult">Cultural</span></p><ul>${c.cultural.map(m=>`<li>${escapeHtml(m)}</li>`).join('')}</ul>`:''}
-      ${c.biological&&c.biological.length?`<p style="margin-top:8px;"><span class="ipm-tag bio">Biological</span></p><ul>${c.biological.map(m=>`<li>${escapeHtml(m)}</li>`).join('')}</ul>`:''}
-      ${c.chemical&&c.chemical.length?`<p style="margin-top:8px;"><span class="ipm-tag chem">Chemical</span></p><ul>${c.chemical.map(m=>`<li>${escapeHtml(m)}</li>`).join('')}</ul>`:''}
-      ${c.resistant_varieties&&c.resistant_varieties.length?`<p style="margin-top:8px;"><span class="ipm-tag mech">Resistant Varieties</span></p><ul>${c.resistant_varieties.map(m=>`<li>${escapeHtml(m)}</li>`).join('')}</ul>`:''}
+      ${c.ipmSummary?`<p style="margin-bottom:10px;">${esc(c.ipmSummary)}</p>`:''}
+      ${c.cultural?.length?`<p><span class="ipm-tag cult">Cultural</span></p><ul>${c.cultural.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+      ${c.biological?.length?`<p style="margin-top:8px;"><span class="ipm-tag bio">Biological</span></p><ul>${c.biological.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+      ${c.chemical?.length?`<p style="margin-top:8px;"><span class="ipm-tag chem">Chemical</span></p><ul>${c.chemical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+      ${c.resistant_varieties?.length?`<p style="margin-top:8px;"><span class="ipm-tag mech">Resistant Varieties</span></p><ul>${c.resistant_varieties.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
     </div>`;
-    if (info.preventionTips && info.preventionTips.length) html += `<div class="info-section-block disease-block"><h3>🛡️ Prevention Tips</h3><ul>${info.preventionTips.map(t=>`<li>${escapeHtml(t)}</li>`).join('')}</ul></div>`;
+    if (info.preventionTips?.length) html += `<div class="info-section-block disease-block"><h3>🛡️ Prevention Tips</h3><ul>${info.preventionTips.map(t=>`<li>${esc(t)}</li>`).join('')}</ul></div>`;
     return html;
   }
 
   function renderPestInfo(info) {
     const c = info.control || {};
     let html = `<div class="taxonomy-grid">
-      <div class="taxonomy-item"><span>Pest Type</span>${escapeHtml(info.pestType||'—')}</div>
-      <div class="taxonomy-item"><span>Scientific Name</span><em>${escapeHtml(info.scientificName||'—')}</em></div>
+      <div class="taxonomy-item"><span>Pest Type</span>${esc(info.pestType||'—')}</div>
+      <div class="taxonomy-item"><span>Scientific Name</span><em>${esc(info.scientificName||'—')}</em></div>
     </div>`;
-    if (info.affectedPlants && info.affectedPlants.length) html += `<div class="info-section-block pest-block"><h3>🌿 Affected Plants</h3><p>${info.affectedPlants.map(p=>escapeHtml(p)).join(', ')}</p></div>`;
-    if (info.damageDescription) html += `<div class="info-section-block pest-block"><h3>💥 Damage Caused</h3><p>${escapeHtml(info.damageDescription)}</p></div>`;
-    if (info.peakActivity) html += `<div class="info-section-block pest-block"><h3>📅 Peak Activity</h3><p>${escapeHtml(info.peakActivity)}</p></div>`;
-    if (info.economicThreshold) html += `<div class="info-section-block pest-block"><h3>📊 Economic Threshold</h3><p>${escapeHtml(info.economicThreshold)}</p></div>`;
+    if (info.affectedPlants?.length) html += `<div class="info-section-block pest-block"><h3>🌿 Affected Plants</h3><p>${info.affectedPlants.map(p=>esc(p)).join(', ')}</p></div>`;
+    if (info.damageDescription) html += `<div class="info-section-block pest-block"><h3>💥 Damage Caused</h3><p>${esc(info.damageDescription)}</p></div>`;
+    if (info.lifeStages?.length) html += `<div class="info-section-block pest-block"><h3>🔄 Life Stages</h3><ul>${info.lifeStages.map(s=>`<li>${esc(s)}</li>`).join('')}</ul></div>`;
+    if (info.peakActivity) html += `<div class="info-section-block pest-block"><h3>📅 Peak Activity</h3><p>${esc(info.peakActivity)}</p></div>`;
+    if (info.economicThreshold) html += `<div class="info-section-block pest-block"><h3>📊 Economic Threshold</h3><p>${esc(info.economicThreshold)}</p></div>`;
     html += `<div class="info-section-block pest-block"><h3>🐛 Pest Control (IPM)</h3>
-      ${c.ipmSummary?`<p style="margin-bottom:10px;">${escapeHtml(c.ipmSummary)}</p>`:''}
-      ${c.cultural&&c.cultural.length?`<p><span class="ipm-tag cult">Cultural</span></p><ul>${c.cultural.map(m=>`<li>${escapeHtml(m)}</li>`).join('')}</ul>`:''}
-      ${c.biological&&c.biological.length?`<p style="margin-top:8px;"><span class="ipm-tag bio">Biological</span></p><ul>${c.biological.map(m=>`<li>${escapeHtml(m)}</li>`).join('')}</ul>`:''}
-      ${c.mechanical&&c.mechanical.length?`<p style="margin-top:8px;"><span class="ipm-tag mech">Mechanical / Traps</span></p><ul>${c.mechanical.map(m=>`<li>${escapeHtml(m)}</li>`).join('')}</ul>`:''}
-      ${c.chemical&&c.chemical.length?`<p style="margin-top:8px;"><span class="ipm-tag chem">Chemical</span></p><ul>${c.chemical.map(m=>`<li>${escapeHtml(m)}</li>`).join('')}</ul>`:''}
+      ${c.ipmSummary?`<p style="margin-bottom:10px;">${esc(c.ipmSummary)}</p>`:''}
+      ${c.cultural?.length?`<p><span class="ipm-tag cult">Cultural</span></p><ul>${c.cultural.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+      ${c.biological?.length?`<p style="margin-top:8px;"><span class="ipm-tag bio">Biological</span></p><ul>${c.biological.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+      ${c.mechanical?.length?`<p style="margin-top:8px;"><span class="ipm-tag mech">Mechanical / Traps</span></p><ul>${c.mechanical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+      ${c.chemical?.length?`<p style="margin-top:8px;"><span class="ipm-tag chem">Chemical</span></p><ul>${c.chemical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
     </div>`;
-    if (info.safetyNotes) html += `<div class="info-section-block pest-block"><h3>⚠️ Safety Notes</h3><p>${escapeHtml(info.safetyNotes)}</p></div>`;
+    if (info.safetyNotes) html += `<div class="info-section-block pest-block"><h3>⚠️ Safety Notes</h3><p>${esc(info.safetyNotes)}</p></div>`;
     return html;
   }
 
@@ -588,7 +526,7 @@
       infoModalBody.innerHTML = `<div class="error-msg">
         <i class="fas fa-exclamation-triangle"></i><br>
         <strong>Could not load information</strong><br>
-        <small>${escapeHtml(err.message)}</small><br><br>
+        <small>${esc(err.message)}</small><br><br>
         <small>Make sure your backend is running at:<br><strong>plant-backend-avof.onrender.com</strong></small>
       </div>`;
     }
@@ -598,78 +536,36 @@
   infoModalClose.addEventListener('click', closeInfoModal);
   infoModal.addEventListener('click', e => { if (e.target === infoModal) closeInfoModal(); });
 
+  // Build action buttons for results
   function makeSearchBtn(query, type, title, subtitle) {
     const btn = document.createElement('button');
     btn.className = 'search-info-inline-btn';
-    btn.innerHTML = '<i class="fas fa-search"></i> Search Comprehensive Info (Claude)';
+    btn.innerHTML = '<i class="fas fa-search"></i> Search Comprehensive Info (Claude AI)';
     btn.addEventListener('click', () => openInfoModal(query, type, title, subtitle));
     return btn;
   }
 
-  // Helper: auto-fill manual search input and optionally trigger search
-  function setManualSearchInput(value) {
-    if (manualSearchInput) manualSearchInput.value = value;
-    lastDetectedName = value;
-  }
-
-  // Add Wikipedia search button to detection results
-  function addWikipediaSearchButton(containerDiv, query, typeHint) {
-    const wikiBtn = document.createElement('button');
-    wikiBtn.innerHTML = '<i class="fab fa-wikipedia-w"></i> Search Wikipedia for more info';
-    wikiBtn.style.background = '#2c5f8a';
-    wikiBtn.style.color = 'white';
-    wikiBtn.style.border = 'none';
-    wikiBtn.style.borderRadius = '40px';
-    wikiBtn.style.padding = '8px 16px';
-    wikiBtn.style.fontSize = '0.7rem';
-    wikiBtn.style.marginTop = '10px';
-    wikiBtn.style.cursor = 'pointer';
-    wikiBtn.addEventListener('click', () => {
-      setManualSearchInput(query);
+  function makeWikiBtn(query, typeHint) {
+    const btn = document.createElement('button');
+    btn.className = 'wiki-btn';
+    btn.innerHTML = '<i class="fab fa-wikipedia-w"></i> Wikipedia';
+    btn.addEventListener('click', () => {
+      manualSearchInput.value = query;
       searchWikipedia(query, typeHint);
+      document.querySelector('.manual-search-panel').scrollIntoView({ behavior: 'smooth' });
     });
-    containerDiv.appendChild(wikiBtn);
+    return btn;
   }
 
-  // ========== ORIGINAL FUNCTIONS (mostly unchanged, just added auto-fill & wiki button) ==========
-  function autoFillFn() {
-    const raw = commonNameInput.value.trim().toLowerCase();
-    if (plantDatabase[raw]) {
-      const p = plantDatabase[raw];
-      scientificNameInput.value = p.scientific;
-      familyNameInput.value = p.family;
-      importanceInput.value = p.importance;
-      setStatus(`✅ Auto-filled: ${p.common}`, false);
-    } else setStatus(`❌ No entry for "${raw}"`, false);
-  }
-  autoFillBtn.addEventListener('click', autoFillFn);
-
-  const modeAuto = document.getElementById('modeAuto');
-  const modeOnline = document.getElementById('modeOnline');
-  const modeOffline = document.getElementById('modeOffline');
-  function setActiveMode(mode) {
-    modeAuto.classList.remove('active'); modeOnline.classList.remove('active'); modeOffline.classList.remove('active');
-    if (mode === 'auto') modeAuto.classList.add('active');
-    else if (mode === 'online') modeOnline.classList.add('active');
-    else if (mode === 'offline') modeOffline.classList.add('active');
-    currentMode = mode;
-  }
-  modeAuto.addEventListener('click', () => setActiveMode('auto'));
-  modeOnline.addEventListener('click', () => setActiveMode('online'));
-  modeOffline.addEventListener('click', () => setActiveMode('offline'));
-
-  function setStatus(msg, loading=false) {
-    statusSpan.innerText = msg;
-    loading ? spinner.classList.remove('hidden') : spinner.classList.add('hidden');
-  }
-
+  // ========================
+  // CORRECTIONS
+  // ========================
   function getAllCorrections() { return { ...globalCorrections, ...pendingCorrections }; }
   function addPendingCorrection(key, common, scientific, family, importance, ownerSure) {
     if (!key || !common) return false;
     const k = key.toLowerCase().trim();
     pendingCorrections[k] = { name: common.trim(), scientific: scientific.trim()||'', family: family.trim()||'', importance: importance.trim()||'', ownerSure: ownerSure||false };
-    setStatus('✅ Correction added (pending)', false);
-    updateCorrectionUI(); return true;
+    setStatus('✅ Correction added (pending)', false); updateCorrectionUI(); return true;
   }
   function removePendingCorrection(key) {
     const k = key.toLowerCase().trim();
@@ -695,12 +591,11 @@
     try {
       const r = await fetch('corrections.json?t=' + Date.now());
       if (r.ok) { const d = await r.json(); if (typeof d === 'object') globalCorrections = d; }
-    } catch(e) { /* silent */ }
+    } catch(e) { /* silent — expected when running from local file */ }
     pendingCorrections = {}; updateCorrectionUI();
   }
   function downloadCorrectionsFile() {
-    const merged = getAllCorrections();
-    const blob = new Blob([JSON.stringify(merged, null, 2)], {type:'application/json'});
+    const blob = new Blob([JSON.stringify(getAllCorrections(), null, 2)], {type:'application/json'});
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'corrections.json'; a.click();
     URL.revokeObjectURL(blob); setStatus("Downloaded corrections.json", false);
   }
@@ -716,8 +611,8 @@
     for (const [key, val] of entries) {
       const isPending = !!pendingCorrections[key];
       const div = document.createElement('div'); div.className = 'correction-item';
-      div.innerHTML = `<div><span>${escapeHtml(key)}</span> → <span>${escapeHtml(val.name)}</span> ${isPending ? '<span style="background:#f4a261;color:black;padding:2px 6px;border-radius:40px;">pending</span>' : ''}</div>
-        ${ownerAuthenticated ? `<button class="delete-correction" data-key="${escapeHtml(key)}"><i class="fas fa-trash"></i> Delete</button>` : ''}`;
+      div.innerHTML = `<div><span>${esc(key)}</span> → <span>${esc(val.name)}</span> ${isPending ? '<span style="background:#f4a261;color:black;padding:2px 6px;border-radius:40px;">pending</span>' : ''}</div>
+        ${ownerAuthenticated ? `<button class="delete-correction" data-key="${esc(key)}"><i class="fas fa-trash"></i> Delete</button>` : ''}`;
       if (ownerAuthenticated) {
         div.querySelector('.delete-correction').addEventListener('click', () => {
           if (pendingCorrections[key]) removePendingCorrection(key);
@@ -728,17 +623,25 @@
     }
   }
 
+  function setStatus(msg, loading=false) {
+    statusSpan.innerText = msg;
+    loading ? spinner.classList.remove('hidden') : spinner.classList.add('hidden');
+  }
+
   function blobToImage(blob) {
     return new Promise(resolve => { const img = new Image(); img.onload = () => resolve(img); img.src = URL.createObjectURL(blob); });
   }
 
+  // ========================
+  // PLANT IDENTIFICATION
+  // ========================
   async function identifyPlantWithBackend(imageBlob) {
     try {
       const fd = new FormData(); fd.append("image", imageBlob);
       const r = await fetch(BACKEND_URL + "/identify", { method:"POST", body:fd });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const data = await r.json();
-      if (data.success && data.data && data.data.results && data.data.results.length > 0) {
+      if (data.success && data.data?.results?.length > 0) {
         const best = data.data.results[0];
         const commonName = best.species?.commonNames?.[0] || '';
         const scientificName = best.species?.scientificNameWithoutAuthor || best.species?.scientificName || '';
@@ -752,8 +655,8 @@
 
   const offlinePlantMap = [
     { patterns: ['mango','mangifera'], name:'Mango', scientific:'Mangifera indica', family:'Anacardiaceae', importance:"Tropical fruit." },
-    { patterns: ['tomato','solanum'], name:'Tomato', scientific:'Solanum lycopersicum', family:'Solanaceae', importance:"Fruit vegetable." },
-    { patterns: ['maize','corn','zea'], name:'Maize', scientific:'Zea mays', family:'Poaceae', importance:"Staple grain." }
+    { patterns: ['tomato','solanum'],  name:'Tomato', scientific:'Solanum lycopersicum', family:'Solanaceae', importance:"Fruit vegetable." },
+    { patterns: ['maize','corn','zea'],name:'Maize', scientific:'Zea mays', family:'Poaceae', importance:"Staple grain." }
   ];
   function matchOffline(label) {
     const lower = label.toLowerCase();
@@ -766,7 +669,7 @@
     try {
       const t = tf.browser.fromPixels(imgEl).resizeNearestNeighbor([224,224]).toFloat().expandDims(0);
       const preds = await offlineModel.classify(t); t.dispose();
-      if (preds && preds[0]) {
+      if (preds?.[0]) {
         const plant = matchOffline(preds[0].className);
         return { name:plant.name, scientific:plant.scientific, confidence:(preds[0].probability*100).toFixed(1), family:plant.family, importance:plant.importance||'', originalPredictedLabel:preds[0].className };
       }
@@ -784,25 +687,28 @@
       result = await classifyOffline(img);
     } else result = await identifyPlantWithBackend(currentImageBlob);
 
-    if (result && result.error) {
+    if (result?.error) {
       const rawJson = result.rawData ? JSON.stringify(result.rawData, null, 2) : (result.message || "No data");
-      aiOutput.innerHTML = `<div class="plant-card"><div><strong>⚠️ Could not parse plant name</strong></div><div class="raw-json"><strong>Raw API response:</strong><br>${escapeHtml(rawJson)}</div><div class="tip-box">💡 Your backend returned this. The plant name is likely inside the "data" field.</div></div>`;
+      aiOutput.innerHTML = `<div class="plant-card"><strong>⚠️ Could not parse plant name</strong><div class="raw-json">${esc(rawJson)}</div><div class="tip-box">💡 The plant name is likely inside the "data" field.</div></div>`;
       setStatus("Plant API responded but name not found.", false); return;
     }
-    if (result && result.name) {
+    if (result?.name) {
       if (result.originalPredictedLabel) { result = applyBestCorrection(result, result.originalPredictedLabel); lastPredictedKey = result.originalPredictedLabel; }
       else { lastPredictedKey = result.name.toLowerCase(); result = applyBestCorrection(result, lastPredictedKey); }
       lastPlantResult = result;
       displayPlantResult(result, lastPredictedKey);
+      // Auto-fill Wikipedia search
+      manualSearchInput.value = result.name;
       setStatus(`✅ Plant: ${result.name} (${result.confidence}%)`, false);
-      // Auto-fill manual search
-      setManualSearchInput(result.name);
     } else {
       aiOutput.innerHTML = `<div class="error-msg">❌ No plant identified. Try a clearer image.</div>`;
       setStatus("No plant found", false);
     }
   }
 
+  // ========================
+  // DISEASE DETECTION
+  // ========================
   async function detectDiseaseWithBackend(imageBlob) {
     try {
       const fd = new FormData(); fd.append("image", imageBlob);
@@ -810,7 +716,7 @@
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const data = await r.json();
       if (!data.success) return { error:true, rawData:data };
-      if (data.source === "Roboflow" && data.data && data.data.predictions) {
+      if (data.source === "Roboflow" && data.data?.predictions) {
         const preds = data.data.predictions;
         if (preds.length > 0) {
           const top = preds.reduce((max,p) => p.confidence > max.confidence ? p : max, preds[0]);
@@ -821,7 +727,7 @@
         return { result:"No disease detected", confidence:100, isHealthy:true, rawData:data };
       } else if (data.source === "Plant.id (fallback)" && data.data?.health_assessment) {
         const diseases = data.data.health_assessment.diseases;
-        if (diseases && diseases.length > 0) return { result: diseases[0].name||"Unknown disease", confidence: Math.round((diseases[0].probability||0)*100), isHealthy:false, rawData:data };
+        if (diseases?.length > 0) return { result: diseases[0].name||"Unknown disease", confidence: Math.round((diseases[0].probability||0)*100), isHealthy:false, rawData:data };
         return { result:"Healthy plant", confidence:85, isHealthy:true, rawData:data };
       }
       return { error:true, rawData:data };
@@ -835,31 +741,31 @@
     const diseaseData = await detectDiseaseWithBackend(currentImageBlob);
     if (!diseaseData || diseaseData.error) {
       const raw = diseaseData?.rawData ? JSON.stringify(diseaseData.rawData, null, 2) : "No response";
-      aiOutput.innerHTML = `<div class="disease-card"><div><strong>⚠️ Disease detection failed</strong></div><div class="raw-json">${escapeHtml(raw)}</div><div class="tip-box">Check console for details.</div></div>`;
+      aiOutput.innerHTML = `<div class="disease-card"><strong>⚠️ Disease detection failed</strong><div class="raw-json">${esc(raw)}</div></div>`;
       setStatus("Disease API error", false); return;
     }
     const diseaseResult = diseaseData.result;
     const confVal = diseaseData.confidence;
     const confDisp = (confVal != null) ? confVal + '%' : 'N/A';
-    const isHealthy = diseaseData.isHealthy || (confVal===0) || diseaseResult.toLowerCase().includes("healthy");
+    const isHealthy = diseaseData.isHealthy || confVal===0 || diseaseResult.toLowerCase().includes("healthy");
 
     const wrapper = document.createElement('div');
     if (isHealthy) {
-      wrapper.innerHTML = `<div class="disease-card"><div><strong><i class="fas fa-seedling"></i> 🌱 Health Status: ${escapeHtml(diseaseResult)}</strong></div><div class="confidence">🎯 Confidence: ${confDisp}</div><div class="treatment-section">✅ Your plant appears healthy. Continue good practices.</div></div>`;
+      wrapper.innerHTML = `<div class="disease-card"><strong><i class="fas fa-seedling"></i> 🌱 Health Status: ${esc(diseaseResult)}</strong><div class="confidence">🎯 Confidence: ${confDisp}</div><div class="treatment-section">✅ Your plant appears healthy. Continue good practices.</div></div>`;
     } else {
-      wrapper.innerHTML = `<div class="disease-card"><div><strong><i class="fas fa-biohazard"></i> 🦠 Disease: ${escapeHtml(diseaseResult)}</strong></div><div class="confidence">🎯 Confidence: ${confDisp}</div><div class="treatment-section"><strong>Suggested Action:</strong><br>Consult an agronomist. Remove infected parts and apply recommended treatment.</div></div>`;
+      wrapper.innerHTML = `<div class="disease-card"><strong><i class="fas fa-biohazard"></i> 🦠 Disease: ${esc(diseaseResult)}</strong><div class="confidence">🎯 Confidence: ${confDisp}</div><div class="treatment-section"><strong>Suggested Action:</strong><br>Consult an agronomist. Remove infected parts and apply recommended treatment.</div></div>`;
     }
-    // Add Claude button
     wrapper.appendChild(makeSearchBtn(diseaseResult, 'disease', `🦠 ${diseaseResult}`, 'Plant Disease — Full Information & Control'));
-    // Add Wikipedia button
-    addWikipediaSearchButton(wrapper, diseaseResult, 'disease');
+    wrapper.appendChild(makeWikiBtn(diseaseResult, 'disease'));
     aiOutput.innerHTML = '';
     aiOutput.appendChild(wrapper);
+    manualSearchInput.value = diseaseResult;
     setStatus(`Disease: ${diseaseResult} (${confDisp})`, false);
-    // Auto-fill manual search
-    setManualSearchInput(diseaseResult);
   }
 
+  // ========================
+  // PEST DETECTION
+  // ========================
   async function detectPest() {
     if (!currentImageBlob) { alert("Please take or upload a picture first."); return; }
     setStatus("🐛 Detecting pest...", true);
@@ -871,29 +777,29 @@
       const pestResult = data.result || "No pest detected";
       const confVal = data.confidence;
       const confDisp = (confVal != null) ? confVal + '%' : 'N/A';
-      const isNoPest = (confVal === 0) || pestResult.toLowerCase().includes("no pest");
+      const isNoPest = confVal === 0 || pestResult.toLowerCase().includes("no pest");
 
       const wrapper = document.createElement('div');
       if (isNoPest) {
-        wrapper.innerHTML = `<div class="pest-card"><div><strong><i class="fas fa-check-circle"></i> ✅ ${escapeHtml(pestResult)}</strong></div><div class="confidence">🎯 Confidence: ${confDisp}</div><div class="treatment-section">No pest detected. Maintain good hygiene.</div></div>`;
+        wrapper.innerHTML = `<div class="pest-card"><strong><i class="fas fa-check-circle"></i> ✅ ${esc(pestResult)}</strong><div class="confidence">🎯 Confidence: ${confDisp}</div><div class="treatment-section">No pest detected. Maintain good hygiene.</div></div>`;
       } else {
-        wrapper.innerHTML = `<div class="pest-card"><div><strong><i class="fas fa-bug"></i> 🐛 Pest: ${escapeHtml(pestResult)}</strong></div><div class="confidence">🎯 Confidence: ${confDisp}</div><div class="treatment-section"><strong>Control:</strong> Apply neem oil or appropriate pesticide.</div></div>`;
+        wrapper.innerHTML = `<div class="pest-card"><strong><i class="fas fa-bug"></i> 🐛 Pest: ${esc(pestResult)}</strong><div class="confidence">🎯 Confidence: ${confDisp}</div><div class="treatment-section"><strong>Control:</strong> Apply neem oil or appropriate pesticide.</div></div>`;
       }
-      // Add Claude button
       wrapper.appendChild(makeSearchBtn(pestResult, 'pest', `🐛 ${pestResult}`, 'Pest — Full Information & IPM Control'));
-      // Add Wikipedia button
-      addWikipediaSearchButton(wrapper, pestResult, 'pest');
+      wrapper.appendChild(makeWikiBtn(pestResult, 'pest'));
       aiOutput.innerHTML = '';
       aiOutput.appendChild(wrapper);
+      manualSearchInput.value = pestResult;
       setStatus(`Pest: ${pestResult} (${confDisp})`, false);
-      // Auto-fill manual search
-      setManualSearchInput(pestResult);
     } catch(e) {
       aiOutput.innerHTML = `<div class="error-msg">❌ Pest detection failed: ${e.message}</div>`;
       setStatus("Pest API error", false);
     }
   }
 
+  // ========================
+  // CAMERA & UPLOAD
+  // ========================
   async function captureAndStore() {
     if (!cameraActive || !video.videoWidth) { setStatus("Start camera first", false); return; }
     const canvas = document.createElement('canvas');
@@ -906,7 +812,6 @@
     setStatus("📸 Image captured. Choose analysis.", false);
     aiOutput.innerHTML = ''; defaultMsg.classList.remove('hidden');
   }
-
   function handleUpload(file) {
     if (!file) return;
     previewImg.src = URL.createObjectURL(file); previewImg.style.display = 'block';
@@ -915,9 +820,7 @@
     setStatus("📷 Image uploaded. Choose analysis.", false);
     aiOutput.innerHTML = ''; defaultMsg.classList.remove('hidden');
   }
-
   function enableAnalysisButtons(enabled) { plantBtn.disabled = !enabled; diseaseBtn.disabled = !enabled; pestBtn.disabled = !enabled; }
-
   async function startCamera() {
     if (currentStream) await stopCamera();
     setStatus("Requesting camera...", true);
@@ -945,34 +848,33 @@
     }
   }
 
+  // ========================
+  // DISPLAY PLANT RESULT
+  // ========================
   function displayPlantResult(result, predictedKey) {
     if ((!result.importance || result.importance==='') && result.name) {
       const dbM = plantDatabase[result.name.toLowerCase()];
       if (dbM) { result.family = dbM.family; result.importance = dbM.importance; }
     }
-    const importanceHtml = result.importance ? `<div class="info-section"><i class="fas fa-info-circle"></i> <strong>Uses:</strong><br>${escapeHtml(result.importance)}</div>` : '';
+    const importanceHtml = result.importance ? `<div class="info-section"><i class="fas fa-info-circle"></i> <strong>Uses:</strong><br>${esc(result.importance)}</div>` : '';
     const wrapper = document.createElement('div');
-    wrapper.innerHTML = `
-      <div class="plant-card">
-        <div><strong>🌿 ${escapeHtml(result.name)}</strong></div>
-        <div class="scientific">${escapeHtml(result.scientific||'')}</div>
-        <div class="confidence">🎯 Confidence: ${result.confidence}%</div>
-        <div>🌱 Family: ${escapeHtml(result.family)}</div>
-        ${importanceHtml}
-        ${result.correctionNote ? `<div style="font-size:0.7rem;">${escapeHtml(result.correctionNote)}</div>` : ''}
-      </div>`;
+    wrapper.innerHTML = `<div class="plant-card">
+      <div><strong>🌿 ${esc(result.name)}</strong></div>
+      <div class="scientific">${esc(result.scientific||'')}</div>
+      <div class="confidence">🎯 Confidence: ${result.confidence}%</div>
+      <div>🌱 Family: ${esc(result.family)}</div>
+      ${importanceHtml}
+      ${result.correctionNote ? `<div style="font-size:0.7rem;">${esc(result.correctionNote)}</div>` : ''}
+    </div>`;
     aiOutput.innerHTML = '';
     aiOutput.appendChild(wrapper);
-    // Add Claude button
     const searchQuery = result.scientific || result.name;
     wrapper.appendChild(makeSearchBtn(searchQuery, 'plant', `🌿 ${result.name}`, result.scientific || ''));
-    // Add Wikipedia button
-    addWikipediaSearchButton(wrapper, result.name, 'plant');
+    wrapper.appendChild(makeWikiBtn(result.name, 'plant'));
 
     if (ownerAuthenticated && predictedKey) {
       const editBtn = document.createElement('button');
-      editBtn.className = 'primary';
-      editBtn.style.marginTop = '8px';
+      editBtn.className = 'primary'; editBtn.style.marginTop = '8px';
       editBtn.innerHTML = '<i class="fas fa-edit"></i> Owner: Correct this';
       editBtn.onclick = () => {
         correctionKeyInput.value = predictedKey;
@@ -987,7 +889,9 @@
     }
   }
 
-  // Owner modal
+  // ========================
+  // OWNER MODAL
+  // ========================
   const modal = document.getElementById('passwordModal');
   const passwordInput = document.getElementById('ownerPassword');
   const submitPassword = document.getElementById('submitPassword');
@@ -1003,6 +907,14 @@
   logoutBtn.addEventListener('click', () => setOwnerMode(false));
   modal.addEventListener('click', e => { if (e.target === modal) hideModal(); });
 
+  // ========================
+  // CORRECTION BUTTONS
+  // ========================
+  autoFillBtn.addEventListener('click', () => {
+    const raw = commonNameInput.value.trim().toLowerCase();
+    if (plantDatabase[raw]) { const p = plantDatabase[raw]; scientificNameInput.value = p.scientific; familyNameInput.value = p.family; importanceInput.value = p.importance; setStatus(`✅ Auto-filled: ${p.common}`, false); }
+    else setStatus(`❌ No entry for "${raw}"`, false);
+  });
   saveCorrectionBtn.addEventListener('click', () => {
     const key = correctionKeyInput.value.trim(); const common = commonNameInput.value.trim();
     if (!key || !common) { alert("Enter predicted key and common name"); return; }
@@ -1011,6 +923,27 @@
     if (lastPlantResult && lastPredictedKey) { const r2 = {...lastPlantResult}; applyBestCorrection(r2, lastPredictedKey); displayPlantResult(r2, lastPredictedKey); }
   });
   downloadBtn.addEventListener('click', downloadCorrectionsFile);
+
+  // ========================
+  // MODE BUTTONS
+  // ========================
+  const modeAuto = document.getElementById('modeAuto');
+  const modeOnline = document.getElementById('modeOnline');
+  const modeOffline = document.getElementById('modeOffline');
+  function setActiveMode(mode) {
+    modeAuto.classList.remove('active'); modeOnline.classList.remove('active'); modeOffline.classList.remove('active');
+    if (mode === 'auto') modeAuto.classList.add('active');
+    else if (mode === 'online') modeOnline.classList.add('active');
+    else if (mode === 'offline') modeOffline.classList.add('active');
+    currentMode = mode;
+  }
+  modeAuto.addEventListener('click', () => setActiveMode('auto'));
+  modeOnline.addEventListener('click', () => setActiveMode('online'));
+  modeOffline.addEventListener('click', () => setActiveMode('offline'));
+
+  // ========================
+  // ALL EVENT LISTENERS
+  // ========================
   startCam.addEventListener('click', startCamera);
   stopCam.addEventListener('click', stopCamera);
   captureBtn.addEventListener('click', captureAndStore);
@@ -1020,21 +953,21 @@
   uploadLabel.addEventListener('click', () => fileInput.click());
   fileInput.addEventListener('change', e => { if (e.target.files[0]) handleUpload(e.target.files[0]); fileInput.value=''; });
   refreshBtn.addEventListener('click', () => { loadGlobalCorrections(); if (currentImageBlob) identifyPlant(); });
-
-  // Manual search listeners
   manualSearchBtn.addEventListener('click', () => {
-    const query = manualSearchInput.value.trim();
-    if (query) searchWikipedia(query, 'plant');
+    const q = manualSearchInput.value.trim();
+    if (q) searchWikipedia(q, 'plant');
     else document.getElementById('wikipediaResultContainer').innerHTML = '<div class="wikipedia-result">⚠️ Please enter a name.</div>';
   });
-  manualSearchInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') manualSearchBtn.click();
-  });
+  manualSearchInput.addEventListener('keypress', e => { if (e.key === 'Enter') manualSearchBtn.click(); });
 
+  // ========================
+  // INIT
+  // ========================
   loadGlobalCorrections();
   async function loadOfflineModel() { try { offlineModel = await mobilenet.load({ version:2, alpha:1.0 }); offlineReady = true; } catch(e) { offlineReady = false; } }
   loadOfflineModel();
   setStatus("✅ Ready. Take/upload a photo, then click Plant / Disease / Pest.", false);
+
 })();
 </script>
 </body>
