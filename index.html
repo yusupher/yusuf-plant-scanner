@@ -58,7 +58,9 @@
     .tip-box { background: #fff3cd; border-left: 4px solid #ffc107; padding: 8px 12px; margin-top: 10px; border-radius: 12px; font-size: 0.8rem; }
     .raw-json { background: #f0f0f0; padding: 10px; border-radius: 12px; font-family: monospace; font-size: 0.7rem; white-space: pre-wrap; word-break: break-all; margin-top: 12px; overflow-x: auto; }
 
-    /* ===== SEARCH INFO BUTTON ===== */
+
+
+    /* SEARCH INFO BUTTON */
     .search-info-inline-btn {
       display: inline-flex; align-items: center; gap: 6px;
       background: linear-gradient(135deg, #1a5276, #2980b9);
@@ -69,7 +71,7 @@
     }
     .search-info-inline-btn:hover { opacity: 0.88; }
 
-    /* ===== WIKIPEDIA BUTTON ===== */
+    /* WIKIPEDIA BUTTON */
     .wiki-btn {
       display: inline-flex; align-items: center; gap: 6px;
       background: #2c5f8a; color: white; border: none;
@@ -79,7 +81,7 @@
     }
     .wiki-btn:hover { opacity: 0.85; }
 
-    /* ===== COMPREHENSIVE INFO MODAL ===== */
+    /* COMPREHENSIVE INFO MODAL */
     .info-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.75); align-items: center; justify-content: center; z-index: 2000; padding: 14px; }
     .info-modal.open { display: flex; }
     .info-modal-box { background: white; border-radius: 28px; width: 100%; max-width: 680px; max-height: 92vh; overflow-y: auto; box-shadow: 0 30px 60px rgba(0,0,0,0.4); animation: slideUp 0.3s ease; }
@@ -115,7 +117,7 @@
     .ipm-tag.cult { background: #bbdefb; color: #0d3c6e; }
     .ipm-tag.mech { background: #e1bee7; color: #4a148c; }
 
-    /* ===== MANUAL SEARCH PANEL ===== */
+    /* MANUAL SEARCH PANEL */
     .manual-search-panel { background: #fef9ef; border-radius: 24px; margin: 10px 16px 16px 16px; padding: 16px; border: 1px solid #d9efcd; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
     .manual-search-panel h3 { color: #1a3c2a; font-size: 1rem; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
     .search-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
@@ -142,6 +144,8 @@
       <button id="logoutBtn" class="logout-btn" style="display:none;"><i class="fas fa-sign-out-alt"></i> Exit</button>
     </div>
   </header>
+
+
 
   <div class="camera-area">
     <div class="video-box">
@@ -226,7 +230,7 @@
   </div>
 
   <footer>
-    🌿 Powered by D-pious Smart World | Plant ID: PlantNet | Disease &amp; Pest: Roboflow | Info: Claude AI
+    🌿 Powered by D-pious Smart World | Plant ID: PlantNet | Disease &amp; Pest: Roboflow | Info: Google Gemini AI (Free)
   </footer>
 </div>
 
@@ -260,9 +264,11 @@
   // ========================
   // CONFIGURATION
   // ========================
-  const BACKEND_URL = "https://plant-backend-avof.onrender.com";  // Your backend with fixed Claude model
+  const BACKEND_URL = "https://plant-backend-avof.onrender.com";
   const OWNER_PASSWORD = 'yusupher01';
   let ownerAuthenticated = false;
+  // Gemini API key (embedded)
+  const GEMINI_API_KEY = 'AIzaSyBxXYrZ_CU53R_H-vBFBQFKm6ru-Ffa-NY';
 
   // DOM elements
   const video = document.getElementById('video');
@@ -384,18 +390,113 @@
   function enableAnalysisButtons(enabled) { plantBtn.disabled = !enabled; diseaseBtn.disabled = !enabled; pestBtn.disabled = !enabled; }
 
   // ========================
-  // CLAUDE AI COMPREHENSIVE INFO (via backend, fixed model)
+  // CLAUDE AI COMPREHENSIVE INFO — DIRECT API (no backend)
   // ========================
+
+  function buildPromptForType(query, type) {
+    if (type === 'plant') {
+      return `You are an expert agricultural botanist. Provide comprehensive information about the plant: "${query}".
+Return ONLY a valid JSON object (no markdown, no extra text) with this exact structure:
+{
+  "category": "crop|tree|weed|other",
+  "isWeed": false,
+  "family": "",
+  "order": "",
+  "class": "",
+  "origin": "",
+  "description": "",
+  "uses": [],
+  "nutritionalValue": "",
+  "economicImportance": "",
+  "ecologicalRole": "",
+  "growingConditions": { "climate": "", "soil": "", "rainfall": "", "temperature": "" },
+  "weedControl": { "ipmSummary": "", "cultural": [], "mechanical": [], "biological": [], "chemical": [] },
+  "interestingFacts": []
+}
+Fill all fields with accurate information. If isWeed is true, fill weedControl. Keep descriptions concise but informative.`;
+    }
+    if (type === 'disease') {
+      return `You are an expert plant pathologist. Provide comprehensive information about the plant disease: "${query}".
+Return ONLY a valid JSON object (no markdown, no extra text) with this exact structure:
+{
+  "pathogenType": "fungal|bacterial|viral|nematode|other",
+  "pathogenName": "",
+  "affectedPlants": [],
+  "symptoms": [],
+  "spreadMechanism": "",
+  "favorableConditions": "",
+  "economicImpact": "",
+  "control": {
+    "ipmSummary": "",
+    "cultural": [],
+    "biological": [],
+    "chemical": [],
+    "resistant_varieties": []
+  },
+  "preventionTips": []
+}
+Fill all fields with accurate, practical information for farmers.`;
+    }
+    if (type === 'pest') {
+      return `You are an expert agricultural entomologist. Provide comprehensive information about the pest: "${query}".
+Return ONLY a valid JSON object (no markdown, no extra text) with this exact structure:
+{
+  "pestType": "insect|mite|rodent|bird|other",
+  "scientificName": "",
+  "affectedPlants": [],
+  "damageDescription": "",
+  "lifeStages": [],
+  "peakActivity": "",
+  "economicThreshold": "",
+  "control": {
+    "ipmSummary": "",
+    "cultural": [],
+    "biological": [],
+    "mechanical": [],
+    "chemical": []
+  },
+  "safetyNotes": ""
+}
+Fill all fields with accurate, practical IPM information.`;
+    }
+    return `Provide information about: "${query}". Return a JSON object with relevant fields.`;
+  }
+
   async function fetchComprehensiveInfo(query, type) {
-    const response = await fetch(BACKEND_URL + "/claude-info", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query, type })
-    });
-    if (!response.ok) throw new Error(`Backend error ${response.status}`);
+    const prompt = buildPromptForType(query, type);
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.2,
+            maxOutputTokens: 4000
+          }
+        })
+      }
+    );
+
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      const msg = errData?.error?.message || `API error ${response.status}`;
+      throw new Error(msg);
+    }
+
     const data = await response.json();
-    if (!data.success) throw new Error(data.error || "Backend returned failure");
-    return data.data;
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    // Extract JSON object from response robustly
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('No JSON object found in response. Raw: ' + text.substring(0, 200));
+    const clean = jsonMatch[0].trim();
+    try {
+      return JSON.parse(clean);
+    } catch(e) {
+      throw new Error('Gemini returned malformed JSON. Raw: ' + clean.substring(0, 200));
+    }
   }
 
   // Rendering functions (full detailed display)
@@ -457,7 +558,7 @@
   async function openInfoModal(query, type, title, subtitle) {
     infoModalTitle.textContent = title;
     infoModalSubtitle.textContent = subtitle || '';
-    infoModalBody.innerHTML = `<div class="info-loading"><div class="big-loader"></div><p>Fetching comprehensive information…</p><p style="font-size:0.74rem;color:#888;margin-top:5px;">Powered by Claude AI</p></div>`;
+    infoModalBody.innerHTML = `<div class="info-loading"><div class="big-loader"></div><p>Fetching comprehensive information…</p><p style="font-size:0.74rem;color:#888;margin-top:5px;">Powered by Google Gemini AI (Free)</p></div>`;
     infoModal.classList.add('open');
     document.body.style.overflow = 'hidden';
     try {
@@ -471,8 +572,7 @@
       infoModalBody.innerHTML = `<div class="error-msg">
         <i class="fas fa-exclamation-triangle"></i><br>
         <strong>Could not load information</strong><br>
-        <small>${esc(err.message)}</small><br><br>
-        <small>Make sure your backend is running at:<br><strong>${BACKEND_URL}</strong></small>
+        <small>${esc(err.message)}</small>
       </div>`;
     }
   }
