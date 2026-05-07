@@ -18,6 +18,10 @@
     .mode-btn.active { background: #f4a261; color: #1a3c2a; }
     .refresh-btn, .owner-btn, .logout-btn { background: #1b5e3f; color: white; border: none; padding: 6px 14px; border-radius: 40px; font-size: 0.7rem; cursor: pointer; }
     .logout-btn { background: #b1624b; margin-left: 8px; }
+    .lang-selector { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+    .lang-label { font-size: 0.7rem; opacity: 0.8; }
+    .lang-btn { background: #2d6a4f; border: none; padding: 5px 12px; border-radius: 40px; font-size: 0.7rem; font-weight: bold; cursor: pointer; color: white; transition: background 0.2s; }
+    .lang-btn.active { background: #52b788; color: #1a3c2a; }
     .camera-area { background: #1e3323; padding: 14px; }
     .video-box { position: relative; background: #0f1f12; border-radius: 28px; overflow: hidden; aspect-ratio: 4 / 3; }
     video { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -142,6 +146,13 @@
       <button id="refreshCorrectionsBtn" class="refresh-btn"><i class="fas fa-sync-alt"></i> Reload</button>
       <button id="ownerLoginBtn" class="owner-btn"><i class="fas fa-lock"></i> Owner</button>
       <button id="logoutBtn" class="logout-btn" style="display:none;"><i class="fas fa-sign-out-alt"></i> Exit</button>
+    </div>
+    <div class="lang-selector">
+      <span class="lang-label">🌍 Language:</span>
+      <button class="lang-btn active" data-lang="en">English</button>
+      <button class="lang-btn" data-lang="yo">Yoruba</button>
+      <button class="lang-btn" data-lang="ha">Hausa</button>
+      <button class="lang-btn" data-lang="ig">Igbo</button>
     </div>
   </header>
 
@@ -268,7 +279,265 @@
   const OWNER_PASSWORD = 'yusupher01';
   let ownerAuthenticated = false;
   // Gemini API key (embedded)
-  const GEMINI_API_KEY = 'AIzaSyBxXYrZ_CU53R_H-vBFBQFKm6ru-Ffa-NY';
+
+  // ========================
+  // LANGUAGE SYSTEM
+  // ========================
+  let currentLang = 'en';
+
+  const TRANSLATIONS = {
+    en: {
+      appTitle: '🌿 YSF Smart Agricultural Diagnostic AI System',
+      ready: '📸 Ready – take/upload a photo, then choose analysis.',
+      identifying: '🌿 Identifying plant...',
+      analyzingDisease: '🦠 Analyzing disease...',
+      detectingPest: '🐛 Detecting pest...',
+      cameraReady: 'Camera ready. Capture & Preview.',
+      cameraStopped: 'Camera stopped.',
+      cameraPermission: 'Camera permission denied. Use upload.',
+      imageCaptured: '📸 Image captured. Choose analysis.',
+      imageUploaded: '📷 Image uploaded. Choose analysis.',
+      noImage: 'Please take or upload a picture first.',
+      noPlant: '❌ No plant identified. Try a clearer image.',
+      plantLabel: '🌿 Identify Plant',
+      diseaseLabel: '🦠 Disease',
+      pestLabel: '🐛 Pest',
+      startCam: 'Start Camera',
+      stopCam: 'Stop',
+      capture: 'Capture & Preview',
+      upload: 'Upload Image',
+      searchInfo: 'Search Comprehensive Info (Gemini AI)',
+      wikipedia: 'Wikipedia',
+      searchPlaceholder: 'e.g. maize, cassava mosaic, fall armyworm',
+      searchTitle: '🔍 Search for More Information',
+      defaultMsg: 'Take or upload a picture, then click one of the analysis buttons: Plant, Disease, or Pest.',
+      healthy: '✅ Your plant appears healthy. Continue good practices.',
+      noPest: 'No pest detected. Maintain good hygiene.',
+      pestControl: 'Control: Apply neem oil or appropriate pesticide.',
+      diseaseAction: 'Consult an agronomist. Remove infected parts and apply recommended treatment.',
+      loadingInfo: 'Fetching comprehensive information…',
+      langName: 'English',
+      promptLang: 'English',
+      footerText: '🌿 Powered by D-pious Smart World | Plant ID: PlantNet | Disease & Pest: Roboflow | Info: Google Gemini AI (Free)',
+      // Info modal section labels
+      secDescription: '📖 Description', secUses: '🔧 Uses & Importance', secNutritional: '🥗 Nutritional Value',
+      secEconomic: '💰 Economic Importance', secEcological: '🌍 Ecological Role', secGrowing: '🌱 Growing Conditions',
+      secWeedControl: '⚠️ IPM Weed Control', secFacts: '💡 Interesting Facts',
+      secAffected: '🌿 Affected Plants', secSymptoms: '🔍 Symptoms', secSpread: '🔄 How It Spreads',
+      secConditions: '🌡️ Favorable Conditions', secEconomicImpact: '💸 Economic Impact',
+      secDiseaseControl: '💊 Disease Control (IPM)', secPrevention: '🛡️ Prevention Tips',
+      secDamage: '💥 Damage Caused', secLifeStages: '🔄 Life Stages', secPeakActivity: '📅 Peak Activity',
+      secThreshold: '📊 Economic Threshold', secPestControl: '🐛 Pest Control (IPM)', secSafety: '⚠️ Safety Notes',
+      secClimate: 'Climate', secSoil: 'Soil', secRainfall: 'Rainfall', secTemperature: 'Temperature',
+      tagCultural: 'Cultural', tagBiological: 'Biological', tagChemical: 'Chemical',
+      tagMechanical: 'Mechanical / Traps', tagResistant: 'Resistant Varieties',
+      labelFamily: 'Family', labelOrder: 'Order', labelClass: 'Class', labelOrigin: 'Origin',
+      labelPathogenType: 'Pathogen Type', labelPathogen: 'Pathogen',
+      labelPestType: 'Pest Type', labelScientific: 'Scientific Name',
+      healthyStatus: '🌱 Health Status', diseaseFound: '🦠 Disease',
+      pestFound: '🐛 Pest', noPestFound: '✅',
+      suggestedAction: 'Suggested Action', pestControlLabel: 'Control',
+      plantFamily: '🌱 Family', plantUses: '🔧 Uses',
+      correctionNote: 'Correction'
+    },
+    yo: {
+      appTitle: '🌿 Eto Aisan Ogbin Ologbon YSF',
+      ready: '📸 Ó ṣetán – ya/gbe fọto soke, lẹhinna yan itupalẹ.',
+      identifying: '🌿 Ndamọ eweko...',
+      analyzingDisease: '🦠 Ṣiṣe itupalẹ arun...',
+      detectingPest: '🐛 Wiwa kokoro...',
+      cameraReady: 'Kamẹra ṣetán. Ya aworan & Preview.',
+      cameraStopped: 'Kamẹra duro.',
+      cameraPermission: 'Kamẹra ko gba laaye. Lo igbalade.',
+      imageCaptured: '📸 Aworan ti ya. Yan itupalẹ.',
+      imageUploaded: '📷 Aworan ti gbe soke. Yan itupalẹ.',
+      noImage: 'Jọwọ ya tabi gbe aworan soke ni akọkọ.',
+      noPlant: '❌ Ko si eweko ti a damọ. Gbiyanju aworan ti o han gedegbe.',
+      plantLabel: '🌿 Damọ Eweko',
+      diseaseLabel: '🦠 Arun',
+      pestLabel: '🐛 Kokoro',
+      startCam: 'Bẹrẹ Kamẹra',
+      stopCam: 'Duro',
+      capture: 'Ya Aworan & Preview',
+      upload: 'Gbe Aworan Soke',
+      searchInfo: 'Wa Alaye Kikun (Gemini AI)',
+      wikipedia: 'Wikipedia',
+      searchPlaceholder: 'fun apẹẹrẹ: agbado, ẹgẹ mosaic, jagunjagun',
+      searchTitle: '🔍 Wa Alaye Siwaju Sii',
+      defaultMsg: 'Ya tabi gbe aworan soke, lẹhinna tẹ ọkan ninu awọn bọtini itupalẹ: Eweko, Arun, tabi Kokoro.',
+      healthy: '✅ Eweko rẹ dabi ẹni pe o ni ilera. Tẹsiwaju awọn iṣe rere.',
+      noPest: 'Ko si kokoro ti a rii. Ṣetọju mimọ.',
+      pestControl: 'Iṣakoso: Lo epo neem tabi apakokoro ti o yẹ.',
+      diseaseAction: 'Kan si amoye ogbin. Yọ awọn ẹya ti o ni arun kuro ki o lo itọju ti a ṣeduro.',
+      loadingInfo: 'Gíga alaye pipe...',
+      langName: 'Yorùbá',
+      promptLang: 'Yoruba',
+      footerText: '🌿 Agbara nipasẹ D-pious Smart World | Eweko: PlantNet | Arun & Kokoro: Roboflow | Alaye: Google Gemini AI',
+      secDescription: '📖 Apejuwe', secUses: '🔧 Lilo & Pataki', secNutritional: '🥗 Iye Ounjẹ',
+      secEconomic: '💰 Pataki Eto-ọrọ', secEcological: '🌍 Ipa Ayika', secGrowing: '🌱 Awọn Ipo Idagba',
+      secWeedControl: '⚠️ Iṣakoso Èpo (IPM)', secFacts: '💡 Awọn Otitọ Yanilenu',
+      secAffected: '🌿 Eweko ti O Kan', secSymptoms: '🔍 Awọn Aami Aisan', secSpread: '🔄 Bii O Ṣe Ntan',
+      secConditions: '🌡️ Awọn Ipo Anfaani', secEconomicImpact: '💸 Ipa Eto-ọrọ',
+      secDiseaseControl: '💊 Iṣakoso Arun (IPM)', secPrevention: '🛡️ Awọn Imọran Idena',
+      secDamage: '💥 Ibajẹ Ti O Fa', secLifeStages: '🔄 Awọn Ipele Igbesi Aye', secPeakActivity: '📅 Akoko Giga',
+      secThreshold: '📊 Ẹnu-ọna Eto-ọrọ', secPestControl: '🐛 Iṣakoso Kokoro (IPM)', secSafety: '⚠️ Awọn Akiyesi Aabo',
+      secClimate: 'Oju-ọjọ', secSoil: 'Ilẹ', secRainfall: 'Ojo', secTemperature: 'Otutu',
+      tagCultural: 'Aṣa', tagBiological: 'Ẹda', tagChemical: 'Kemikali',
+      tagMechanical: 'Ẹrọ / Àmì', tagResistant: 'Awọn Iru-irugbin Sooro',
+      labelFamily: 'Idile', labelOrder: 'Aṣẹ', labelClass: 'Kilasi', labelOrigin: 'Orisun',
+      labelPathogenType: 'Iru Aarun', labelPathogen: 'Aarun',
+      labelPestType: 'Iru Kokoro', labelScientific: 'Orukọ Imọ-jinlẹ',
+      healthyStatus: '🌱 Ipò Ilera', diseaseFound: '🦠 Arun',
+      pestFound: '🐛 Kokoro', noPestFound: '✅',
+      suggestedAction: 'Igbesẹ Ti A Daba', pestControlLabel: 'Iṣakoso',
+      plantFamily: '🌱 Idile', plantUses: '🔧 Lilo',
+      correctionNote: 'Atunṣe'
+    },
+    ha: {
+      appTitle: '🌿 Tsarin Binciken Noma na YSF',
+      ready: '📸 Shirye – dauka/loda hoto, sannan zabi nazari.',
+      identifying: '🌿 Ana gane tsire...',
+      analyzingDisease: '🦠 Ana nazarin cuta...',
+      detectingPest: '🐛 Ana neman kwaro...',
+      cameraReady: 'Kyamara yana shirye. Ɗauki Hoto & Preview.',
+      cameraStopped: 'Kyamara ya tsaya.',
+      cameraPermission: 'Ba a ba da izinin kyamara. Yi amfani da lodawa.',
+      imageCaptured: '📸 An ɗauki hoto. Zabi nazari.',
+      imageUploaded: '📷 An loda hoto. Zabi nazari.',
+      noImage: 'Da fatan za a ɗauki ko loda hoto da farko.',
+      noPlant: '❌ Ba a sami wani tsire ba. Gwada hoto mai fari.',
+      plantLabel: '🌿 Gane Tsire',
+      diseaseLabel: '🦠 Cuta',
+      pestLabel: '🐛 Kwaro',
+      startCam: 'Fara Kyamara',
+      stopCam: 'Tsaya',
+      capture: 'Ɗauki Hoto & Preview',
+      upload: 'Loda Hoto',
+      searchInfo: 'Nemi Cikakken Bayani (Gemini AI)',
+      wikipedia: 'Wikipedia',
+      searchPlaceholder: 'misali: masara, cuta cassava, sojoji',
+      searchTitle: '🔍 Nemi Ƙarin Bayani',
+      defaultMsg: 'Ɗauki ko loda hoto, sannan danna ɗaya daga cikin maɓallan nazari: Tsire, Cuta, ko Kwaro.',
+      healthy: '✅ Tsiren ka yana da lafiya. Ci gaba da kyawawan ayyuka.',
+      noPest: 'Ba a sami kwaro ba. Kiyaye tsafta.',
+      pestControl: 'Sarrafawa: Yi amfani da mai neem ko maganin kwari mai dacewa.',
+      diseaseAction: 'Tuntuɓi ƙwararren noma. Cire sassan da suka kamu da cuta kuma yi amfani da magani da aka ba da shawara.',
+      loadingInfo: 'Ana kawo cikakken bayani...',
+      langName: 'Hausa',
+      promptLang: 'Hausa',
+      footerText: '🌿 Wutar D-pious Smart World | Tsire: PlantNet | Cuta & Kwaro: Roboflow | Bayani: Google Gemini AI',
+      secDescription: '📖 Bayani', secUses: '🔧 Amfani & Muhimmanci', secNutritional: '🥗 Darajar Abinci',
+      secEconomic: '💰 Muhimmancin Tattalin Arziki', secEcological: '🌍 Rawar Muhalli', secGrowing: '🌱 Yanayin Girma',
+      secWeedControl: '⚠️ Sarrafa Ciyawa (IPM)', secFacts: '💡 Bayanai Masu Ban Sha\'awa',
+      secAffected: '🌿 Tsiruka Da Suka Kamu', secSymptoms: '🔍 Alamomin Cuta', secSpread: '🔄 Yadda Yake Yada',
+      secConditions: '🌡️ Yanayi Mai Dacewa', secEconomicImpact: '💸 Tasirin Tattalin Arziki',
+      secDiseaseControl: '💊 Sarrafa Cuta (IPM)', secPrevention: '🛡️ Shawarwarin Rigakafi',
+      secDamage: '💥 Lalacewar Da Yake Yi', secLifeStages: '🔄 Matakai na Rayuwa', secPeakActivity: '📅 Lokacin Girma',
+      secThreshold: '📊 Iyakar Tattalin Arziki', secPestControl: '🐛 Sarrafa Kwaro (IPM)', secSafety: '⚠️ Bayanin Lafiya',
+      secClimate: 'Yanayi', secSoil: 'Ƙasa', secRainfall: 'Ruwan Sama', secTemperature: 'Zafi',
+      tagCultural: 'Al\'adu', tagBiological: 'Halitta', tagChemical: 'Sinadarai',
+      tagMechanical: 'Na\'ura / Tarko', tagResistant: 'Nau\'ikan Da Suka Tsira',
+      labelFamily: 'Iyali', labelOrder: 'Tsari', labelClass: 'Aji', labelOrigin: 'Asali',
+      labelPathogenType: 'Nau\'in Cuta', labelPathogen: 'Ƙwayar Cuta',
+      labelPestType: 'Nau\'in Kwaro', labelScientific: 'Sunan Kimiyya',
+      healthyStatus: '🌱 Matsayin Lafiya', diseaseFound: '🦠 Cuta',
+      pestFound: '🐛 Kwaro', noPestFound: '✅',
+      suggestedAction: 'Mataki Da Ake Ba Da Shawara', pestControlLabel: 'Sarrafawa',
+      plantFamily: '🌱 Iyali', plantUses: '🔧 Amfani',
+      correctionNote: 'Gyara'
+    },
+    ig: {
+      appTitle: '🌿 Usoro Nyocha Ọrụ Ugbo YSF',
+      ready: '📸 Akụrụghị – were/budata foto, wee họrọ nyocha.',
+      identifying: '🌿 Na-achọta osisi...',
+      analyzingDisease: '🦠 Na-atụle ọrịa...',
+      detectingPest: '🐛 Na-achọ ahụhụ...',
+      cameraReady: 'Igwefoto dị njikere. Were Foto & Preview.',
+      cameraStopped: 'Igwefoto kwụsịrị.',
+      cameraPermission: 'Enye-enye igwefoto ajụọla. Jiri nbudata.',
+      imageCaptured: '📸 Ewere foto. Họrọ nyocha.',
+      imageUploaded: '📷 Ebudata foto. Họrọ nyocha.',
+      noImage: 'Biko were ma ọ bụ budata foto nke ọ bụla na mbụ.',
+      noPlant: '❌ Achọtaghị osisi ọ bụla. Nwaa foto doro anya.',
+      plantLabel: '🌿 Chọpụta Osisi',
+      diseaseLabel: '🦠 Ọrịa',
+      pestLabel: '🐛 Ahụhụ',
+      startCam: 'Malite Igwefoto',
+      stopCam: 'Kwụsị',
+      capture: 'Were Foto & Preview',
+      upload: 'Budata Foto',
+      searchInfo: 'Chọọ Ozi Zuru Oke (Gemini AI)',
+      wikipedia: 'Wikipedia',
+      searchPlaceholder: 'dịka: ọka, ọrịa cassava, agha ahụhụ',
+      searchTitle: '🔍 Chọọ Ozi Ọzọ',
+      defaultMsg: "Were ma ọ bụ budata foto, wee pịa otu n'ime bọtịnụ nyocha: Osisi, Ọrịa, ma ọ bụ Ahụhụ.",
+      healthy: "✅ Osisi gị yiri ka ọ dị mma. Gaa n'ihu na omume ọma.",
+      noPest: 'Achọtaghị ahụhụ ọ bụla. Debe ọcha.',
+      pestControl: 'Njikwa: Jiri mmanụ neem ma ọ bụ ọgwụ ahụhụ kwesịrị ekwesị.',
+      diseaseAction: 'Kpọtụrụ onye ọkachamara ugbo. Wepụ akụkụ ndị nwere ọrịa wee jiri ọgwụ a tụrụ aro.',
+      loadingInfo: 'Na-eweta ozi zuru oke...',
+      langName: 'Igbo',
+      promptLang: 'Igbo',
+      footerText: '🌿 Ike site na D-pious Smart World | Osisi: PlantNet | Ọrịa & Ahụhụ: Roboflow | Ozi: Google Gemini AI',
+      secDescription: '📖 Nkọwa', secUses: '🔧 Ojiji & Mkpa', secNutritional: '🥗 Uru Nri',
+      secEconomic: '💰 Mkpa Akụ na Ụba', secEcological: '🌍 Ọrụ Gburugburu', secGrowing: '🌱 Ọnọdụ Ọ Tọọ',
+      secWeedControl: '⚠️ Njikwa Ahịhịa (IPM)', secFacts: '💡 Ihe Mmemme Dị Mmasị',
+      secAffected: '🌿 Osisi Ndị Metụtara', secSymptoms: '🔍 Ihe Ngosi Ọrịa', secSpread: '🔄 Otu O Si Gbasaa',
+      secConditions: '🌡️ Ọnọdụ Dị Mma', secEconomicImpact: '💸 Mmetụta Akụ na Ụba',
+      secDiseaseControl: '💊 Njikwa Ọrịa (IPM)', secPrevention: '🛡️ Ndụmọdụ Mgbochi',
+      secDamage: '💥 Mmebi O Na-eme', secLifeStages: '🔄 Ọkwa Ndụ', secPeakActivity: '📅 Oge Ọrụ Kacha',
+      secThreshold: '📊 Ọkwa Akụ na Ụba', secPestControl: '🐛 Njikwa Ahụhụ (IPM)', secSafety: '⚠️ Ndetu Nchekwa',
+      secClimate: 'Ihu Igwe', secSoil: 'Ala', secRainfall: 'Mmiri Ozuzo', secTemperature: 'Okpomọkụ',
+      tagCultural: 'Omenala', tagBiological: 'Ọdịnala', tagChemical: 'Kemịkal',
+      tagMechanical: 'Igwe / Ọchịchọ', tagResistant: 'Ụdị Na-anabata',
+      labelFamily: 'Ezinụlọ', labelOrder: 'Usoro', labelClass: 'Klaasị', labelOrigin: 'Isi Mmalite',
+      labelPathogenType: 'Ụdị Ọrịa', labelPathogen: 'Ihe Na-akpata Ọrịa',
+      labelPestType: 'Ụdị Ahụhụ', labelScientific: 'Aha Sayensị',
+      healthyStatus: '🌱 Ọnọdụ Ahụike', diseaseFound: '🦠 Ọrịa',
+      pestFound: '🐛 Ahụhụ', noPestFound: '✅',
+      suggestedAction: 'Omume A Tụrụ Aro', pestControlLabel: 'Njikwa',
+      plantFamily: '🌱 Ezinụlọ', plantUses: '🔧 Ojiji',
+      correctionNote: 'Mgbazi'
+    }
+  };
+
+  function t(key) { return TRANSLATIONS[currentLang]?.[key] || TRANSLATIONS.en[key] || key; }
+
+  function applyLanguage() {
+    // Header title
+    document.querySelector('header h1').innerHTML = `<i class="fas fa-leaf"></i> ${t('appTitle')}`;
+    // Buttons
+    document.getElementById('startCam').innerHTML = `<i class="fas fa-play"></i> ${t('startCam')}`;
+    document.getElementById('stopCam').innerHTML = `<i class="fas fa-stop"></i> ${t('stopCam')}`;
+    document.getElementById('captureBtn').innerHTML = `<i class="fas fa-camera"></i> ${t('capture')}`;
+    document.getElementById('plantBtn').innerHTML = `<i class="fas fa-seedling"></i> ${t('plantLabel')}`;
+    document.getElementById('diseaseBtn').innerHTML = `<i class="fas fa-biohazard"></i> ${t('diseaseLabel')}`;
+    document.getElementById('pestBtn').innerHTML = `<i class="fas fa-bug"></i> ${t('pestLabel')}`;
+    document.getElementById('uploadLabel').innerHTML = `<i class="fas fa-upload"></i> ${t('upload')}`;
+    // Search panel
+    document.querySelector('.manual-search-panel h3').innerHTML = `<i class="fas fa-globe"></i> ${t('searchTitle')}`;
+    document.getElementById('manualSearchInput').placeholder = t('searchPlaceholder');
+    document.getElementById('manualSearchBtn').innerHTML = `<i class="fab fa-wikipedia-w"></i> ${t('wikipedia')}`;
+    // Default msg
+    document.getElementById('defaultMsg').innerHTML = `<i class="fas fa-info-circle"></i> ${t('defaultMsg')}`;
+    // Status
+    setStatus(t('ready'), false);
+    // Footer
+    document.querySelector('footer').innerHTML = t('footerText');
+    // Highlight active lang button
+    document.querySelectorAll('.lang-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.lang === currentLang);
+    });
+  }
+
+  // Lang button click
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentLang = btn.dataset.lang;
+      applyLanguage();
+    });
+  });
+
 
   // DOM elements
   const video = document.getElementById('video');
@@ -394,8 +663,11 @@
   // ========================
 
   function buildPromptForType(query, type) {
+    const lang = t('promptLang');
+    const langNote = lang === 'English' ? '' : `\nIMPORTANT: Write ALL text values in ${lang} language. Only keep scientific names, taxonomy terms (family/order/class), and JSON keys in English/Latin.`;
+
     if (type === 'plant') {
-      return `You are an expert agricultural botanist. Provide comprehensive information about the plant: "${query}".
+      return `You are an expert agricultural botanist. Provide comprehensive information about the plant: "${query}".${langNote}
 Return ONLY a valid JSON object (no markdown, no extra text) with this exact structure:
 {
   "category": "crop|tree|weed|other",
@@ -416,7 +688,7 @@ Return ONLY a valid JSON object (no markdown, no extra text) with this exact str
 Fill all fields with accurate information. If isWeed is true, fill weedControl. Keep descriptions concise but informative.`;
     }
     if (type === 'disease') {
-      return `You are an expert plant pathologist. Provide comprehensive information about the plant disease: "${query}".
+      return `You are an expert plant pathologist. Provide comprehensive information about the plant disease: "${query}".${langNote}
 Return ONLY a valid JSON object (no markdown, no extra text) with this exact structure:
 {
   "pathogenType": "fungal|bacterial|viral|nematode|other",
@@ -438,7 +710,7 @@ Return ONLY a valid JSON object (no markdown, no extra text) with this exact str
 Fill all fields with accurate, practical information for farmers.`;
     }
     if (type === 'pest') {
-      return `You are an expert agricultural entomologist. Provide comprehensive information about the pest: "${query}".
+      return `You are an expert agricultural entomologist. Provide comprehensive information about the pest: "${query}".${langNote}
 Return ONLY a valid JSON object (no markdown, no extra text) with this exact structure:
 {
   "pestType": "insect|mite|rodent|bird|other",
@@ -462,44 +734,24 @@ Fill all fields with accurate, practical IPM information.`;
     return `Provide information about: "${query}". Return a JSON object with relevant fields.`;
   }
 
+  const WORKER_URL = 'https://wild-water-cba5.olucast61.workers.dev';
+
   async function fetchComprehensiveInfo(query, type) {
-    const prompt = buildPromptForType(query, type);
-
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.2,
-            maxOutputTokens: 4000
-          }
-        })
-      }
-    );
-
+    const response = await fetch(WORKER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, type })
+    });
     if (!response.ok) {
       const errData = await response.json().catch(() => ({}));
-      const msg = errData?.error?.message || `API error ${response.status}`;
-      throw new Error(msg);
+      throw new Error(errData?.error || `Worker error ${response.status}`);
     }
-
     const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    // Extract JSON object from response robustly
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error('No JSON object found in response. Raw: ' + text.substring(0, 200));
-    const clean = jsonMatch[0].trim();
-    try {
-      return JSON.parse(clean);
-    } catch(e) {
-      throw new Error('Gemini returned malformed JSON. Raw: ' + clean.substring(0, 200));
-    }
+    if (!data.success) throw new Error(data.error || 'Worker returned failure');
+    return data.data;
   }
 
-  // Rendering functions (full detailed display)
+  // Rendering functions (full detailed display) — all labels use t() for current language
   function renderPlantInfo(info) {
     const isWeed = info.isWeed || info.category === 'weed';
     const cat = (info.category || 'other').toLowerCase();
@@ -507,58 +759,59 @@ Fill all fields with accurate, practical IPM information.`;
     const badgeClass = isWeed ? 'badge-weed' : (cat === 'tree' ? 'badge-tree' : (cat === 'crop' ? 'badge-crop' : 'badge-other'));
     let html = `<span class="info-type-badge ${badgeClass}">${emoji} ${esc(cat.toUpperCase())}</span>`;
     html += `<div class="taxonomy-grid">
-      <div class="taxonomy-item"><span>Family</span>${esc(info.family||'—')}</div>
-      <div class="taxonomy-item"><span>Order</span>${esc(info.order||'—')}</div>
-      <div class="taxonomy-item"><span>Class</span>${esc(info.class||'—')}</div>
-      <div class="taxonomy-item"><span>Origin</span>${esc(info.origin||'—')}</div>
+      <div class="taxonomy-item"><span>${t('labelFamily')}</span>${esc(info.family||'—')}</div>
+      <div class="taxonomy-item"><span>${t('labelOrder')}</span>${esc(info.order||'—')}</div>
+      <div class="taxonomy-item"><span>${t('labelClass')}</span>${esc(info.class||'—')}</div>
+      <div class="taxonomy-item"><span>${t('labelOrigin')}</span>${esc(info.origin||'—')}</div>
     </div>`;
-    if (info.description) html += `<div class="info-section-block"><h3>📖 Description</h3><p>${esc(info.description)}</p></div>`;
-    if (info.uses?.length) html += `<div class="info-section-block"><h3>🔧 Uses &amp; Importance</h3><ul>${info.uses.map(u=>`<li>${esc(u)}</li>`).join('')}</ul></div>`;
-    if (info.nutritionalValue) html += `<div class="info-section-block"><h3>🥗 Nutritional Value</h3><p>${esc(info.nutritionalValue)}</p></div>`;
-    if (info.economicImportance) html += `<div class="info-section-block"><h3>💰 Economic Importance</h3><p>${esc(info.economicImportance)}</p></div>`;
-    if (info.ecologicalRole) html += `<div class="info-section-block"><h3>🌍 Ecological Role</h3><p>${esc(info.ecologicalRole)}</p></div>`;
+    if (info.description) html += `<div class="info-section-block"><h3>${t('secDescription')}</h3><p>${esc(info.description)}</p></div>`;
+    if (info.uses?.length) html += `<div class="info-section-block"><h3>${t('secUses')}</h3><ul>${info.uses.map(u=>`<li>${esc(u)}</li>`).join('')}</ul></div>`;
+    if (info.nutritionalValue) html += `<div class="info-section-block"><h3>${t('secNutritional')}</h3><p>${esc(info.nutritionalValue)}</p></div>`;
+    if (info.economicImportance) html += `<div class="info-section-block"><h3>${t('secEconomic')}</h3><p>${esc(info.economicImportance)}</p></div>`;
+    if (info.ecologicalRole) html += `<div class="info-section-block"><h3>${t('secEcological')}</h3><p>${esc(info.ecologicalRole)}</p></div>`;
     if (info.growingConditions) {
       const g = info.growingConditions;
-      html += `<div class="info-section-block"><h3>🌱 Growing Conditions</h3>${g.climate?`<p><strong>Climate:</strong> ${esc(g.climate)}</p>`:''}${g.soil?`<p><strong>Soil:</strong> ${esc(g.soil)}</p>`:''}${g.rainfall?`<p><strong>Rainfall:</strong> ${esc(g.rainfall)}</p>`:''}${g.temperature?`<p><strong>Temperature:</strong> ${esc(g.temperature)}</p>`:''}</div>`;
+      html += `<div class="info-section-block"><h3>${t('secGrowing')}</h3>${g.climate?`<p><strong>${t('secClimate')}:</strong> ${esc(g.climate)}</p>`:''}${g.soil?`<p><strong>${t('secSoil')}:</strong> ${esc(g.soil)}</p>`:''}${g.rainfall?`<p><strong>${t('secRainfall')}:</strong> ${esc(g.rainfall)}</p>`:''}${g.temperature?`<p><strong>${t('secTemperature')}:</strong> ${esc(g.temperature)}</p>`:''}</div>`;
     }
     if (isWeed && info.weedControl) {
       const wc = info.weedControl;
-      html += `<div class="info-section-block weed-block"><h3>⚠️ IPM Weed Control</h3>${wc.ipmSummary?`<p>${esc(wc.ipmSummary)}</p>`:''}${wc.cultural?.length?`<p><span class="ipm-tag cult">Cultural</span></p><ul>${wc.cultural.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}${wc.mechanical?.length?`<p><span class="ipm-tag mech">Mechanical</span></p><ul>${wc.mechanical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}${wc.biological?.length?`<p><span class="ipm-tag bio">Biological</span></p><ul>${wc.biological.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}${wc.chemical?.length?`<p><span class="ipm-tag chem">Chemical</span></p><ul>${wc.chemical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}</div>`;
+      html += `<div class="info-section-block weed-block"><h3>${t('secWeedControl')}</h3>${wc.ipmSummary?`<p>${esc(wc.ipmSummary)}</p>`:''}${wc.cultural?.length?`<p><span class="ipm-tag cult">${t('tagCultural')}</span></p><ul>${wc.cultural.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}${wc.mechanical?.length?`<p><span class="ipm-tag mech">${t('tagMechanical')}</span></p><ul>${wc.mechanical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}${wc.biological?.length?`<p><span class="ipm-tag bio">${t('tagBiological')}</span></p><ul>${wc.biological.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}${wc.chemical?.length?`<p><span class="ipm-tag chem">${t('tagChemical')}</span></p><ul>${wc.chemical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}</div>`;
     }
-    if (info.interestingFacts?.length) html += `<div class="info-section-block"><h3>💡 Interesting Facts</h3><ul>${info.interestingFacts.map(f=>`<li>${esc(f)}</li>`).join('')}</ul></div>`;
+    if (info.interestingFacts?.length) html += `<div class="info-section-block"><h3>${t('secFacts')}</h3><ul>${info.interestingFacts.map(f=>`<li>${esc(f)}</li>`).join('')}</ul></div>`;
     return html;
   }
 
   function renderDiseaseInfo(info) {
     const c = info.control || {};
-    let html = `<div class="taxonomy-grid"><div class="taxonomy-item"><span>Pathogen Type</span>${esc(info.pathogenType||'—')}</div><div class="taxonomy-item"><span>Pathogen</span>${esc(info.pathogenName||'—')}</div></div>`;
-    if (info.affectedPlants?.length) html += `<div class="info-section-block disease-block"><h3>🌿 Affected Plants</h3><p>${info.affectedPlants.map(p=>esc(p)).join(', ')}</p></div>`;
-    if (info.symptoms?.length) html += `<div class="info-section-block disease-block"><h3>🔍 Symptoms</h3><ul>${info.symptoms.map(s=>`<li>${esc(s)}</li>`).join('')}</ul></div>`;
-    if (info.spreadMechanism) html += `<div class="info-section-block disease-block"><h3>🔄 How It Spreads</h3><p>${esc(info.spreadMechanism)}</p></div>`;
-    if (info.favorableConditions) html += `<div class="info-section-block disease-block"><h3>🌡️ Favorable Conditions</h3><p>${esc(info.favorableConditions)}</p></div>`;
-    if (info.economicImpact) html += `<div class="info-section-block disease-block"><h3>💸 Economic Impact</h3><p>${esc(info.economicImpact)}</p></div>`;
-    html += `<div class="info-section-block disease-block"><h3>💊 Disease Control (IPM)</h3>${c.ipmSummary?`<p>${esc(c.ipmSummary)}</p>`:''}${c.cultural?.length?`<p><span class="ipm-tag cult">Cultural</span></p><ul>${c.cultural.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}${c.biological?.length?`<p><span class="ipm-tag bio">Biological</span></p><ul>${c.biological.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}${c.chemical?.length?`<p><span class="ipm-tag chem">Chemical</span></p><ul>${c.chemical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}${c.resistant_varieties?.length?`<p><span class="ipm-tag mech">Resistant Varieties</span></p><ul>${c.resistant_varieties.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}</div>`;
-    if (info.preventionTips?.length) html += `<div class="info-section-block disease-block"><h3>🛡️ Prevention Tips</h3><ul>${info.preventionTips.map(t=>`<li>${esc(t)}</li>`).join('')}</ul></div>`;
+    let html = `<div class="taxonomy-grid"><div class="taxonomy-item"><span>${t('labelPathogenType')}</span>${esc(info.pathogenType||'—')}</div><div class="taxonomy-item"><span>${t('labelPathogen')}</span>${esc(info.pathogenName||'—')}</div></div>`;
+    if (info.affectedPlants?.length) html += `<div class="info-section-block disease-block"><h3>${t('secAffected')}</h3><p>${info.affectedPlants.map(p=>esc(p)).join(', ')}</p></div>`;
+    if (info.symptoms?.length) html += `<div class="info-section-block disease-block"><h3>${t('secSymptoms')}</h3><ul>${info.symptoms.map(s=>`<li>${esc(s)}</li>`).join('')}</ul></div>`;
+    if (info.spreadMechanism) html += `<div class="info-section-block disease-block"><h3>${t('secSpread')}</h3><p>${esc(info.spreadMechanism)}</p></div>`;
+    if (info.favorableConditions) html += `<div class="info-section-block disease-block"><h3>${t('secConditions')}</h3><p>${esc(info.favorableConditions)}</p></div>`;
+    if (info.economicImpact) html += `<div class="info-section-block disease-block"><h3>${t('secEconomicImpact')}</h3><p>${esc(info.economicImpact)}</p></div>`;
+    html += `<div class="info-section-block disease-block"><h3>${t('secDiseaseControl')}</h3>${c.ipmSummary?`<p>${esc(c.ipmSummary)}</p>`:''}${c.cultural?.length?`<p><span class="ipm-tag cult">${t('tagCultural')}</span></p><ul>${c.cultural.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}${c.biological?.length?`<p><span class="ipm-tag bio">${t('tagBiological')}</span></p><ul>${c.biological.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}${c.chemical?.length?`<p><span class="ipm-tag chem">${t('tagChemical')}</span></p><ul>${c.chemical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}${c.resistant_varieties?.length?`<p><span class="ipm-tag mech">${t('tagResistant')}</span></p><ul>${c.resistant_varieties.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}</div>`;
+    if (info.preventionTips?.length) html += `<div class="info-section-block disease-block"><h3>${t('secPrevention')}</h3><ul>${info.preventionTips.map(tip=>`<li>${esc(tip)}</li>`).join('')}</ul></div>`;
     return html;
   }
 
   function renderPestInfo(info) {
     const c = info.control || {};
-    let html = `<div class="taxonomy-grid"><div class="taxonomy-item"><span>Pest Type</span>${esc(info.pestType||'—')}</div><div class="taxonomy-item"><span>Scientific Name</span><em>${esc(info.scientificName||'—')}</em></div></div>`;
-    if (info.affectedPlants?.length) html += `<div class="info-section-block pest-block"><h3>🌿 Affected Plants</h3><p>${info.affectedPlants.map(p=>esc(p)).join(', ')}</p></div>`;
-    if (info.damageDescription) html += `<div class="info-section-block pest-block"><h3>💥 Damage Caused</h3><p>${esc(info.damageDescription)}</p></div>`;
-    if (info.lifeStages?.length) html += `<div class="info-section-block pest-block"><h3>🔄 Life Stages</h3><ul>${info.lifeStages.map(s=>`<li>${esc(s)}</li>`).join('')}</ul></div>`;
-    if (info.peakActivity) html += `<div class="info-section-block pest-block"><h3>📅 Peak Activity</h3><p>${esc(info.peakActivity)}</p></div>`;
-    if (info.economicThreshold) html += `<div class="info-section-block pest-block"><h3>📊 Economic Threshold</h3><p>${esc(info.economicThreshold)}</p></div>`;
-    html += `<div class="info-section-block pest-block"><h3>🐛 Pest Control (IPM)</h3>${c.ipmSummary?`<p>${esc(c.ipmSummary)}</p>`:''}${c.cultural?.length?`<p><span class="ipm-tag cult">Cultural</span></p><ul>${c.cultural.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}${c.biological?.length?`<p><span class="ipm-tag bio">Biological</span></p><ul>${c.biological.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}${c.mechanical?.length?`<p><span class="ipm-tag mech">Mechanical / Traps</span></p><ul>${c.mechanical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}${c.chemical?.length?`<p><span class="ipm-tag chem">Chemical</span></p><ul>${c.chemical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}</div>`;
-    if (info.safetyNotes) html += `<div class="info-section-block pest-block"><h3>⚠️ Safety Notes</h3><p>${esc(info.safetyNotes)}</p></div>`;
+    let html = `<div class="taxonomy-grid"><div class="taxonomy-item"><span>${t('labelPestType')}</span>${esc(info.pestType||'—')}</div><div class="taxonomy-item"><span>${t('labelScientific')}</span><em>${esc(info.scientificName||'—')}</em></div></div>`;
+    if (info.affectedPlants?.length) html += `<div class="info-section-block pest-block"><h3>${t('secAffected')}</h3><p>${info.affectedPlants.map(p=>esc(p)).join(', ')}</p></div>`;
+    if (info.damageDescription) html += `<div class="info-section-block pest-block"><h3>${t('secDamage')}</h3><p>${esc(info.damageDescription)}</p></div>`;
+    if (info.lifeStages?.length) html += `<div class="info-section-block pest-block"><h3>${t('secLifeStages')}</h3><ul>${info.lifeStages.map(s=>`<li>${esc(s)}</li>`).join('')}</ul></div>`;
+    if (info.peakActivity) html += `<div class="info-section-block pest-block"><h3>${t('secPeakActivity')}</h3><p>${esc(info.peakActivity)}</p></div>`;
+    if (info.economicThreshold) html += `<div class="info-section-block pest-block"><h3>${t('secThreshold')}</h3><p>${esc(info.economicThreshold)}</p></div>`;
+    html += `<div class="info-section-block pest-block"><h3>${t('secPestControl')}</h3>${c.ipmSummary?`<p>${esc(c.ipmSummary)}</p>`:''}${c.cultural?.length?`<p><span class="ipm-tag cult">${t('tagCultural')}</span></p><ul>${c.cultural.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}${c.biological?.length?`<p><span class="ipm-tag bio">${t('tagBiological')}</span></p><ul>${c.biological.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}${c.mechanical?.length?`<p><span class="ipm-tag mech">${t('tagMechanical')}</span></p><ul>${c.mechanical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}${c.chemical?.length?`<p><span class="ipm-tag chem">${t('tagChemical')}</span></p><ul>${c.chemical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}</div>`;
+    if (info.safetyNotes) html += `<div class="info-section-block pest-block"><h3>${t('secSafety')}</h3><p>${esc(info.safetyNotes)}</p></div>`;
     return html;
   }
+
 
   async function openInfoModal(query, type, title, subtitle) {
     infoModalTitle.textContent = title;
     infoModalSubtitle.textContent = subtitle || '';
-    infoModalBody.innerHTML = `<div class="info-loading"><div class="big-loader"></div><p>Fetching comprehensive information…</p><p style="font-size:0.74rem;color:#888;margin-top:5px;">Powered by Google Gemini AI (Free)</p></div>`;
+    infoModalBody.innerHTML = `<div class="info-loading"><div class="big-loader"></div><p>${t('loadingInfo')}</p><p style="font-size:0.74rem;color:#888;margin-top:5px;">Powered by Google Gemini AI (Free)</p></div>`;
     infoModal.classList.add('open');
     document.body.style.overflow = 'hidden';
     try {
@@ -584,7 +837,7 @@ Fill all fields with accurate, practical IPM information.`;
   function makeSearchBtn(query, type, title, subtitle) {
     const btn = document.createElement('button');
     btn.className = 'search-info-inline-btn';
-    btn.innerHTML = '<i class="fas fa-search"></i> Search Comprehensive Info (Claude AI)';
+    btn.innerHTML = `<i class="fas fa-search"></i> ${t('searchInfo')}`;
     btn.addEventListener('click', () => openInfoModal(query, type, title, subtitle));
     return btn;
   }
@@ -592,7 +845,7 @@ Fill all fields with accurate, practical IPM information.`;
   function makeWikiBtn(query, typeHint) {
     const btn = document.createElement('button');
     btn.className = 'wiki-btn';
-    btn.innerHTML = '<i class="fab fa-wikipedia-w"></i> Wikipedia';
+    btn.innerHTML = `<i class="fab fa-wikipedia-w"></i> ${t('wikipedia')}`;
     btn.addEventListener('click', () => {
       manualSearchInput.value = query;
       searchWikipedia(query, typeHint);
@@ -647,8 +900,8 @@ Fill all fields with accurate, practical IPM information.`;
   }
 
   async function identifyPlant() {
-    if (!currentImageBlob) { alert("Please take or upload a picture first."); return; }
-    setStatus("🌿 Identifying plant...", true);
+    if (!currentImageBlob) { alert(t('noImage')); return; }
+    setStatus(t('identifying'), true);
     defaultMsg.classList.add('hidden');
     let result = null;
     if (currentMode === 'offline' && offlineReady) {
@@ -657,7 +910,7 @@ Fill all fields with accurate, practical IPM information.`;
     } else result = await identifyPlantWithBackend(currentImageBlob);
     if (result?.error) {
       const rawJson = result.rawData ? JSON.stringify(result.rawData, null, 2) : (result.message || "No data");
-      aiOutput.innerHTML = `<div class="plant-card"><strong>⚠️ Could not parse plant name</strong><div class="raw-json">${esc(rawJson)}</div><div class="tip-box">💡 The plant name is likely inside the "data" field.</div></div>`;
+      aiOutput.innerHTML = `<div class="plant-card"><strong>⚠️ Could not parse plant name</strong><div class="raw-json">${esc(rawJson)}</div></div>`;
       setStatus("Plant API responded but name not found.", false); return;
     }
     if (result?.name) {
@@ -666,10 +919,10 @@ Fill all fields with accurate, practical IPM information.`;
       lastPlantResult = result;
       displayPlantResult(result, lastPredictedKey);
       manualSearchInput.value = result.name;
-      setStatus(`✅ Plant: ${result.name} (${result.confidence}%)`, false);
+      setStatus(`✅ ${result.name} (${result.confidence}%)`, false);
     } else {
-      aiOutput.innerHTML = `<div class="error-msg">❌ No plant identified. Try a clearer image.</div>`;
-      setStatus("No plant found", false);
+      aiOutput.innerHTML = `<div class="error-msg">${t('noPlant')}</div>`;
+      setStatus(t('noPlant'), false);
     }
   }
 
@@ -702,8 +955,8 @@ Fill all fields with accurate, practical IPM information.`;
   }
 
   async function detectDisease() {
-    if (!currentImageBlob) { alert("Please take or upload a picture first."); return; }
-    setStatus("🦠 Analyzing disease...", true);
+    if (!currentImageBlob) { alert(t('noImage')); return; }
+    setStatus(t('analyzingDisease'), true);
     defaultMsg.classList.add('hidden');
     const diseaseData = await detectDiseaseWithBackend(currentImageBlob);
     if (!diseaseData || diseaseData.error) {
@@ -717,23 +970,23 @@ Fill all fields with accurate, practical IPM information.`;
     const isHealthy = diseaseData.isHealthy || confVal===0 || diseaseResult.toLowerCase().includes("healthy");
     const wrapper = document.createElement('div');
     if (isHealthy) {
-      wrapper.innerHTML = `<div class="disease-card"><strong><i class="fas fa-seedling"></i> 🌱 Health Status: ${esc(diseaseResult)}</strong><div class="confidence">🎯 Confidence: ${confDisp}</div><div class="treatment-section">✅ Your plant appears healthy. Continue good practices.</div></div>`;
+      wrapper.innerHTML = `<div class="disease-card"><strong><i class="fas fa-seedling"></i> ${t('healthyStatus')}: ${esc(diseaseResult)}</strong><div class="confidence">🎯 ${confDisp}</div><div class="treatment-section">${t('healthy')}</div></div>`;
     } else {
-      wrapper.innerHTML = `<div class="disease-card"><strong><i class="fas fa-biohazard"></i> 🦠 Disease: ${esc(diseaseResult)}</strong><div class="confidence">🎯 Confidence: ${confDisp}</div><div class="treatment-section"><strong>Suggested Action:</strong><br>Consult an agronomist. Remove infected parts and apply recommended treatment.</div></div>`;
+      wrapper.innerHTML = `<div class="disease-card"><strong><i class="fas fa-biohazard"></i> ${t('diseaseFound')}: ${esc(diseaseResult)}</strong><div class="confidence">🎯 ${confDisp}</div><div class="treatment-section"><strong>${t('suggestedAction')}:</strong><br>${t('diseaseAction')}</div></div>`;
     }
-    wrapper.appendChild(makeSearchBtn(diseaseResult, 'disease', `🦠 ${diseaseResult}`, 'Plant Disease — Full Information & Control'));
+    wrapper.appendChild(makeSearchBtn(diseaseResult, 'disease', `🦠 ${diseaseResult}`, t('diseaseFound')));
     wrapper.appendChild(makeWikiBtn(diseaseResult, 'disease'));
     aiOutput.innerHTML = ''; aiOutput.appendChild(wrapper);
     manualSearchInput.value = diseaseResult;
-    setStatus(`Disease: ${diseaseResult} (${confDisp})`, false);
+    setStatus(`${t('diseaseFound')}: ${diseaseResult} (${confDisp})`, false);
   }
 
   // ========================
   // PEST DETECTION (via backend)
   // ========================
   async function detectPest() {
-    if (!currentImageBlob) { alert("Please take or upload a picture first."); return; }
-    setStatus("🐛 Detecting pest...", true);
+    if (!currentImageBlob) { alert(t('noImage')); return; }
+    setStatus(t('detectingPest'), true);
     defaultMsg.classList.add('hidden');
     const fd = new FormData(); fd.append('image', currentImageBlob);
     try {
@@ -745,17 +998,17 @@ Fill all fields with accurate, practical IPM information.`;
       const isNoPest = confVal === 0 || pestResult.toLowerCase().includes("no pest");
       const wrapper = document.createElement('div');
       if (isNoPest) {
-        wrapper.innerHTML = `<div class="pest-card"><strong><i class="fas fa-check-circle"></i> ✅ ${esc(pestResult)}</strong><div class="confidence">🎯 Confidence: ${confDisp}</div><div class="treatment-section">No pest detected. Maintain good hygiene.</div></div>`;
+        wrapper.innerHTML = `<div class="pest-card"><strong><i class="fas fa-check-circle"></i> ${t('noPestFound')} ${esc(pestResult)}</strong><div class="confidence">🎯 ${confDisp}</div><div class="treatment-section">${t('noPest')}</div></div>`;
       } else {
-        wrapper.innerHTML = `<div class="pest-card"><strong><i class="fas fa-bug"></i> 🐛 Pest: ${esc(pestResult)}</strong><div class="confidence">🎯 Confidence: ${confDisp}</div><div class="treatment-section"><strong>Control:</strong> Apply neem oil or appropriate pesticide.</div></div>`;
+        wrapper.innerHTML = `<div class="pest-card"><strong><i class="fas fa-bug"></i> ${t('pestFound')}: ${esc(pestResult)}</strong><div class="confidence">🎯 ${confDisp}</div><div class="treatment-section"><strong>${t('pestControlLabel')}:</strong> ${t('pestControl')}</div></div>`;
       }
-      wrapper.appendChild(makeSearchBtn(pestResult, 'pest', `🐛 ${pestResult}`, 'Pest — Full Information & IPM Control'));
+      wrapper.appendChild(makeSearchBtn(pestResult, 'pest', `🐛 ${pestResult}`, t('pestFound')));
       wrapper.appendChild(makeWikiBtn(pestResult, 'pest'));
       aiOutput.innerHTML = ''; aiOutput.appendChild(wrapper);
       manualSearchInput.value = pestResult;
-      setStatus(`Pest: ${pestResult} (${confDisp})`, false);
+      setStatus(`${t('pestFound')}: ${pestResult} (${confDisp})`, false);
     } catch(e) {
-      aiOutput.innerHTML = `<div class="error-msg">❌ Pest detection failed: ${e.message}</div>`;
+      aiOutput.innerHTML = `<div class="error-msg">❌ ${e.message}</div>`;
       setStatus("Pest API error", false);
     }
   }
@@ -772,7 +1025,7 @@ Fill all fields with accurate, practical IPM information.`;
     previewImg.src = URL.createObjectURL(blob); previewImg.style.display = 'block';
     previewImg.onload = () => URL.revokeObjectURL(previewImg.src);
     currentImageBlob = blob; enableAnalysisButtons(true);
-    setStatus("📸 Image captured. Choose analysis.", false);
+    setStatus(t('imageCaptured'), false);
     aiOutput.innerHTML = ''; defaultMsg.classList.remove('hidden');
   }
   function handleUpload(file) {
@@ -780,7 +1033,7 @@ Fill all fields with accurate, practical IPM information.`;
     previewImg.src = URL.createObjectURL(file); previewImg.style.display = 'block';
     previewImg.onload = () => URL.revokeObjectURL(previewImg.src);
     currentImageBlob = file; enableAnalysisButtons(true);
-    setStatus("📷 Image uploaded. Choose analysis.", false);
+    setStatus(t('imageUploaded'), false);
     aiOutput.innerHTML = ''; defaultMsg.classList.remove('hidden');
   }
   async function startCamera() {
@@ -792,13 +1045,13 @@ Fill all fields with accurate, practical IPM information.`;
       await video.play();
       await new Promise(r => video.videoWidth > 0 ? r() : (video.onloadedmetadata = r));
       cameraActive = true; updateUICamera();
-      setStatus('Camera ready. Capture & Preview.', false);
-    } catch(e) { cameraActive = false; updateUICamera(); setStatus("Camera permission denied. Use upload.", false); }
+      setStatus(t('cameraReady'), false);
+    } catch(e) { cameraActive = false; updateUICamera(); setStatus(t('cameraPermission'), false); }
   }
   async function stopCamera() {
     if (currentStream) { currentStream.getTracks().forEach(t=>t.stop()); currentStream = null; }
     video.srcObject = null; cameraActive = false; updateUICamera();
-    setStatus("Camera stopped.", false);
+    setStatus(t('cameraStopped'), false);
   }
   function updateUICamera() {
     if (cameraActive && currentStream && video.srcObject) {
@@ -880,9 +1133,10 @@ Fill all fields with accurate, practical IPM information.`;
       const dbM = plantDatabase[result.name.toLowerCase()];
       if (dbM) { result.family = dbM.family; result.importance = dbM.importance; }
     }
-    const importanceHtml = result.importance ? `<div class="info-section"><i class="fas fa-info-circle"></i> <strong>Uses:</strong><br>${esc(result.importance)}</div>` : '';
+    const importanceHtml = result.importance ? `<div class="info-section"><i class="fas fa-info-circle"></i> <strong>${t('plantUses')}:</strong><br>${esc(result.importance)}</div>` : '';
+    if (result.correctionNote) result.correctionNote = `✨ ${t('correctionNote')}: "${result.originalPredictedLabel||''}" → "${result.name}"`;
     const wrapper = document.createElement('div');
-    wrapper.innerHTML = `<div class="plant-card"><div><strong>🌿 ${esc(result.name)}</strong></div><div class="scientific">${esc(result.scientific||'')}</div><div class="confidence">🎯 Confidence: ${result.confidence}%</div><div>🌱 Family: ${esc(result.family)}</div>${importanceHtml}${result.correctionNote ? `<div style="font-size:0.7rem;">${esc(result.correctionNote)}</div>` : ''}</div>`;
+    wrapper.innerHTML = `<div class="plant-card"><div><strong>🌿 ${esc(result.name)}</strong></div><div class="scientific">${esc(result.scientific||'')}</div><div class="confidence">🎯 ${result.confidence}%</div><div>${t('plantFamily')}: ${esc(result.family)}</div>${importanceHtml}${result.correctionNote ? `<div style="font-size:0.7rem;">${esc(result.correctionNote)}</div>` : ''}</div>`;
     aiOutput.innerHTML = ''; aiOutput.appendChild(wrapper);
     const searchQuery = result.scientific || result.name;
     wrapper.appendChild(makeSearchBtn(searchQuery, 'plant', `🌿 ${result.name}`, result.scientific || ''));
