@@ -530,11 +530,26 @@
     });
   }
 
-  // Lang button click
+  // Lang button click — re-render everything in new language automatically
   document.querySelectorAll('.lang-btn').forEach(btn => {
     btn.addEventListener('click', () => {
+      if (btn.dataset.lang === currentLang) return; // no change
       currentLang = btn.dataset.lang;
       applyLanguage();
+
+      // Re-render the last result card in the new language
+      if (lastResultType === 'plant' && lastResultData) {
+        displayPlantResult(lastResultData, lastPredictedKey);
+      } else if (lastResultType === 'disease' && lastResultData) {
+        rerenderDiseaseCard(lastResultData);
+      } else if (lastResultType === 'pest' && lastResultData) {
+        rerenderPestCard(lastResultData);
+      }
+
+      // If info modal is open, re-fetch in new language
+      if (infoModalOpen && lastInfoQuery) {
+        openInfoModal(lastInfoQuery, lastInfoType, lastInfoTitle, lastInfoSubtitle);
+      }
     });
   });
 
@@ -580,6 +595,14 @@
   let currentStream = null, cameraActive = false, offlineModel = null, offlineReady = false;
   let currentMode = 'auto', globalCorrections = {}, pendingCorrections = {};
   let currentImageBlob = null, lastPlantResult = null, lastPredictedKey = '';
+  // Track last shown result so we can re-render on language switch
+  let lastResultType = null;   // 'plant' | 'disease' | 'pest'
+  let lastResultData = null;   // the result object
+  let lastInfoQuery = null;    // last comprehensive info query
+  let lastInfoType = null;     // last comprehensive info type
+  let lastInfoTitle = null;    // last comprehensive info title
+  let lastInfoSubtitle = null; // last comprehensive info subtitle
+  let infoModalOpen = false;   // is the info modal currently open
 
   const plantDatabase = {
     "cowpea": { common: "Cowpea", scientific: "Vigna unguiculata", family: "Fabaceae", importance: "Legume crop, rich in protein, drought-tolerant." },
@@ -592,22 +615,74 @@
   // LOCAL NAMES & WIKIPEDIA
   // ========================
   const localNamesDB = {
-    "coffee": { yoruba: "Kọfí", hausa: "Kofi", igbo: "Kọfị" },
-    "maize": { yoruba: "Àgbàdo", hausa: "Masara", igbo: "Ọka" },
-    "cassava": { yoruba: "Ẹ̀gẹ́", hausa: "Rogo", igbo: "Akpu" },
-    "yam": { yoruba: "Iṣu", hausa: "Doya", igbo: "Ji" },
-    "cowpea": { yoruba: "Ẹ̀wà", hausa: "Wake", igbo: "Agwa" },
-    "mango": { yoruba: "Mángoro", hausa: "Mangwaro", igbo: "Mango" },
-    "tomato": { yoruba: "Tòmátì", hausa: "Tumatir", igbo: "Tọmati" },
-    "fall armyworm": { yoruba: "Kòkòrò jagunjagun", hausa: "Kwaro Soja", igbo: "Ahụhụ agha" },
-    "late blight": { yoruba: "Àrùn Tomato", hausa: "Cutar Tomato", igbo: "Ọrịa Tomato" }
+    "coffee":        { yo: "Kọfí",         ha: "Kofi",           ig: "Kọfị" },
+    "maize":         { yo: "Àgbàdo",       ha: "Masara",          ig: "Ọka" },
+    "corn":          { yo: "Àgbàdo",       ha: "Masara",          ig: "Ọka" },
+    "cassava":       { yo: "Ẹ̀gẹ́",        ha: "Rogo",            ig: "Akpu" },
+    "yam":           { yo: "Iṣu",          ha: "Doya",            ig: "Ji" },
+    "cowpea":        { yo: "Ẹ̀wà",         ha: "Wake",            ig: "Agwa" },
+    "mango":         { yo: "Mángoro",      ha: "Mangwaro",        ig: "Mango" },
+    "tomato":        { yo: "Tòmátì",       ha: "Tumatir",         ig: "Tọmati" },
+    "rice":          { yo: "Irẹsì",        ha: "Shinkafa",        ig: "Osikapa" },
+    "sorghum":       { yo: "Oka baba",     ha: "Dawa",            ig: "Ọjị ọcha" },
+    "millet":        { yo: "Ọka",          ha: "Gero",            ig: "Ọka obere" },
+    "groundnut":     { yo: "Ẹ̀pà",         ha: "Gyada",           ig: "Ahụ ọjị" },
+    "peanut":        { yo: "Ẹ̀pà",         ha: "Gyada",           ig: "Ahụ ọjị" },
+    "plantain":      { yo: "Ọ̀gẹ̀dẹ̀",      ha: "Ayaba",           ig: "Ojoko" },
+    "banana":        { yo: "Ọ̀gẹ̀dẹ̀ wẹ̀wẹ̀", ha: "Ayaba",          ig: "Unere" },
+    "oil palm":      { yo: "Ọpẹ",          ha: "Kwakwar mai",     ig: "Nkwu" },
+    "cocoa":         { yo: "Koko",         ha: "Koko",            ig: "Koko" },
+    "pepper":        { yo: "Ata",          ha: "Barkono",         ig: "Ose" },
+    "okra":          { yo: "Ilá",          ha: "Kubewa",          ig: "Okwuru" },
+    "sweet potato":  { yo: "Odunkun",      ha: "Dankalin turawa", ig: "Ji bekee" },
+    "sugarcane":     { yo: "Ireke",        ha: "Rake",            ig: "Okpete" },
+    "soybean":       { yo: "Ẹ̀wà soya",    ha: "Wake soya",       ig: "Agwa soya" },
+    "cotton":        { yo: "Owu",          ha: "Auduga",          ig: "Owu" },
+    "onion":         { yo: "Alubosa",      ha: "Albasa",          ig: "Yabasị" },
+    "watermelon":    { yo: "Egusi",        ha: "Kankana",         ig: "Anyụ mmiri" },
+    "melon":         { yo: "Egusi",        ha: "Kabewa",          ig: "Egwusi" },
+    "fall armyworm": { yo: "Kòkòrò jagunjagun", ha: "Sojin kwaro", ig: "Ahụhụ agha" },
+    "late blight":   { yo: "Àrùn tomato",  ha: "Cutar tomato",    ig: "Ọrịa tomato" },
+    "early blight":  { yo: "Àrùn tete",    ha: "Cuta ta farko",   ig: "Ọrịa oge" },
+    "mosaic virus":  { yo: "Àrùn mosaic",  ha: "Cuta mosaic",     ig: "Ọrịa mosaic" },
+    "cassava mosaic":{ yo: "Àrùn ẹ̀gẹ́",   ha: "Cutar rogo",      ig: "Ọrịa akpu" },
+    "leaf rust":     { yo: "Àrùn ewe",     ha: "Tsatsa ganye",    ig: "Ọrịa akwụkwọ" },
+    "root rot":      { yo: "Àrùn gbòngbò", ha: "Rubewar saiwa",   ig: "Ọrịa mgbọ" },
+    "powdery mildew":{ yo: "Funfun ewe",   ha: "Farin cuta",      ig: "Ọrịa ọcha" },
+    "blight":        { yo: "Àrùn eweko",   ha: "Lalacewar tsire", ig: "Ọrịa osisi" },
+    "wilt":          { yo: "Àrùn gbígbẹ",  ha: "Bushewa",         ig: "Ọrịa nkụ" },
+    "aphid":         { yo: "Kokoro kekere", ha: "Kwaron ganye",   ig: "Ahụhụ obere" },
+    "whitefly":      { yo: "Eṣinṣin funfun", ha: "Farin sauro",   ig: "Ijiji ọcha" },
+    "stem borer":    { yo: "Kokoro igi",    ha: "Kwaron bango",    ig: "Ahụhụ osisi" },
+    "locust":        { yo: "Eṣuṣu",         ha: "Fara",            ig: "Anụ ọhịa ọkụ" },
+    "grasshopper":   { yo: "Eṣu",           ha: "Tsattsage",       ig: "Ọgọ" },
+    "caterpillar":   { yo: "Kojuẹkọ",       ha: "Tsutswa",         ig: "Ụdọ" },
+    "weevil":        { yo: "Kokoro iṣu",    ha: "Gizo",            ig: "Ahụhụ ji" }
   };
+
+  function getLocalName(query) {
+    const q = query.toLowerCase().trim();
+    const langKey = currentLang === 'yo' ? 'yo' : currentLang === 'ha' ? 'ha' : currentLang === 'ig' ? 'ig' : null;
+    if (!langKey) return null;
+    let found = null;
+    if (localNamesDB[q]) found = localNamesDB[q];
+    else for (let key in localNamesDB) if (q.includes(key) || key.includes(q)) { found = localNamesDB[key]; break; }
+    return found ? found[langKey] : null;
+  }
 
   function getLocalNames(query) {
     const q = query.toLowerCase().trim();
-    if (localNamesDB[q]) return localNamesDB[q];
-    for (let key in localNamesDB) if (q.includes(key) || key.includes(q)) return localNamesDB[key];
-    return null;
+    let found = null;
+    if (localNamesDB[q]) found = localNamesDB[q];
+    else for (let key in localNamesDB) if (q.includes(key) || key.includes(q)) { found = localNamesDB[key]; break; }
+    return found ? { yoruba: found.yo, hausa: found.ha, igbo: found.ig } : null;
+  }
+
+  function tribalBadge(name) {
+    const local = getLocalName(name);
+    if (!local || currentLang === 'en') return '';
+    const langLabel = currentLang === 'yo' ? 'Yorùbá' : currentLang === 'ha' ? 'Hausa' : 'Igbo';
+    return `<div style="display:inline-block;background:#e8f5e9;color:#1b5e20;border-radius:40px;padding:3px 12px;font-size:0.75rem;font-weight:700;margin:6px 0 2px;"><i class="fas fa-language" style="margin-right:5px;"></i>${langLabel}: ${local}</div>`;
   }
 
   async function searchWikipedia(query, typeHint) {
@@ -737,10 +812,11 @@ Fill all fields with accurate, practical IPM information.`;
   const WORKER_URL = 'https://wild-water-cba5.olucast61.workers.dev';
 
   async function fetchComprehensiveInfo(query, type) {
+    const lang = t('promptLang');
     const response = await fetch(WORKER_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query, type })
+      body: JSON.stringify({ query, type, lang })
     });
     if (!response.ok) {
       const errData = await response.json().catch(() => ({}));
@@ -808,7 +884,39 @@ Fill all fields with accurate, practical IPM information.`;
   }
 
 
+  function rerenderDiseaseCard(d) {
+    const confDisp = (d.confidence != null) ? d.confidence + '%' : 'N/A';
+    const wrapper = document.createElement('div');
+    if (d.isHealthy) {
+      wrapper.innerHTML = `<div class="disease-card"><strong><i class="fas fa-seedling"></i> ${t('healthyStatus')}: ${esc(d.result)}</strong><div class="confidence">🎯 ${confDisp}</div><div class="treatment-section">${t('healthy')}</div></div>`;
+    } else {
+      const disTribal = tribalBadge(d.result);
+      wrapper.innerHTML = `<div class="disease-card"><strong><i class="fas fa-biohazard"></i> ${t('diseaseFound')}: ${esc(d.result)}</strong>${disTribal}<div class="confidence">🎯 ${confDisp}</div><div class="treatment-section"><strong>${t('suggestedAction')}:</strong><br>${t('diseaseAction')}</div></div>`;
+    }
+    wrapper.appendChild(makeSearchBtn(d.result, 'disease', `🦠 ${d.result}`, t('diseaseFound')));
+    wrapper.appendChild(makeWikiBtn(d.result, 'disease'));
+    aiOutput.innerHTML = ''; aiOutput.appendChild(wrapper);
+  }
+
+  function rerenderPestCard(d) {
+    const confDisp = (d.confidence != null) ? d.confidence + '%' : 'N/A';
+    const wrapper = document.createElement('div');
+    if (d.isNoPest) {
+      wrapper.innerHTML = `<div class="pest-card"><strong><i class="fas fa-check-circle"></i> ${t('noPestFound')} ${esc(d.result)}</strong><div class="confidence">🎯 ${confDisp}</div><div class="treatment-section">${t('noPest')}</div></div>`;
+    } else {
+      const pestTribal = tribalBadge(d.result);
+      wrapper.innerHTML = `<div class="pest-card"><strong><i class="fas fa-bug"></i> ${t('pestFound')}: ${esc(d.result)}</strong>${pestTribal}<div class="confidence">🎯 ${confDisp}</div><div class="treatment-section"><strong>${t('pestControlLabel')}:</strong> ${t('pestControl')}</div></div>`;
+    }
+    wrapper.appendChild(makeSearchBtn(d.result, 'pest', `🐛 ${d.result}`, t('pestFound')));
+    wrapper.appendChild(makeWikiBtn(d.result, 'pest'));
+    aiOutput.innerHTML = ''; aiOutput.appendChild(wrapper);
+  }
+
   async function openInfoModal(query, type, title, subtitle) {
+    // Save state so language switch can re-fetch
+    lastInfoQuery = query; lastInfoType = type;
+    lastInfoTitle = title; lastInfoSubtitle = subtitle;
+    infoModalOpen = true;
     infoModalTitle.textContent = title;
     infoModalSubtitle.textContent = subtitle || '';
     infoModalBody.innerHTML = `<div class="info-loading"><div class="big-loader"></div><p>${t('loadingInfo')}</p><p style="font-size:0.74rem;color:#888;margin-top:5px;">Powered by Google Gemini AI (Free)</p></div>`;
@@ -830,7 +938,11 @@ Fill all fields with accurate, practical IPM information.`;
     }
   }
 
-  function closeInfoModal() { infoModal.classList.remove('open'); document.body.style.overflow = ''; }
+  function closeInfoModal() {
+    infoModal.classList.remove('open');
+    document.body.style.overflow = '';
+    infoModalOpen = false;
+  }
   infoModalClose.addEventListener('click', closeInfoModal);
   infoModal.addEventListener('click', e => { if (e.target === infoModal) closeInfoModal(); });
 
@@ -917,6 +1029,8 @@ Fill all fields with accurate, practical IPM information.`;
       if (result.originalPredictedLabel) { result = applyBestCorrection(result, result.originalPredictedLabel); lastPredictedKey = result.originalPredictedLabel; }
       else { lastPredictedKey = result.name.toLowerCase(); result = applyBestCorrection(result, lastPredictedKey); }
       lastPlantResult = result;
+      lastResultType = 'plant';
+      lastResultData = result;
       displayPlantResult(result, lastPredictedKey);
       manualSearchInput.value = result.name;
       setStatus(`✅ ${result.name} (${result.confidence}%)`, false);
@@ -966,19 +1080,13 @@ Fill all fields with accurate, practical IPM information.`;
     }
     const diseaseResult = diseaseData.result;
     const confVal = diseaseData.confidence;
-    const confDisp = (confVal != null) ? confVal + '%' : 'N/A';
     const isHealthy = diseaseData.isHealthy || confVal===0 || diseaseResult.toLowerCase().includes("healthy");
-    const wrapper = document.createElement('div');
-    if (isHealthy) {
-      wrapper.innerHTML = `<div class="disease-card"><strong><i class="fas fa-seedling"></i> ${t('healthyStatus')}: ${esc(diseaseResult)}</strong><div class="confidence">🎯 ${confDisp}</div><div class="treatment-section">${t('healthy')}</div></div>`;
-    } else {
-      wrapper.innerHTML = `<div class="disease-card"><strong><i class="fas fa-biohazard"></i> ${t('diseaseFound')}: ${esc(diseaseResult)}</strong><div class="confidence">🎯 ${confDisp}</div><div class="treatment-section"><strong>${t('suggestedAction')}:</strong><br>${t('diseaseAction')}</div></div>`;
-    }
-    wrapper.appendChild(makeSearchBtn(diseaseResult, 'disease', `🦠 ${diseaseResult}`, t('diseaseFound')));
-    wrapper.appendChild(makeWikiBtn(diseaseResult, 'disease'));
-    aiOutput.innerHTML = ''; aiOutput.appendChild(wrapper);
+    // Store for language re-render
+    lastResultType = 'disease';
+    lastResultData = { result: diseaseResult, confidence: confVal, isHealthy };
+    rerenderDiseaseCard(lastResultData);
     manualSearchInput.value = diseaseResult;
-    setStatus(`${t('diseaseFound')}: ${diseaseResult} (${confDisp})`, false);
+    setStatus(`${t('diseaseFound')}: ${diseaseResult} (${confVal != null ? confVal+'%' : 'N/A'})`, false);
   }
 
   // ========================
@@ -994,19 +1102,13 @@ Fill all fields with accurate, practical IPM information.`;
       const data = await res.json();
       const pestResult = data.result || "No pest detected";
       const confVal = data.confidence;
-      const confDisp = (confVal != null) ? confVal + '%' : 'N/A';
       const isNoPest = confVal === 0 || pestResult.toLowerCase().includes("no pest");
-      const wrapper = document.createElement('div');
-      if (isNoPest) {
-        wrapper.innerHTML = `<div class="pest-card"><strong><i class="fas fa-check-circle"></i> ${t('noPestFound')} ${esc(pestResult)}</strong><div class="confidence">🎯 ${confDisp}</div><div class="treatment-section">${t('noPest')}</div></div>`;
-      } else {
-        wrapper.innerHTML = `<div class="pest-card"><strong><i class="fas fa-bug"></i> ${t('pestFound')}: ${esc(pestResult)}</strong><div class="confidence">🎯 ${confDisp}</div><div class="treatment-section"><strong>${t('pestControlLabel')}:</strong> ${t('pestControl')}</div></div>`;
-      }
-      wrapper.appendChild(makeSearchBtn(pestResult, 'pest', `🐛 ${pestResult}`, t('pestFound')));
-      wrapper.appendChild(makeWikiBtn(pestResult, 'pest'));
-      aiOutput.innerHTML = ''; aiOutput.appendChild(wrapper);
+      // Store for language re-render
+      lastResultType = 'pest';
+      lastResultData = { result: pestResult, confidence: confVal, isNoPest };
+      rerenderPestCard(lastResultData);
       manualSearchInput.value = pestResult;
-      setStatus(`${t('pestFound')}: ${pestResult} (${confDisp})`, false);
+      setStatus(`${t('pestFound')}: ${pestResult} (${confVal != null ? confVal+'%' : 'N/A'})`, false);
     } catch(e) {
       aiOutput.innerHTML = `<div class="error-msg">❌ ${e.message}</div>`;
       setStatus("Pest API error", false);
@@ -1136,7 +1238,8 @@ Fill all fields with accurate, practical IPM information.`;
     const importanceHtml = result.importance ? `<div class="info-section"><i class="fas fa-info-circle"></i> <strong>${t('plantUses')}:</strong><br>${esc(result.importance)}</div>` : '';
     if (result.correctionNote) result.correctionNote = `✨ ${t('correctionNote')}: "${result.originalPredictedLabel||''}" → "${result.name}"`;
     const wrapper = document.createElement('div');
-    wrapper.innerHTML = `<div class="plant-card"><div><strong>🌿 ${esc(result.name)}</strong></div><div class="scientific">${esc(result.scientific||'')}</div><div class="confidence">🎯 ${result.confidence}%</div><div>${t('plantFamily')}: ${esc(result.family)}</div>${importanceHtml}${result.correctionNote ? `<div style="font-size:0.7rem;">${esc(result.correctionNote)}</div>` : ''}</div>`;
+    const plantTribal = tribalBadge(result.name);
+    wrapper.innerHTML = `<div class="plant-card"><div><strong>🌿 ${esc(result.name)}</strong></div>${plantTribal}<div class="scientific">${esc(result.scientific||'')}</div><div class="confidence">🎯 ${result.confidence}%</div><div>${t('plantFamily')}: ${esc(result.family)}</div>${importanceHtml}${result.correctionNote ? `<div style="font-size:0.7rem;">${esc(result.correctionNote)}</div>` : ''}</div>`;
     aiOutput.innerHTML = ''; aiOutput.appendChild(wrapper);
     const searchQuery = result.scientific || result.name;
     wrapper.appendChild(makeSearchBtn(searchQuery, 'plant', `🌿 ${result.name}`, result.scientific || ''));
