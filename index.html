@@ -133,6 +133,34 @@
     .local-names { background: #e2eed9; border-radius: 16px; padding: 10px; margin-bottom: 10px; font-weight: 500; }
     .local-names span { display: inline-block; margin-right: 15px; font-size: 0.8rem; }
     .local-names i { margin-right: 4px; color: #4a6e3c; }
+
+    /* Fast loading dots */
+    .typing-dots { display: inline-flex; gap: 5px; align-items: center; margin-top: 8px; }
+    .typing-dots span { width: 8px; height: 8px; background: #2f6b47; border-radius: 50%; animation: dotBounce 1.2s infinite; }
+    .typing-dots span:nth-child(2) { animation-delay: 0.2s; background: #2563eb; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.4s; background: #f59e0b; }
+    @keyframes dotBounce { 0%,80%,100%{transform:scale(0.6);opacity:0.4} 40%{transform:scale(1);opacity:1} }
+    .fast-tip { font-size:0.72rem; color:#888; margin-top:6px; }
+
+    /* ===== INTENT SEARCH PANEL ===== */
+    .intent-search-panel { background: #f0f7ff; border-radius: 24px; margin: 0 16px 16px; padding: 16px 18px; border: 1px solid #b3d4f5; box-shadow: 0 2px 10px rgba(41,128,185,0.08); }
+    .intent-search-panel h3 { color: #1a3c6e; font-size: 1rem; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .intent-type-tabs { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+    .intent-tab { background: #dbeafe; border: none; border-radius: 40px; padding: 6px 16px; font-size: 0.78rem; font-weight: 600; cursor: pointer; color: #1e4d8c; transition: all 0.2s; }
+    .intent-tab.active { background: #2563eb; color: white; }
+    .intent-search-row { display: flex; gap: 8px; }
+    .intent-search-row input { flex: 1; padding: 10px 16px; border: 1.5px solid #93c5fd; border-radius: 60px; font-size: 0.88rem; outline: none; background: white; }
+    .intent-search-row input:focus { border-color: #2563eb; }
+    .intent-search-row button { background: #2563eb; color: white; border: none; padding: 10px 20px; border-radius: 60px; font-weight: 700; cursor: pointer; font-size: 0.85rem; white-space: nowrap; }
+    .intent-search-row button:hover { background: #1d4ed8; }
+    .intent-result { margin-top: 12px; background: white; border-radius: 18px; padding: 14px 16px; font-size: 0.84rem; line-height: 1.7; color: #1e293b; border: 1px solid #e2eaf5; min-height: 48px; }
+    .intent-result .intent-section { margin-bottom: 10px; }
+    .intent-result .intent-section-title { font-weight: 700; color: #1a3c6e; font-size: 0.85rem; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+    .intent-result ul { padding-left: 18px; margin: 4px 0; }
+    .intent-result li { margin-bottom: 3px; }
+    .intent-result .intent-loading { text-align: center; padding: 18px; color: #2563eb; }
+    .intent-result .intent-loading .mini-loader { display: inline-block; width: 22px; height: 22px; border: 3px solid #bfdbfe; border-top-color: #2563eb; border-radius: 50%; animation: spin 0.7s linear infinite; margin-bottom: 8px; }
+    .intent-tag { display: inline-block; background: #dbeafe; color: #1e4d8c; border-radius: 20px; padding: 2px 10px; font-size: 0.7rem; font-weight: 600; margin-right: 4px; margin-bottom: 4px; }
   </style>
 </head>
 <body>
@@ -205,6 +233,27 @@
     </div>
     <div id="wikipediaResultContainer">
       <div class="wikipedia-result"><i>Enter a plant, disease, or pest name above and click Wikipedia.</i></div>
+    </div>
+  </div>
+
+  <!-- INTENT SEARCH PANEL -->
+  <div class="intent-search-panel" id="intentSearchPanel">
+    <h3 id="intentPanelTitle"><i class="fas fa-brain"></i> 🤖 Ask Gemini AI Anything Agricultural</h3>
+    <div class="intent-type-tabs" id="intentTypeTabs">
+      <button class="intent-tab active" data-intent="general">🌾 General</button>
+      <button class="intent-tab" data-intent="plant">🌿 Plant</button>
+      <button class="intent-tab" data-intent="disease">🦠 Disease</button>
+      <button class="intent-tab" data-intent="pest">🐛 Pest</button>
+      <button class="intent-tab" data-intent="soil">🪱 Soil</button>
+      <button class="intent-tab" data-intent="weather">🌦️ Weather & Season</button>
+      <button class="intent-tab" data-intent="market">💰 Market & Price</button>
+    </div>
+    <div class="intent-search-row">
+      <input type="text" id="intentSearchInput" placeholder="Ask anything e.g. How do I treat maize streak virus?">
+      <button id="intentSearchBtn"><i class="fas fa-paper-plane"></i> Ask</button>
+    </div>
+    <div id="intentResultContainer">
+      <div class="intent-result" style="color:#888;font-size:0.82rem;"><i class="fas fa-lightbulb" style="margin-right:6px;color:#f59e0b;"></i>Ask any agricultural question in any language and get an instant AI answer.</div>
     </div>
   </div>
 
@@ -306,7 +355,7 @@
       stopCam: 'Stop',
       capture: 'Capture & Preview',
       upload: 'Upload Image',
-      searchInfo: 'Search Comprehensive Info (Gemini AI)',
+      searchInfo: '🔬 Comprehensive Info',
       wikipedia: 'Wikipedia',
       searchPlaceholder: 'e.g. maize, cassava mosaic, fall armyworm',
       searchTitle: '🔍 Search for More Information',
@@ -338,7 +387,14 @@
       pestFound: '🐛 Pest', noPestFound: '✅',
       suggestedAction: 'Suggested Action', pestControlLabel: 'Control',
       plantFamily: '🌱 Family', plantUses: '🔧 Uses',
-      correctionNote: 'Correction'
+      correctionNote: 'Correction',
+      intentTitle: '🤖 Ask Gemini AI Anything Agricultural',
+      intentPlaceholder: 'Ask anything e.g. How do I treat maize streak virus?',
+      intentAsk: 'Ask',
+      intentTabs: { general: '🌾 General', plant: '🌿 Plant', disease: '🦠 Disease', pest: '🐛 Pest', soil: '🪱 Soil', weather: '🌦️ Weather & Season', market: '💰 Market & Price' },
+      intentLoading: 'Thinking…',
+      intentError: 'Could not get answer. Try again.',
+      intentHint: 'Ask any agricultural question in any language and get an instant AI answer.'
     },
     yo: {
       appTitle: '🌿 Eto Aisan Ogbin Ologbon YSF',
@@ -360,7 +416,7 @@
       stopCam: 'Duro',
       capture: 'Ya Aworan & Preview',
       upload: 'Gbe Aworan Soke',
-      searchInfo: 'Wa Alaye Kikun (Gemini AI)',
+      searchInfo: '🔬 Alaye Kikun',
       wikipedia: 'Wikipedia',
       searchPlaceholder: 'fun apẹẹrẹ: agbado, ẹgẹ mosaic, jagunjagun',
       searchTitle: '🔍 Wa Alaye Siwaju Sii',
@@ -391,7 +447,14 @@
       pestFound: '🐛 Kokoro', noPestFound: '✅',
       suggestedAction: 'Igbesẹ Ti A Daba', pestControlLabel: 'Iṣakoso',
       plantFamily: '🌱 Idile', plantUses: '🔧 Lilo',
-      correctionNote: 'Atunṣe'
+      correctionNote: 'Atunṣe',
+      intentTitle: '🤖 Beere lọwọ Gemini AI nipa Ogbin',
+      intentPlaceholder: 'Beere ohunkohun fun apẹẹrẹ: Bawo ni mo ṣe le tọju arun agbado?',
+      intentAsk: 'Beere',
+      intentTabs: { general: '🌾 Gbogbogbo', plant: '🌿 Eweko', disease: '🦠 Arun', pest: '🐛 Kokoro', soil: '🪱 Ilẹ', weather: '🌦️ Oju ojo', market: '💰 Oja & Iye' },
+      intentLoading: 'Ń ronu…',
+      intentError: 'Ko le gba idahun. Gbiyanju lẹẹkansi.',
+      intentHint: 'Beere ibeere ogbin eyikeyi ki o gba idahun AI lẹsẹkẹsẹ.'
     },
     ha: {
       appTitle: '🌿 Tsarin Binciken Noma na YSF',
@@ -413,7 +476,7 @@
       stopCam: 'Tsaya',
       capture: 'Ɗauki Hoto & Preview',
       upload: 'Loda Hoto',
-      searchInfo: 'Nemi Cikakken Bayani (Gemini AI)',
+      searchInfo: '🔬 Cikakken Bayani',
       wikipedia: 'Wikipedia',
       searchPlaceholder: 'misali: masara, cuta cassava, sojoji',
       searchTitle: '🔍 Nemi Ƙarin Bayani',
@@ -444,7 +507,14 @@
       pestFound: '🐛 Kwaro', noPestFound: '✅',
       suggestedAction: 'Mataki Da Ake Ba Da Shawara', pestControlLabel: 'Sarrafawa',
       plantFamily: '🌱 Iyali', plantUses: '🔧 Amfani',
-      correctionNote: 'Gyara'
+      correctionNote: 'Gyara',
+      intentTitle: '🤖 Tambaya Gemini AI Game da Noma',
+      intentPlaceholder: 'Tambayi komai misali: Ta yaya zan kula da cutar masara?',
+      intentAsk: 'Tambaya',
+      intentTabs: { general: '🌾 Gaba ɗaya', plant: '🌿 Tsire', disease: '🦠 Cuta', pest: '🐛 Kwaro', soil: '🪱 Ƙasa', weather: '🌦️ Yanayi', market: '💰 Kasuwa & Farashi' },
+      intentLoading: 'Yana tunani…',
+      intentError: 'Ba za a iya samun amsa ba. Sake gwadawa.',
+      intentHint: 'Tambayi tambayar noma ta kowane harshe ka sami amsar AI.'
     },
     ig: {
       appTitle: '🌿 Usoro Nyocha Ọrụ Ugbo YSF',
@@ -466,7 +536,7 @@
       stopCam: 'Kwụsị',
       capture: 'Were Foto & Preview',
       upload: 'Budata Foto',
-      searchInfo: 'Chọọ Ozi Zuru Oke (Gemini AI)',
+      searchInfo: '🔬 Ozi Zuru Oke',
       wikipedia: 'Wikipedia',
       searchPlaceholder: 'dịka: ọka, ọrịa cassava, agha ahụhụ',
       searchTitle: '🔍 Chọọ Ozi Ọzọ',
@@ -497,7 +567,14 @@
       pestFound: '🐛 Ahụhụ', noPestFound: '✅',
       suggestedAction: 'Omume A Tụrụ Aro', pestControlLabel: 'Njikwa',
       plantFamily: '🌱 Ezinụlọ', plantUses: '🔧 Ojiji',
-      correctionNote: 'Mgbazi'
+      correctionNote: 'Mgbazi',
+      intentTitle: '🤖 Jụọ Gemini AI Ihe Ọ Bụla Banyere Ọrụ Ugbo',
+      intentPlaceholder: 'Jụọ ihe ọ bụla dịka: Kedu otu m ga-esi gwo ọrịa ọka?',
+      intentAsk: 'Jụọ',
+      intentTabs: { general: '🌾 Izugbe', plant: '🌿 Osisi', disease: '🦠 Ọrịa', pest: '🐛 Ahụhụ', soil: '🪱 Ala', weather: '🌦️ Ihu Igwe', market: '💰 Ahịa & Ọnụahịa' },
+      intentLoading: 'Na-eche echiche…',
+      intentError: 'Enweghị ike nweta azịza. Nwaa ọzọ.',
+      "intentHint": "Jụọ ajụjụ ọrụ ugbo ọ bụla n'asụsụ ọ bụla wee nweta azịza AI ozugbo."
     }
   };
 
@@ -527,6 +604,15 @@
     // Highlight active lang button
     document.querySelectorAll('.lang-btn').forEach(b => {
       b.classList.toggle('active', b.dataset.lang === currentLang);
+    });
+    // Intent search panel
+    document.getElementById('intentPanelTitle').innerHTML = `<i class="fas fa-brain"></i> ${t('intentTitle')}`;
+    document.getElementById('intentSearchInput').placeholder = t('intentPlaceholder');
+    document.getElementById('intentSearchBtn').innerHTML = `<i class="fas fa-paper-plane"></i> ${t('intentAsk')}`;
+    const tabs = t('intentTabs');
+    document.querySelectorAll('.intent-tab').forEach(tab => {
+      const key = tab.dataset.intent;
+      if (tabs[key]) tab.textContent = tabs[key];
     });
   }
 
@@ -813,18 +899,28 @@ Fill all fields with accurate, practical IPM information.`;
 
   async function fetchComprehensiveInfo(query, type) {
     const lang = t('promptLang');
-    const response = await fetch(WORKER_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query, type, lang })
-    });
-    if (!response.ok) {
-      const errData = await response.json().catch(() => ({}));
-      throw new Error(errData?.error || `Worker error ${response.status}`);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 30000);
+    try {
+      const response = await fetch(WORKER_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, type, lang }),
+        signal: controller.signal
+      });
+      clearTimeout(timer);
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData?.error || `Worker error ${response.status}`);
+      }
+      const data = await response.json();
+      if (!data.success) throw new Error(data.error || 'Empty result. Please try again.');
+      return data.data;
+    } catch(e) {
+      clearTimeout(timer);
+      if (e.name === 'AbortError') throw new Error('Request timed out. Please try again.');
+      throw e;
     }
-    const data = await response.json();
-    if (!data.success) throw new Error(data.error || 'Worker returned failure');
-    return data.data;
   }
 
   // Rendering functions (full detailed display) — all labels use t() for current language
@@ -919,7 +1015,7 @@ Fill all fields with accurate, practical IPM information.`;
     infoModalOpen = true;
     infoModalTitle.textContent = title;
     infoModalSubtitle.textContent = subtitle || '';
-    infoModalBody.innerHTML = `<div class="info-loading"><div class="big-loader"></div><p>${t('loadingInfo')}</p><p style="font-size:0.74rem;color:#888;margin-top:5px;">Powered by Google Gemini AI (Free)</p></div>`;
+    infoModalBody.innerHTML = `<div class="info-loading"><div class="big-loader"></div><p>${t('loadingInfo')}</p><div class="typing-dots"><span></span><span></span><span></span></div><p class="fast-tip">Usually ready in 3–6 seconds…</p></div>`;
     infoModal.classList.add('open');
     document.body.style.overflow = 'hidden';
     try {
@@ -1327,6 +1423,71 @@ Fill all fields with accurate, practical IPM information.`;
   refreshBtn.addEventListener('click', () => { loadGlobalCorrections(); if (currentImageBlob) identifyPlant(); });
   manualSearchBtn.addEventListener('click', () => { const q = manualSearchInput.value.trim(); if (q) searchWikipedia(q, 'plant'); else document.getElementById('wikipediaResultContainer').innerHTML = '<div class="wikipedia-result">⚠️ Please enter a name.</div>'; });
   manualSearchInput.addEventListener('keypress', e => { if (e.key === 'Enter') manualSearchBtn.click(); });
+
+  // ========================
+  // INTENT SEARCH PANEL
+  // ========================
+  let currentIntentType = 'general';
+
+  document.querySelectorAll('.intent-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.intent-tab').forEach(tb => tb.classList.remove('active'));
+      tab.classList.add('active');
+      currentIntentType = tab.dataset.intent;
+    });
+  });
+
+  function buildIntentPrompt(question, intentType) {
+    const lang = t('promptLang');
+    const langNote = lang === 'English' ? '' : `\nIMPORTANT: You MUST respond entirely in ${lang} language. Only scientific/Latin names may stay in English.`;
+    const contextMap = {
+      general:  'You are an expert agricultural advisor helping farmers in Nigeria and West Africa.',
+      plant:    'You are an expert botanist and agronomist specializing in West African crops.',
+      disease:  'You are an expert plant pathologist specializing in crop disease diagnosis and management.',
+      pest:     'You are an expert agricultural entomologist specializing in pest identification and IPM.',
+      soil:     'You are an expert soil scientist and agronomist specializing in West African soils.',
+      weather:  'You are an expert agricultural meteorologist advising farmers on seasonal planting.',
+      market:   'You are an expert agricultural economist advising on crop pricing and market access.'
+    };
+    const ctx = contextMap[intentType] || contextMap.general;
+    return `${ctx}${langNote}\n\nA farmer asks: "${question}"\n\nGive a clear, practical, helpful answer. Return ONLY this JSON (no markdown):\n{\n  "summary": "One sentence direct answer",\n  "details": ["point 1", "point 2", "point 3"],\n  "tips": ["practical tip 1", "practical tip 2"],\n  "warning": "Any important warning or empty string"\n}`;
+  }
+
+  function renderIntentResult(data, question) {
+    let html = `<div style="font-size:0.8rem;color:#64748b;margin-bottom:8px;"><i class="fas fa-question-circle" style="color:#2563eb;margin-right:5px;"></i><em>${esc(question)}</em></div>`;
+    if (data.summary) html += `<div style="font-weight:700;color:#14532d;margin-bottom:8px;font-size:0.9rem;"><i class="fas fa-check-circle" style="color:#16a34a;margin-right:6px;"></i>${esc(data.summary)}</div>`;
+    if (data.details?.length) html += `<div style="margin-bottom:8px;"><div style="font-weight:700;color:#1e3a8a;font-size:0.82rem;margin-bottom:4px;"><i class="fas fa-list-ul" style="color:#2563eb;margin-right:5px;"></i>Details</div><ul style="padding-left:18px;margin:0;">${data.details.map(d=>`<li style="margin-bottom:3px;font-size:0.82rem;">${esc(d)}</li>`).join('')}</ul></div>`;
+    if (data.tips?.length) html += `<div style="margin-bottom:8px;"><div style="font-weight:700;color:#92400e;font-size:0.82rem;margin-bottom:4px;"><i class="fas fa-lightbulb" style="color:#f59e0b;margin-right:5px;"></i>Practical Tips</div><ul style="padding-left:18px;margin:0;">${data.tips.map(tip=>`<li style="margin-bottom:3px;font-size:0.82rem;">${esc(tip)}</li>`).join('')}</ul></div>`;
+    if (data.warning) html += `<div style="background:#fff3cd;border-left:4px solid #ffc107;padding:8px 12px;border-radius:10px;margin-top:6px;font-size:0.8rem;"><i class="fas fa-exclamation-triangle" style="color:#b45309;margin-right:6px;"></i>${esc(data.warning)}</div>`;
+    return html;
+  }
+
+  async function runIntentSearch() {
+    const q = document.getElementById('intentSearchInput').value.trim();
+    const container = document.getElementById('intentResultContainer');
+    if (!q) { container.innerHTML = `<div class="intent-result" style="color:#e11d48;">⚠️ Please enter a question.</div>`; return; }
+    container.innerHTML = `<div class="intent-result" style="text-align:center;padding:20px;color:#2563eb;"><div class="typing-dots" style="justify-content:center;margin-bottom:10px;"><span></span><span></span><span></span></div><p style="font-size:0.84rem;">${t('intentLoading')}</p><p class="fast-tip">Usually ready in 2–4 seconds…</p></div>`;
+    try {
+      const prompt = buildIntentPrompt(q, currentIntentType);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 20000);
+      const response = await fetch(WORKER_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: q, type: 'intent', lang: t('promptLang'), customPrompt: prompt }),
+        signal: controller.signal
+      });
+      clearTimeout(timeout);
+      const data = await response.json();
+      if (!data.success) throw new Error(data.error || 'Empty response. Please try again.');
+      container.innerHTML = `<div class="intent-result">${renderIntentResult(data.data, q)}</div>`;
+    } catch(err) {
+      container.innerHTML = `<div class="intent-result" style="color:#e11d48;"><i class="fas fa-exclamation-triangle"></i> ${t('intentError')}: ${esc(err.message)}</div>`;
+    }
+  }
+
+  document.getElementById('intentSearchBtn').addEventListener('click', runIntentSearch);
+  document.getElementById('intentSearchInput').addEventListener('keypress', e => { if (e.key === 'Enter') runIntentSearch(); });
 
   // ========================
   // INIT
