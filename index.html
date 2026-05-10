@@ -388,6 +388,8 @@
       suggestedAction: 'Suggested Action', pestControlLabel: 'Control',
       plantFamily: '🌱 Family', plantUses: '🔧 Uses',
       correctionNote: 'Correction',
+      detailsLabel: 'Details',
+      tipsLabel: 'Practical Tips',
       intentTitle: '🤖 Ask Gemini AI Anything Agricultural',
       intentPlaceholder: 'Ask anything e.g. How do I treat maize streak virus?',
       intentAsk: 'Ask',
@@ -448,6 +450,8 @@
       suggestedAction: 'Igbesẹ Ti A Daba', pestControlLabel: 'Iṣakoso',
       plantFamily: '🌱 Idile', plantUses: '🔧 Lilo',
       correctionNote: 'Atunṣe',
+      detailsLabel: 'Alaye Siwaju',
+      tipsLabel: 'Awọn Imọran Amulo',
       intentTitle: '🤖 Beere lọwọ Gemini AI nipa Ogbin',
       intentPlaceholder: 'Beere ohunkohun fun apẹẹrẹ: Bawo ni mo ṣe le tọju arun agbado?',
       intentAsk: 'Beere',
@@ -508,6 +512,8 @@
       suggestedAction: 'Mataki Da Ake Ba Da Shawara', pestControlLabel: 'Sarrafawa',
       plantFamily: '🌱 Iyali', plantUses: '🔧 Amfani',
       correctionNote: 'Gyara',
+      detailsLabel: 'Ƙarin Bayani',
+      tipsLabel: 'Shawarwari Masu Amfani',
       intentTitle: '🤖 Tambaya Gemini AI Game da Noma',
       intentPlaceholder: 'Tambayi komai misali: Ta yaya zan kula da cutar masara?',
       intentAsk: 'Tambaya',
@@ -568,6 +574,8 @@
       suggestedAction: 'Omume A Tụrụ Aro', pestControlLabel: 'Njikwa',
       plantFamily: '🌱 Ezinụlọ', plantUses: '🔧 Ojiji',
       correctionNote: 'Mgbazi',
+      detailsLabel: 'Nkọwa Ndị Ọzọ',
+      tipsLabel: 'Ndụmọdụ Bara Uru',
       intentTitle: '🤖 Jụọ Gemini AI Ihe Ọ Bụla Banyere Ọrụ Ugbo',
       intentPlaceholder: 'Jụọ ihe ọ bụla dịka: Kedu otu m ga-esi gwo ọrịa ọka?',
       intentAsk: 'Jụọ',
@@ -764,11 +772,57 @@
     return found ? { yoruba: found.yo, hausa: found.ha, igbo: found.ig } : null;
   }
 
-  function tribalBadge(name) {
+  // Cache for AI-generated local names (so we don't re-fetch same name)
+  const aiLocalNameCache = {};
+
+  function tribalBadgeSyncOrPlaceholder(name, containerId) {
+    // Returns sync badge if in DB, or a placeholder div that will be filled async
+    if (currentLang === 'en') return '';
     const local = getLocalName(name);
-    if (!local || currentLang === 'en') return '';
     const langLabel = currentLang === 'yo' ? 'Yorùbá' : currentLang === 'ha' ? 'Hausa' : 'Igbo';
-    return `<div style="display:inline-block;background:#e8f5e9;color:#1b5e20;border-radius:40px;padding:3px 12px;font-size:0.75rem;font-weight:700;margin:6px 0 2px;"><i class="fas fa-language" style="margin-right:5px;"></i>${langLabel}: ${local}</div>`;
+    const cacheKey = name.toLowerCase() + '_' + currentLang;
+    if (local) {
+      // Found in hardcoded DB — return immediately
+      aiLocalNameCache[cacheKey] = local;
+      return `<div id="${containerId}" style="display:inline-block;background:#e8f5e9;color:#1b5e20;border-radius:40px;padding:3px 14px;font-size:0.78rem;font-weight:700;margin:6px 0 2px;border:1px solid #a7f3d0;"><i class="fas fa-language" style="margin-right:5px;color:#065f46;"></i>${langLabel}: <strong>${local}</strong></div>`;
+    }
+    if (aiLocalNameCache[cacheKey]) {
+      // Already fetched before — use cache
+      return `<div id="${containerId}" style="display:inline-block;background:#e8f5e9;color:#1b5e20;border-radius:40px;padding:3px 14px;font-size:0.78rem;font-weight:700;margin:6px 0 2px;border:1px solid #a7f3d0;"><i class="fas fa-language" style="margin-right:5px;color:#065f46;"></i>${langLabel}: <strong>${aiLocalNameCache[cacheKey]}</strong></div>`;
+    }
+    // Not in DB — return a loading placeholder and fetch async
+    setTimeout(() => fetchAILocalName(name, currentLang, langLabel, containerId, cacheKey), 50);
+    return `<div id="${containerId}" style="display:inline-block;background:#f0fdf4;color:#6b7280;border-radius:40px;padding:3px 14px;font-size:0.75rem;font-weight:600;margin:6px 0 2px;border:1px solid #d1fae5;"><i class="fas fa-language" style="margin-right:5px;"></i>${langLabel}: <span class="loader" style="display:inline-block;width:10px;height:10px;border-width:1px;"></span></div>`;
+  }
+
+  async function fetchAILocalName(name, lang, langLabel, containerId, cacheKey) {
+    try {
+      const langFull = lang === 'yo' ? 'Yoruba' : lang === 'ha' ? 'Hausa' : 'Igbo';
+      const prompt = `What is the correct traditional ${langFull} name for "${name}" (a plant, crop, disease, or pest)? Return ONLY JSON: {"localName": "the name", "notes": "brief explanation if needed"}. If no known name exists, use the closest common term or a descriptive phrase in ${langFull}.`;
+      const res = await fetch(WORKER_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: name, type: 'localname', lang: langFull, customPrompt: prompt })
+      });
+      const data = await res.json();
+      if (data.success && data.data?.localName) {
+        const localName = data.data.localName;
+        aiLocalNameCache[cacheKey] = localName;
+        const el = document.getElementById(containerId);
+        if (el) {
+          el.style.background = '#e8f5e9';
+          el.style.color = '#1b5e20';
+          el.style.border = '1px solid #a7f3d0';
+          el.innerHTML = `<i class="fas fa-language" style="margin-right:5px;color:#065f46;"></i>${langLabel}: <strong>${esc(localName)}</strong>`;
+        }
+      }
+    } catch(e) { /* silent fail — badge stays as loader */ }
+  }
+
+  function tribalBadge(name) {
+    if (currentLang === 'en') return '';
+    const id = 'tribal_' + Math.random().toString(36).substr(2, 8);
+    return tribalBadgeSyncOrPlaceholder(name, id);
   }
 
   async function searchWikipedia(query, typeHint) {
@@ -927,88 +981,214 @@ Fill all fields with accurate, practical IPM information.`;
   function renderPlantInfo(info) {
     const isWeed = info.isWeed || info.category === 'weed';
     const cat = (info.category || 'other').toLowerCase();
-    const emoji = cat === 'tree' ? '🌳' : (isWeed ? '🌾' : (cat === 'crop' ? '🌾' : '🪴'));
+    const emoji = cat === 'tree' ? '🌳' : (isWeed ? '🌿' : (cat === 'crop' ? '🌾' : '🪴'));
     const badgeClass = isWeed ? 'badge-weed' : (cat === 'tree' ? 'badge-tree' : (cat === 'crop' ? 'badge-crop' : 'badge-other'));
     let html = `<span class="info-type-badge ${badgeClass}">${emoji} ${esc(cat.toUpperCase())}</span>`;
+
+    // Taxonomy
     html += `<div class="taxonomy-grid">
       <div class="taxonomy-item"><span>${t('labelFamily')}</span>${esc(info.family||'—')}</div>
       <div class="taxonomy-item"><span>${t('labelOrder')}</span>${esc(info.order||'—')}</div>
       <div class="taxonomy-item"><span>${t('labelClass')}</span>${esc(info.class||'—')}</div>
       <div class="taxonomy-item"><span>${t('labelOrigin')}</span>${esc(info.origin||'—')}</div>
     </div>`;
+
+    // Local/tribal names from API (West Africa)
+    const waf = info.localNamesWestAfrica;
+    if (waf && (waf.yoruba || waf.hausa || waf.igbo)) {
+      html += `<div class="info-section-block" style="background:#f0fdf4;border-left-color:#16a34a;">
+        <h3>🌍 Local Names (West Africa)</h3>
+        <div class="taxonomy-grid">
+          ${waf.yoruba ? `<div class="taxonomy-item"><span>Yorùbá</span><strong>${esc(waf.yoruba)}</strong></div>` : ''}
+          ${waf.hausa  ? `<div class="taxonomy-item"><span>Hausa</span><strong>${esc(waf.hausa)}</strong></div>`  : ''}
+          ${waf.igbo   ? `<div class="taxonomy-item"><span>Igbo</span><strong>${esc(waf.igbo)}</strong></div>`   : ''}
+          ${waf.fulani ? `<div class="taxonomy-item"><span>Fulani</span><strong>${esc(waf.fulani)}</strong></div>` : ''}
+        </div>
+      </div>`;
+    }
+
     if (info.description) html += `<div class="info-section-block"><h3>${t('secDescription')}</h3><p>${esc(info.description)}</p></div>`;
+
+    // Morphology
+    const m = info.morphology;
+    if (m && Object.values(m).some(v=>v)) {
+      html += `<div class="info-section-block"><h3>🔬 Morphology & Botany</h3>
+        ${m.root?`<p><strong>Root:</strong> ${esc(m.root)}</p>`:''}
+        ${m.stem?`<p><strong>Stem:</strong> ${esc(m.stem)}</p>`:''}
+        ${m.leaves?`<p><strong>Leaves:</strong> ${esc(m.leaves)}</p>`:''}
+        ${m.flowers?`<p><strong>Flowers:</strong> ${esc(m.flowers)}</p>`:''}
+        ${m.fruits?`<p><strong>Fruits:</strong> ${esc(m.fruits)}</p>`:''}
+        ${m.seeds?`<p><strong>Seeds:</strong> ${esc(m.seeds)}</p>`:''}
+      </div>`;
+    }
+
     if (info.uses?.length) html += `<div class="info-section-block"><h3>${t('secUses')}</h3><ul>${info.uses.map(u=>`<li>${esc(u)}</li>`).join('')}</ul></div>`;
-    if (info.nutritionalValue) html += `<div class="info-section-block"><h3>${t('secNutritional')}</h3><p>${esc(info.nutritionalValue)}</p></div>`;
+    if (info.foodUses?.length) html += `<div class="info-section-block"><h3>🍽️ Food Uses</h3><ul>${info.foodUses.map(u=>`<li>${esc(u)}</li>`).join('')}</ul></div>`;
+    if (info.medicinalUses?.length) html += `<div class="info-section-block"><h3>💊 Medicinal Uses</h3><ul>${info.medicinalUses.map(u=>`<li>${esc(u)}</li>`).join('')}</ul></div>`;
+    if (info.industrialUses?.length) html += `<div class="info-section-block"><h3>🏭 Industrial Uses</h3><ul>${info.industrialUses.map(u=>`<li>${esc(u)}</li>`).join('')}</ul></div>`;
+
+    // Nutritional composition
+    const n = info.nutritionalComposition;
+    if (n && Object.values(n).some(v=>v&&(Array.isArray(v)?v.length:true))) {
+      html += `<div class="info-section-block"><h3>${t('secNutritional')}</h3>
+        ${n.protein?`<p><strong>Protein:</strong> ${esc(n.protein)}</p>`:''}
+        ${n.carbohydrates?`<p><strong>Carbohydrates:</strong> ${esc(n.carbohydrates)}</p>`:''}
+        ${n.fats?`<p><strong>Fats:</strong> ${esc(n.fats)}</p>`:''}
+        ${n.fiber?`<p><strong>Fiber:</strong> ${esc(n.fiber)}</p>`:''}
+        ${n.vitamins?.length?`<p><strong>Vitamins:</strong> ${n.vitamins.map(v=>esc(v)).join(', ')}</p>`:''}
+        ${n.minerals?.length?`<p><strong>Minerals:</strong> ${n.minerals.map(v=>esc(v)).join(', ')}</p>`:''}
+      </div>`;
+    }
+
+    // Phytochemicals
+    const p = info.phytochemicals;
+    if (p && Object.values(p).some(v=>v&&(Array.isArray(v)?v.length:true))) {
+      html += `<div class="info-section-block" style="background:#fdf4ff;border-left-color:#9333ea;">
+        <h3>🧪 Phytochemicals & Bioactive Compounds</h3>
+        ${p.primaryCompounds?.length?`<p><strong>Primary Compounds:</strong> ${p.primaryCompounds.map(v=>esc(v)).join(', ')}</p>`:''}
+        ${p.alkaloids?.length?`<p><strong>Alkaloids:</strong> ${p.alkaloids.map(v=>esc(v)).join(', ')}</p>`:''}
+        ${p.flavonoids?.length?`<p><strong>Flavonoids:</strong> ${p.flavonoids.map(v=>esc(v)).join(', ')}</p>`:''}
+        ${p.phenolicAcids?.length?`<p><strong>Phenolic Acids:</strong> ${p.phenolicAcids.map(v=>esc(v)).join(', ')}</p>`:''}
+        ${p.terpenoids?.length?`<p><strong>Terpenoids:</strong> ${p.terpenoids.map(v=>esc(v)).join(', ')}</p>`:''}
+        ${p.saponins?.length?`<p><strong>Saponins:</strong> ${p.saponins.map(v=>esc(v)).join(', ')}</p>`:''}
+        ${p.tannins?`<p><strong>Tannins:</strong> ${esc(p.tannins)}</p>`:''}
+        ${p.glycosides?.length?`<p><strong>Glycosides:</strong> ${p.glycosides.map(v=>esc(v)).join(', ')}</p>`:''}
+        ${p.biologicalActivities?.length?`<p><strong>Biological Activities:</strong> ${p.biologicalActivities.map(v=>esc(v)).join(', ')}</p>`:''}
+      </div>`;
+    }
+
     if (info.economicImportance) html += `<div class="info-section-block"><h3>${t('secEconomic')}</h3><p>${esc(info.economicImportance)}</p></div>`;
     if (info.ecologicalRole) html += `<div class="info-section-block"><h3>${t('secEcological')}</h3><p>${esc(info.ecologicalRole)}</p></div>`;
-    if (info.growingConditions) {
-      const g = info.growingConditions;
-      html += `<div class="info-section-block"><h3>${t('secGrowing')}</h3>${g.climate?`<p><strong>${t('secClimate')}:</strong> ${esc(g.climate)}</p>`:''}${g.soil?`<p><strong>${t('secSoil')}:</strong> ${esc(g.soil)}</p>`:''}${g.rainfall?`<p><strong>${t('secRainfall')}:</strong> ${esc(g.rainfall)}</p>`:''}${g.temperature?`<p><strong>${t('secTemperature')}:</strong> ${esc(g.temperature)}</p>`:''}</div>`;
+
+    // Growing conditions
+    const g = info.growingConditions;
+    if (g && Object.values(g).some(v=>v)) {
+      html += `<div class="info-section-block"><h3>${t('secGrowing')}</h3>
+        ${g.climate?`<p><strong>${t('secClimate')}:</strong> ${esc(g.climate)}</p>`:''}
+        ${g.soil?`<p><strong>${t('secSoil')}:</strong> ${esc(g.soil)}</p>`:''}
+        ${g.rainfall?`<p><strong>${t('secRainfall')}:</strong> ${esc(g.rainfall)}</p>`:''}
+        ${g.temperature?`<p><strong>${t('secTemperature')}:</strong> ${esc(g.temperature)}</p>`:''}
+        ${g.altitude?`<p><strong>Altitude:</strong> ${esc(g.altitude)}</p>`:''}
+        ${g.pH?`<p><strong>Soil pH:</strong> ${esc(g.pH)}</p>`:''}
+      </div>`;
     }
+
+    // Cultivation guide
+    const c = info.cultivation;
+    if (c && Object.values(c).some(v=>v)) {
+      html += `<div class="info-section-block" style="background:#f0f9ff;border-left-color:#0369a1;">
+        <h3>🌱 Cultivation Guide</h3>
+        ${c.landPreparation?`<p><strong>Land Preparation:</strong> ${esc(c.landPreparation)}</p>`:''}
+        ${c.planting?`<p><strong>Planting:</strong> ${esc(c.planting)}</p>`:''}
+        ${c.spacing?`<p><strong>Spacing:</strong> ${esc(c.spacing)}</p>`:''}
+        ${c.fertilization?`<p><strong>Fertilization:</strong> ${esc(c.fertilization)}</p>`:''}
+        ${c.irrigation?`<p><strong>Irrigation:</strong> ${esc(c.irrigation)}</p>`:''}
+        ${c.weeding?`<p><strong>Weeding:</strong> ${esc(c.weeding)}</p>`:''}
+        ${c.harvesting?`<p><strong>Harvesting:</strong> ${esc(c.harvesting)}</p>`:''}
+        ${c.yield?`<p><strong>Expected Yield:</strong> ${esc(c.yield)}</p>`:''}
+      </div>`;
+    }
+
+    if (info.commonDiseases?.length) html += `<div class="info-section-block disease-block"><h3>🦠 Common Diseases</h3><ul>${info.commonDiseases.map(d=>`<li>${esc(d)}</li>`).join('')}</ul></div>`;
+    if (info.commonPests?.length) html += `<div class="info-section-block pest-block"><h3>🐛 Common Pests</h3><ul>${info.commonPests.map(d=>`<li>${esc(d)}</li>`).join('')}</ul></div>`;
+
     if (isWeed && info.weedControl) {
       const wc = info.weedControl;
-      html += `<div class="info-section-block weed-block"><h3>${t('secWeedControl')}</h3>${wc.ipmSummary?`<p>${esc(wc.ipmSummary)}</p>`:''}${wc.cultural?.length?`<p><span class="ipm-tag cult">${t('tagCultural')}</span></p><ul>${wc.cultural.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}${wc.mechanical?.length?`<p><span class="ipm-tag mech">${t('tagMechanical')}</span></p><ul>${wc.mechanical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}${wc.biological?.length?`<p><span class="ipm-tag bio">${t('tagBiological')}</span></p><ul>${wc.biological.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}${wc.chemical?.length?`<p><span class="ipm-tag chem">${t('tagChemical')}</span></p><ul>${wc.chemical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}</div>`;
+      html += `<div class="info-section-block weed-block"><h3>${t('secWeedControl')}</h3>
+        ${wc.ipmSummary?`<p>${esc(wc.ipmSummary)}</p>`:''}
+        ${wc.cultural?.length?`<p><span class="ipm-tag cult">${t('tagCultural')}</span></p><ul>${wc.cultural.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+        ${wc.mechanical?.length?`<p><span class="ipm-tag mech">${t('tagMechanical')}</span></p><ul>${wc.mechanical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+        ${wc.biological?.length?`<p><span class="ipm-tag bio">${t('tagBiological')}</span></p><ul>${wc.biological.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+        ${wc.chemical?.length?`<p><span class="ipm-tag chem">${t('tagChemical')}</span></p><ul>${wc.chemical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+      </div>`;
     }
+
+    if (info.postHarvest) html += `<div class="info-section-block"><h3>📦 Post-Harvest Handling</h3><p>${esc(info.postHarvest)}</p></div>`;
+    if (info.storageRecommendations) html += `<div class="info-section-block"><h3>🏪 Storage Recommendations</h3><p>${esc(info.storageRecommendations)}</p></div>`;
+    if (info.environmentalAdaptations) html += `<div class="info-section-block"><h3>🌡️ Environmental Adaptations</h3><p>${esc(info.environmentalAdaptations)}</p></div>`;
+    if (info.researchFindings) html += `<div class="info-section-block"><h3>🔭 Research Findings</h3><p>${esc(info.researchFindings)}</p></div>`;
     if (info.interestingFacts?.length) html += `<div class="info-section-block"><h3>${t('secFacts')}</h3><ul>${info.interestingFacts.map(f=>`<li>${esc(f)}</li>`).join('')}</ul></div>`;
     return html;
   }
 
-  function renderDiseaseInfo(info) {
+    function renderDiseaseInfo(info) {
     const c = info.control || {};
-    let html = `<div class="taxonomy-grid"><div class="taxonomy-item"><span>${t('labelPathogenType')}</span>${esc(info.pathogenType||'—')}</div><div class="taxonomy-item"><span>${t('labelPathogen')}</span>${esc(info.pathogenName||'—')}</div></div>`;
+    let html = `<div class="taxonomy-grid">
+      <div class="taxonomy-item"><span>${t('labelPathogenType')}</span>${esc(info.pathogenType||'—')}</div>
+      <div class="taxonomy-item"><span>${t('labelPathogen')}</span>${esc(info.pathogenName||'—')}</div>
+      ${info.geographicDistribution?`<div class="taxonomy-item"><span>Distribution</span>${esc(info.geographicDistribution)}</div>`:''}
+      ${info.yieldLoss?`<div class="taxonomy-item"><span>Yield Loss</span>${esc(info.yieldLoss)}</div>`:''}
+    </div>`;
     if (info.affectedPlants?.length) html += `<div class="info-section-block disease-block"><h3>${t('secAffected')}</h3><p>${info.affectedPlants.map(p=>esc(p)).join(', ')}</p></div>`;
+    if (info.earlySymptoms?.length) html += `<div class="info-section-block disease-block"><h3>🔍 Early Symptoms</h3><ul>${info.earlySymptoms.map(s=>`<li>${esc(s)}</li>`).join('')}</ul></div>`;
     if (info.symptoms?.length) html += `<div class="info-section-block disease-block"><h3>${t('secSymptoms')}</h3><ul>${info.symptoms.map(s=>`<li>${esc(s)}</li>`).join('')}</ul></div>`;
-    if (info.spreadMechanism) html += `<div class="info-section-block disease-block"><h3>${t('secSpread')}</h3><p>${esc(info.spreadMechanism)}</p></div>`;
-    if (info.favorableConditions) html += `<div class="info-section-block disease-block"><h3>${t('secConditions')}</h3><p>${esc(info.favorableConditions)}</p></div>`;
-    if (info.economicImpact) html += `<div class="info-section-block disease-block"><h3>${t('secEconomicImpact')}</h3><p>${esc(info.economicImpact)}</p></div>`;
-    html += `<div class="info-section-block disease-block"><h3>${t('secDiseaseControl')}</h3>${c.ipmSummary?`<p>${esc(c.ipmSummary)}</p>`:''}${c.cultural?.length?`<p><span class="ipm-tag cult">${t('tagCultural')}</span></p><ul>${c.cultural.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}${c.biological?.length?`<p><span class="ipm-tag bio">${t('tagBiological')}</span></p><ul>${c.biological.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}${c.chemical?.length?`<p><span class="ipm-tag chem">${t('tagChemical')}</span></p><ul>${c.chemical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}${c.resistant_varieties?.length?`<p><span class="ipm-tag mech">${t('tagResistant')}</span></p><ul>${c.resistant_varieties.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}</div>`;
+    if (info.advancedSymptoms?.length) html += `<div class="info-section-block disease-block"><h3>⚠️ Advanced Symptoms</h3><ul>${info.advancedSymptoms.map(s=>`<li>${esc(s)}</li>`).join('')}</ul></div>`;
+    const sp = info.symptomsOnDifferentParts;
+    if (sp && Object.values(sp).some(v=>v)) {
+      html += `<div class="info-section-block disease-block"><h3>🌿 Symptoms by Plant Part</h3>
+        ${sp.leaves?`<p><strong>Leaves:</strong> ${esc(sp.leaves)}</p>`:''}
+        ${sp.stem?`<p><strong>Stem:</strong> ${esc(sp.stem)}</p>`:''}
+        ${sp.roots?`<p><strong>Roots:</strong> ${esc(sp.roots)}</p>`:''}
+        ${sp.fruits?`<p><strong>Fruits:</strong> ${esc(sp.fruits)}</p>`:''}
+        ${sp.seeds?`<p><strong>Seeds:</strong> ${esc(sp.seeds)}</p>`:''}
+      </div>`;
+    }
+    if (info.spreadMechanism) html += `<div class="info-section-block disease-block"><h3>${t('secSpread')}</h3><p>${esc(info.spreadMechanism)}</p>${info.primarySpreadRoutes?.length?`<ul>${info.primarySpreadRoutes.map(r=>`<li>${esc(r)}</li>`).join('')}</ul>`:''}</div>`;
+    if (info.favorableConditions) html += `<div class="info-section-block disease-block"><h3>${t('secConditions')}</h3><p>${esc(info.favorableConditions)}</p>${info.temperature?`<p><strong>Temperature:</strong> ${esc(info.temperature)}</p>`:''}${info.humidity?`<p><strong>Humidity:</strong> ${esc(info.humidity)}</p>`:''}</div>`;
+    if (info.economicImpact) html += `<div class="info-section-block disease-block"><h3>${t('secEconomicImpact')}</h3><p>${esc(info.economicImpact)}</p>${info.globalLossEstimate?`<p><strong>Global Loss:</strong> ${esc(info.globalLossEstimate)}</p>`:''}</div>`;
+    if (info.diagnosisMethods?.length) html += `<div class="info-section-block disease-block"><h3>🧫 Diagnosis Methods</h3><ul>${info.diagnosisMethods.map(d=>`<li>${esc(d)}</li>`).join('')}</ul></div>`;
+    if (info.confusedWith?.length) html += `<div class="info-section-block disease-block"><h3>🔁 Often Confused With</h3><p>${info.confusedWith.map(d=>esc(d)).join(', ')}</p></div>`;
+    html += `<div class="info-section-block disease-block"><h3>${t('secDiseaseControl')}</h3>
+      ${c.ipmSummary?`<p>${esc(c.ipmSummary)}</p>`:''}
+      ${c.cultural?.length?`<p><span class="ipm-tag cult">${t('tagCultural')}</span></p><ul>${c.cultural.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+      ${c.biological?.length?`<p><span class="ipm-tag bio">${t('tagBiological')}</span></p><ul>${c.biological.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+      ${c.chemical?.length?`<p><span class="ipm-tag chem">${t('tagChemical')}</span></p><ul>${c.chemical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+      ${c.chemicalActiveIngredients?.length?`<p><strong>Active Ingredients:</strong> ${c.chemicalActiveIngredients.map(v=>esc(v)).join(', ')}</p>`:''}
+      ${c.resistant_varieties?.length?`<p><span class="ipm-tag mech">${t('tagResistant')}</span></p><ul>${c.resistant_varieties.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+      ${c.quarantineMeasures?.length?`<p><strong>Quarantine Measures:</strong></p><ul>${c.quarantineMeasures.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+    </div>`;
     if (info.preventionTips?.length) html += `<div class="info-section-block disease-block"><h3>${t('secPrevention')}</h3><ul>${info.preventionTips.map(tip=>`<li>${esc(tip)}</li>`).join('')}</ul></div>`;
+    if (info.earlyWarningIndicators?.length) html += `<div class="info-section-block disease-block"><h3>🚨 Early Warning Indicators</h3><ul>${info.earlyWarningIndicators.map(e=>`<li>${esc(e)}</li>`).join('')}</ul></div>`;
+    if (info.researchAndDevelopment) html += `<div class="info-section-block disease-block"><h3>🔭 Research & Development</h3><p>${esc(info.researchAndDevelopment)}</p></div>`;
+    if (info.interestingFacts?.length) html += `<div class="info-section-block"><h3>${t('secFacts')}</h3><ul>${info.interestingFacts.map(f=>`<li>${esc(f)}</li>`).join('')}</ul></div>`;
     return html;
   }
 
-  function renderPestInfo(info) {
+    function renderPestInfo(info) {
     const c = info.control || {};
-    let html = `<div class="taxonomy-grid"><div class="taxonomy-item"><span>${t('labelPestType')}</span>${esc(info.pestType||'—')}</div><div class="taxonomy-item"><span>${t('labelScientific')}</span><em>${esc(info.scientificName||'—')}</em></div></div>`;
+    let html = `<div class="taxonomy-grid">
+      <div class="taxonomy-item"><span>${t('labelPestType')}</span>${esc(info.pestType||'—')}</div>
+      <div class="taxonomy-item"><span>${t('labelScientific')}</span><em>${esc(info.scientificName||'—')}</em></div>
+      ${info.geographicDistribution?`<div class="taxonomy-item"><span>Distribution</span>${esc(info.geographicDistribution)}</div>`:''}
+      ${info.lifeCycleDuration?`<div class="taxonomy-item"><span>Life Cycle</span>${esc(info.lifeCycleDuration)}</div>`:''}
+    </div>`;
+    if (info.description) html += `<div class="info-section-block pest-block"><h3>📖 Description</h3><p>${esc(info.description)}</p>${info.identificationFeatures?`<p><strong>ID Features:</strong> ${esc(info.identificationFeatures)}</p>`:''}</div>`;
     if (info.affectedPlants?.length) html += `<div class="info-section-block pest-block"><h3>${t('secAffected')}</h3><p>${info.affectedPlants.map(p=>esc(p)).join(', ')}</p></div>`;
-    if (info.damageDescription) html += `<div class="info-section-block pest-block"><h3>${t('secDamage')}</h3><p>${esc(info.damageDescription)}</p></div>`;
+    if (info.originAndSpread) html += `<div class="info-section-block pest-block"><h3>🌍 Origin & Spread</h3><p>${esc(info.originAndSpread)}</p></div>`;
+    if (info.damageDescription) html += `<div class="info-section-block pest-block"><h3>${t('secDamage')}</h3><p>${esc(info.damageDescription)}</p>${info.damageMechanism?`<p><strong>Mechanism:</strong> ${esc(info.damageMechanism)}</p>`:''}</div>`;
+    if (info.symptomsOfAttack?.length) html += `<div class="info-section-block pest-block"><h3>🔍 Symptoms of Attack</h3><ul>${info.symptomsOfAttack.map(s=>`<li>${esc(s)}</li>`).join('')}</ul></div>`;
     if (info.lifeStages?.length) html += `<div class="info-section-block pest-block"><h3>${t('secLifeStages')}</h3><ul>${info.lifeStages.map(s=>`<li>${esc(s)}</li>`).join('')}</ul></div>`;
-    if (info.peakActivity) html += `<div class="info-section-block pest-block"><h3>${t('secPeakActivity')}</h3><p>${esc(info.peakActivity)}</p></div>`;
-    if (info.economicThreshold) html += `<div class="info-section-block pest-block"><h3>${t('secThreshold')}</h3><p>${esc(info.economicThreshold)}</p></div>`;
-    html += `<div class="info-section-block pest-block"><h3>${t('secPestControl')}</h3>${c.ipmSummary?`<p>${esc(c.ipmSummary)}</p>`:''}${c.cultural?.length?`<p><span class="ipm-tag cult">${t('tagCultural')}</span></p><ul>${c.cultural.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}${c.biological?.length?`<p><span class="ipm-tag bio">${t('tagBiological')}</span></p><ul>${c.biological.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}${c.mechanical?.length?`<p><span class="ipm-tag mech">${t('tagMechanical')}</span></p><ul>${c.mechanical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}${c.chemical?.length?`<p><span class="ipm-tag chem">${t('tagChemical')}</span></p><ul>${c.chemical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}</div>`;
+    if (info.peakActivity) html += `<div class="info-section-block pest-block"><h3>${t('secPeakActivity')}</h3><p>${esc(info.peakActivity)}</p>${info.favorableConditions?`<p><strong>Favorable Conditions:</strong> ${esc(info.favorableConditions)}</p>`:''}</div>`;
+    if (info.naturalEnemies?.length) html += `<div class="info-section-block pest-block"><h3>🦅 Natural Enemies</h3><p>${info.naturalEnemies.map(e=>esc(e)).join(', ')}</p></div>`;
+    if (info.economicThreshold) html += `<div class="info-section-block pest-block"><h3>${t('secThreshold')}</h3><p>${esc(info.economicThreshold)}</p>${info.yieldLoss?`<p><strong>Yield Loss:</strong> ${esc(info.yieldLoss)}</p>`:''}</div>`;
+    html += `<div class="info-section-block pest-block"><h3>${t('secPestControl')}</h3>
+      ${c.ipmSummary?`<p>${esc(c.ipmSummary)}</p>`:''}
+      ${c.cultural?.length?`<p><span class="ipm-tag cult">${t('tagCultural')}</span></p><ul>${c.cultural.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+      ${c.biological?.length?`<p><span class="ipm-tag bio">${t('tagBiological')}</span></p><ul>${c.biological.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+      ${c.mechanical?.length?`<p><span class="ipm-tag mech">${t('tagMechanical')}</span></p><ul>${c.mechanical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+      ${c.chemical?.length?`<p><span class="ipm-tag chem">${t('tagChemical')}</span></p><ul>${c.chemical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+      ${c.chemicalActiveIngredients?.length?`<p><strong>Active Ingredients:</strong> ${c.chemicalActiveIngredients.map(v=>esc(v)).join(', ')}</p>`:''}
+      ${c.biopesticides?.length?`<p><strong>Biopesticides:</strong> ${c.biopesticides.map(v=>esc(v)).join(', ')}</p>`:''}
+      ${c.pheromoneTraps?`<p><strong>Pheromone Traps:</strong> ${esc(c.pheromoneTraps)}</p>`:''}
+    </div>`;
+    if (info.monitoringMethods?.length) html += `<div class="info-section-block pest-block"><h3>📡 Monitoring Methods</h3><ul>${info.monitoringMethods.map(m=>`<li>${esc(m)}</li>`).join('')}</ul></div>`;
     if (info.safetyNotes) html += `<div class="info-section-block pest-block"><h3>${t('secSafety')}</h3><p>${esc(info.safetyNotes)}</p></div>`;
+    if (info.resistanceManagement) html += `<div class="info-section-block pest-block"><h3>🔄 Resistance Management</h3><p>${esc(info.resistanceManagement)}</p></div>`;
+    if (info.interestingFacts?.length) html += `<div class="info-section-block"><h3>${t('secFacts')}</h3><ul>${info.interestingFacts.map(f=>`<li>${esc(f)}</li>`).join('')}</ul></div>`;
     return html;
   }
 
-
-  function rerenderDiseaseCard(d) {
-    const confDisp = (d.confidence != null) ? d.confidence + '%' : 'N/A';
-    const wrapper = document.createElement('div');
-    if (d.isHealthy) {
-      wrapper.innerHTML = `<div class="disease-card"><strong><i class="fas fa-seedling"></i> ${t('healthyStatus')}: ${esc(d.result)}</strong><div class="confidence">🎯 ${confDisp}</div><div class="treatment-section">${t('healthy')}</div></div>`;
-    } else {
-      const disTribal = tribalBadge(d.result);
-      wrapper.innerHTML = `<div class="disease-card"><strong><i class="fas fa-biohazard"></i> ${t('diseaseFound')}: ${esc(d.result)}</strong>${disTribal}<div class="confidence">🎯 ${confDisp}</div><div class="treatment-section"><strong>${t('suggestedAction')}:</strong><br>${t('diseaseAction')}</div></div>`;
-    }
-    wrapper.appendChild(makeSearchBtn(d.result, 'disease', `🦠 ${d.result}`, t('diseaseFound')));
-    wrapper.appendChild(makeWikiBtn(d.result, 'disease'));
-    aiOutput.innerHTML = ''; aiOutput.appendChild(wrapper);
-  }
-
-  function rerenderPestCard(d) {
-    const confDisp = (d.confidence != null) ? d.confidence + '%' : 'N/A';
-    const wrapper = document.createElement('div');
-    if (d.isNoPest) {
-      wrapper.innerHTML = `<div class="pest-card"><strong><i class="fas fa-check-circle"></i> ${t('noPestFound')} ${esc(d.result)}</strong><div class="confidence">🎯 ${confDisp}</div><div class="treatment-section">${t('noPest')}</div></div>`;
-    } else {
-      const pestTribal = tribalBadge(d.result);
-      wrapper.innerHTML = `<div class="pest-card"><strong><i class="fas fa-bug"></i> ${t('pestFound')}: ${esc(d.result)}</strong>${pestTribal}<div class="confidence">🎯 ${confDisp}</div><div class="treatment-section"><strong>${t('pestControlLabel')}:</strong> ${t('pestControl')}</div></div>`;
-    }
-    wrapper.appendChild(makeSearchBtn(d.result, 'pest', `🐛 ${d.result}`, t('pestFound')));
-    wrapper.appendChild(makeWikiBtn(d.result, 'pest'));
-    aiOutput.innerHTML = ''; aiOutput.appendChild(wrapper);
-  }
-
-  async function openInfoModal(query, type, title, subtitle) {
+    async function openInfoModal(query, type, title, subtitle) {
     // Save state so language switch can re-fetch
     lastInfoQuery = query; lastInfoType = type;
     lastInfoTitle = title; lastInfoSubtitle = subtitle;
@@ -1439,7 +1619,19 @@ Fill all fields with accurate, practical IPM information.`;
 
   function buildIntentPrompt(question, intentType) {
     const lang = t('promptLang');
-    const langNote = lang === 'English' ? '' : `\nIMPORTANT: You MUST respond entirely in ${lang} language. Only scientific/Latin names may stay in English.`;
+    const isEnglish = lang === 'English';
+    // Get correct local name for any detected crop/pest/disease in the question
+    let localNameHint = '';
+    if (!isEnglish) {
+      for (let key in localNamesDB) {
+        if (question.toLowerCase().includes(key)) {
+          const lk = currentLang === 'yo' ? 'yo' : currentLang === 'ha' ? 'ha' : 'ig';
+          const ln = localNamesDB[key][lk];
+          if (ln) { localNameHint = `\nNote: "${key}" is called "${ln}" in ${lang}.`; break; }
+        }
+      }
+    }
+    const langNote = isEnglish ? '' : `\n=== RESPOND IN ${lang.toUpperCase()} ===\nYou MUST write your entire response in ${lang} language.${localNameHint}\nOnly scientific/Latin names stay in English.\n=== END ===`;
     const contextMap = {
       general:  'You are an expert agricultural advisor helping farmers in Nigeria and West Africa.',
       plant:    'You are an expert botanist and agronomist specializing in West African crops.',
@@ -1450,15 +1642,29 @@ Fill all fields with accurate, practical IPM information.`;
       market:   'You are an expert agricultural economist advising on crop pricing and market access.'
     };
     const ctx = contextMap[intentType] || contextMap.general;
-    return `${ctx}${langNote}\n\nA farmer asks: "${question}"\n\nGive a clear, practical, helpful answer. Return ONLY this JSON (no markdown):\n{\n  "summary": "One sentence direct answer",\n  "details": ["point 1", "point 2", "point 3"],\n  "tips": ["practical tip 1", "practical tip 2"],\n  "warning": "Any important warning or empty string"\n}`;
+    return `${ctx}${langNote}\n\nA farmer asks: "${question}"\n\nGive a clear, practical, detailed and helpful answer. Return ONLY this JSON (no markdown):\n{\n  "summary": "One clear direct answer sentence",\n  "details": ["detailed point 1", "detailed point 2", "detailed point 3", "detailed point 4"],\n  "tips": ["practical tip 1", "practical tip 2", "practical tip 3"],\n  "warning": "Any important warning or empty string"\n}`;
   }
 
   function renderIntentResult(data, question) {
-    let html = `<div style="font-size:0.8rem;color:#64748b;margin-bottom:8px;"><i class="fas fa-question-circle" style="color:#2563eb;margin-right:5px;"></i><em>${esc(question)}</em></div>`;
-    if (data.summary) html += `<div style="font-weight:700;color:#14532d;margin-bottom:8px;font-size:0.9rem;"><i class="fas fa-check-circle" style="color:#16a34a;margin-right:6px;"></i>${esc(data.summary)}</div>`;
-    if (data.details?.length) html += `<div style="margin-bottom:8px;"><div style="font-weight:700;color:#1e3a8a;font-size:0.82rem;margin-bottom:4px;"><i class="fas fa-list-ul" style="color:#2563eb;margin-right:5px;"></i>Details</div><ul style="padding-left:18px;margin:0;">${data.details.map(d=>`<li style="margin-bottom:3px;font-size:0.82rem;">${esc(d)}</li>`).join('')}</ul></div>`;
-    if (data.tips?.length) html += `<div style="margin-bottom:8px;"><div style="font-weight:700;color:#92400e;font-size:0.82rem;margin-bottom:4px;"><i class="fas fa-lightbulb" style="color:#f59e0b;margin-right:5px;"></i>Practical Tips</div><ul style="padding-left:18px;margin:0;">${data.tips.map(tip=>`<li style="margin-bottom:3px;font-size:0.82rem;">${esc(tip)}</li>`).join('')}</ul></div>`;
-    if (data.warning) html += `<div style="background:#fff3cd;border-left:4px solid #ffc107;padding:8px 12px;border-radius:10px;margin-top:6px;font-size:0.8rem;"><i class="fas fa-exclamation-triangle" style="color:#b45309;margin-right:6px;"></i>${esc(data.warning)}</div>`;
+    const closeId = 'intentClose_' + Date.now();
+    let html = `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+        <div style="font-size:0.8rem;color:#64748b;flex:1;"><i class="fas fa-question-circle" style="color:#2563eb;margin-right:5px;"></i><em>${esc(question)}</em></div>
+        <button id="${closeId}" title="Close" style="background:#e11d48;color:white;border:none;border-radius:50%;width:26px;height:26px;font-size:0.8rem;cursor:pointer;flex-shrink:0;margin-left:8px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-times"></i></button>
+      </div>`;
+    if (data.summary) html += `<div style="font-weight:700;color:#14532d;margin-bottom:10px;font-size:0.92rem;line-height:1.5;"><i class="fas fa-check-circle" style="color:#16a34a;margin-right:6px;"></i>${esc(data.summary)}</div>`;
+    if (data.details?.length) html += `<div style="margin-bottom:10px;"><div style="font-weight:700;color:#1e3a8a;font-size:0.82rem;margin-bottom:6px;"><i class="fas fa-list-ul" style="color:#2563eb;margin-right:5px;"></i>${t('detailsLabel')}</div><ul style="padding-left:18px;margin:0;">${data.details.map(d=>`<li style="margin-bottom:5px;font-size:0.83rem;line-height:1.5;">${esc(d)}</li>`).join('')}</ul></div>`;
+    if (data.tips?.length) html += `<div style="margin-bottom:10px;"><div style="font-weight:700;color:#92400e;font-size:0.82rem;margin-bottom:6px;"><i class="fas fa-lightbulb" style="color:#f59e0b;margin-right:5px;"></i>${t('tipsLabel')}</div><ul style="padding-left:18px;margin:0;">${data.tips.map(tip=>`<li style="margin-bottom:5px;font-size:0.83rem;line-height:1.5;">${esc(tip)}</li>`).join('')}</ul></div>`;
+    if (data.warning) html += `<div style="background:#fff3cd;border-left:4px solid #ffc107;padding:10px 14px;border-radius:12px;margin-top:8px;font-size:0.82rem;line-height:1.5;"><i class="fas fa-exclamation-triangle" style="color:#b45309;margin-right:6px;"></i>${esc(data.warning)}</div>`;
+    // wire close button after render
+    setTimeout(() => {
+      const btn = document.getElementById(closeId);
+      if (btn) btn.addEventListener('click', () => {
+        const container = document.getElementById('intentResultContainer');
+        container.innerHTML = '';
+        document.getElementById('intentSearchInput').value = '';
+      });
+    }, 50);
     return html;
   }
 
