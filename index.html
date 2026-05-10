@@ -1095,11 +1095,23 @@ Fill all fields with accurate, practical IPM information.`;
     if (isWeed && info.weedControl) {
       const wc = info.weedControl;
       html += `<div class="info-section-block weed-block"><h3>${t('secWeedControl')}</h3>
-        ${wc.ipmSummary?`<p>${esc(wc.ipmSummary)}</p>`:''}
-        ${wc.cultural?.length?`<p><span class="ipm-tag cult">${t('tagCultural')}</span></p><ul>${wc.cultural.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
-        ${wc.mechanical?.length?`<p><span class="ipm-tag mech">${t('tagMechanical')}</span></p><ul>${wc.mechanical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
-        ${wc.biological?.length?`<p><span class="ipm-tag bio">${t('tagBiological')}</span></p><ul>${wc.biological.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+        ${wc.ipmSummary?`<p><strong>Overview:</strong> ${esc(wc.ipmSummary)}</p>`:''}
+        ${wc.ipmPrinciples?.length?`<p><strong>IPM Principles:</strong></p><ul>${wc.ipmPrinciples.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+        ${wc.monitoringAndThreshold?`<p><strong>Monitoring & Threshold:</strong> ${esc(wc.monitoringAndThreshold)}</p>`:''}
+        ${wc.economicThreshold?`<p><strong>Economic Threshold:</strong> ${esc(wc.economicThreshold)}</p>`:''}
+        ${wc.cultural?.length?`<p><span class="ipm-tag cult">${t('tagCultural')}</span></p><ul>${wc.cultural.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>${wc.culturalDetails?`<p style="font-size:0.78rem;color:#555;">${esc(wc.culturalDetails)}</p>`:''}`:''}
+        ${wc.mechanical?.length?`<p><span class="ipm-tag mech">${t('tagMechanical')}</span></p><ul>${wc.mechanical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>${wc.mechanicalDetails?`<p style="font-size:0.78rem;color:#555;">${esc(wc.mechanicalDetails)}</p>`:''}`:''}
+        ${wc.biological?.length?`<p><span class="ipm-tag bio">${t('tagBiological')}</span></p><ul>${wc.biological.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>${wc.biologicalAgents?.length?`<p><em>Agents: ${wc.biologicalAgents.map(a=>esc(a)).join(', ')}</em></p>`:''}${wc.biologicalDetails?`<p style="font-size:0.78rem;color:#555;">${esc(wc.biologicalDetails)}</p>`:''}`:''}
+        ${wc.preEmergenceHerbicides?.length?`<p><span class="ipm-tag chem">Pre-emergence</span></p><ul>${wc.preEmergenceHerbicides.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+        ${wc.postEmergenceHerbicides?.length?`<p><span class="ipm-tag chem">Post-emergence</span></p><ul>${wc.postEmergenceHerbicides.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
         ${wc.chemical?.length?`<p><span class="ipm-tag chem">${t('tagChemical')}</span></p><ul>${wc.chemical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+        ${wc.herbicideActiveIngredients?.length?`<p><strong>Active Ingredients:</strong> ${wc.herbicideActiveIngredients.map(v=>esc(v)).join(', ')}</p>`:''}
+        ${wc.herbicideApplicationRate?`<p><strong>Application Rate:</strong> ${esc(wc.herbicideApplicationRate)}</p>`:''}
+        ${wc.herbicideTimingAndMethod?`<p><strong>Timing & Method:</strong> ${esc(wc.herbicideTimingAndMethod)}</p>`:''}
+        ${wc.resistanceManagement?`<p><strong>Resistance Management:</strong> ${esc(wc.resistanceManagement)}</p>`:''}
+        ${wc.safetyPrecautions?`<p><strong>Safety:</strong> ${esc(wc.safetyPrecautions)}</p>`:''}
+        ${wc.integratedStrategy?`<p><strong>Integrated Strategy:</strong> ${esc(wc.integratedStrategy)}</p>`:''}
+        ${wc.seasonalCalendar?`<p><strong>Seasonal Calendar:</strong> ${esc(wc.seasonalCalendar)}</p>`:''}
       </div>`;
     }
 
@@ -1139,13 +1151,31 @@ Fill all fields with accurate, practical IPM information.`;
     if (info.diagnosisMethods?.length) html += `<div class="info-section-block disease-block"><h3>🧫 Diagnosis Methods</h3><ul>${info.diagnosisMethods.map(d=>`<li>${esc(d)}</li>`).join('')}</ul></div>`;
     if (info.confusedWith?.length) html += `<div class="info-section-block disease-block"><h3>🔁 Often Confused With</h3><p>${info.confusedWith.map(d=>esc(d)).join(', ')}</p></div>`;
     html += `<div class="info-section-block disease-block"><h3>${t('secDiseaseControl')}</h3>
-      ${c.ipmSummary?`<p>${esc(c.ipmSummary)}</p>`:''}
-      ${c.cultural?.length?`<p><span class="ipm-tag cult">${t('tagCultural')}</span></p><ul>${c.cultural.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
-      ${c.biological?.length?`<p><span class="ipm-tag bio">${t('tagBiological')}</span></p><ul>${c.biological.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+      ${c.ipmSummary?`<p><strong>IPM Overview:</strong> ${esc(c.ipmSummary)}</p>`:''}
+      ${c.ipmPrinciples?.length?`<p><strong>IPM Principles:</strong></p><ul>${c.ipmPrinciples.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+      ${c.ipmDecisionCriteria?`<p><strong>Decision Criteria:</strong> ${esc(c.ipmDecisionCriteria)}</p>`:''}
+      ${c.monitoringFrequency?`<p><strong>Monitoring:</strong> ${esc(c.monitoringFrequency)}</p>`:''}
+      ${c.economicThreshold?`<p><strong>Economic Threshold:</strong> ${esc(c.economicThreshold)}</p>`:''}
+      ${c.actionThreshold?`<p><strong>Action Threshold:</strong> ${esc(c.actionThreshold)}</p>`:''}
+      ${c.cultural?.length?`<p><span class="ipm-tag cult">${t('tagCultural')}</span></p><ul>${c.cultural.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>${c.culturalDetails?`<p style="font-size:0.78rem;color:#555;">${esc(c.culturalDetails)}</p>`:''}`:''}
+      ${c.sanitation?.length?`<p><strong>Sanitation:</strong></p><ul>${c.sanitation.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+      ${c.cropRotation?`<p><strong>Crop Rotation:</strong> ${esc(c.cropRotation)}</p>`:''}
+      ${c.seedTreatment?`<p><strong>Seed Treatment:</strong> ${esc(c.seedTreatment)}</p>`:''}
+      ${c.biological?.length?`<p><span class="ipm-tag bio">${t('tagBiological')}</span></p><ul>${c.biological.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>${c.biologicalAgents?.length?`<p><em>Agents: ${c.biologicalAgents.map(a=>esc(a)).join(', ')}</em></p>`:''}${c.biologicalDetails?`<p style="font-size:0.78rem;color:#555;">${esc(c.biologicalDetails)}</p>`:''}`:''}
+      ${c.fungicides?.length?`<p><span class="ipm-tag chem">Fungicides</span></p><ul>${c.fungicides.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+      ${c.bactericides?.length?`<p><span class="ipm-tag chem">Bactericides</span></p><ul>${c.bactericides.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
       ${c.chemical?.length?`<p><span class="ipm-tag chem">${t('tagChemical')}</span></p><ul>${c.chemical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
       ${c.chemicalActiveIngredients?.length?`<p><strong>Active Ingredients:</strong> ${c.chemicalActiveIngredients.map(v=>esc(v)).join(', ')}</p>`:''}
+      ${c.applicationRate?`<p><strong>Application Rate:</strong> ${esc(c.applicationRate)}</p>`:''}
+      ${c.applicationMethod?`<p><strong>Application Method:</strong> ${esc(c.applicationMethod)}</p>`:''}
+      ${c.applicationTiming?`<p><strong>Timing:</strong> ${esc(c.applicationTiming)}</p>`:''}
+      ${c.preHarvestInterval?`<p><strong>Pre-harvest Interval:</strong> ${esc(c.preHarvestInterval)}</p>`:''}
+      ${c.resistanceManagement?`<p><strong>Resistance Management:</strong> ${esc(c.resistanceManagement)}</p>`:''}
       ${c.resistant_varieties?.length?`<p><span class="ipm-tag mech">${t('tagResistant')}</span></p><ul>${c.resistant_varieties.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+      ${c.tolerantVarieties?.length?`<p><strong>Tolerant Varieties:</strong> ${c.tolerantVarieties.map(v=>esc(v)).join(', ')}</p>`:''}
+      ${c.postHarvestControl?`<p><strong>Post-Harvest Control:</strong> ${esc(c.postHarvestControl)}</p>`:''}
       ${c.quarantineMeasures?.length?`<p><strong>Quarantine Measures:</strong></p><ul>${c.quarantineMeasures.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+      ${c.integratedStrategy?`<p><strong>Integrated Strategy:</strong> ${esc(c.integratedStrategy)}</p>`:''}
     </div>`;
     if (info.preventionTips?.length) html += `<div class="info-section-block disease-block"><h3>${t('secPrevention')}</h3><ul>${info.preventionTips.map(tip=>`<li>${esc(tip)}</li>`).join('')}</ul></div>`;
     if (info.earlyWarningIndicators?.length) html += `<div class="info-section-block disease-block"><h3>🚨 Early Warning Indicators</h3><ul>${info.earlyWarningIndicators.map(e=>`<li>${esc(e)}</li>`).join('')}</ul></div>`;
@@ -1172,14 +1202,38 @@ Fill all fields with accurate, practical IPM information.`;
     if (info.naturalEnemies?.length) html += `<div class="info-section-block pest-block"><h3>🦅 Natural Enemies</h3><p>${info.naturalEnemies.map(e=>esc(e)).join(', ')}</p></div>`;
     if (info.economicThreshold) html += `<div class="info-section-block pest-block"><h3>${t('secThreshold')}</h3><p>${esc(info.economicThreshold)}</p>${info.yieldLoss?`<p><strong>Yield Loss:</strong> ${esc(info.yieldLoss)}</p>`:''}</div>`;
     html += `<div class="info-section-block pest-block"><h3>${t('secPestControl')}</h3>
-      ${c.ipmSummary?`<p>${esc(c.ipmSummary)}</p>`:''}
-      ${c.cultural?.length?`<p><span class="ipm-tag cult">${t('tagCultural')}</span></p><ul>${c.cultural.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+      ${c.ipmSummary?`<p><strong>IPM Overview:</strong> ${esc(c.ipmSummary)}</p>`:''}
+      ${c.ipmPrinciples?.length?`<p><strong>IPM Principles:</strong></p><ul>${c.ipmPrinciples.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+      ${c.ipmDecisionCriteria?`<p><strong>Decision Criteria:</strong> ${esc(c.ipmDecisionCriteria)}</p>`:''}
+      ${c.actionThreshold?`<p><strong>Action Threshold:</strong> ${esc(c.actionThreshold)}</p>`:''}
+      ${c.cultural?.length?`<p><span class="ipm-tag cult">${t('tagCultural')}</span></p><ul>${c.cultural.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>${c.culturalDetails?`<p style="font-size:0.78rem;color:#555;">${esc(c.culturalDetails)}</p>`:''}`:''}
+      ${c.cropRotation?`<p><strong>Crop Rotation:</strong> ${esc(c.cropRotation)}</p>`:''}
+      ${c.intercropping?`<p><strong>Intercropping:</strong> ${esc(c.intercropping)}</p>`:''}
+      ${c.sanitation?.length?`<p><strong>Sanitation:</strong></p><ul>${c.sanitation.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
       ${c.biological?.length?`<p><span class="ipm-tag bio">${t('tagBiological')}</span></p><ul>${c.biological.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+      ${c.parasitoids?.length?`<p><em>Parasitoids: ${c.parasitoids.map(a=>esc(a)).join(', ')}</em></p>`:''}
+      ${c.predators?.length?`<p><em>Predators: ${c.predators.map(a=>esc(a)).join(', ')}</em></p>`:''}
+      ${c.entomopathogenicFungi?.length?`<p><em>Entomopathogenic Fungi: ${c.entomopathogenicFungi.map(a=>esc(a)).join(', ')}</em></p>`:''}
+      ${c.biologicalAgents?.length?`<p><em>Biological Agents: ${c.biologicalAgents.map(a=>esc(a)).join(', ')}</em></p>`:''}
+      ${c.biologicalDetails?`<p style="font-size:0.78rem;color:#555;">${esc(c.biologicalDetails)}</p>`:''}
       ${c.mechanical?.length?`<p><span class="ipm-tag mech">${t('tagMechanical')}</span></p><ul>${c.mechanical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+      ${c.traps?.length?`<p><strong>Traps:</strong> ${c.traps.map(v=>esc(v)).join(', ')}</p>`:''}
+      ${c.barriers?.length?`<p><strong>Barriers:</strong> ${c.barriers.map(v=>esc(v)).join(', ')}</p>`:''}
+      ${c.pheromoneTraps?`<p><strong>Pheromone Traps:</strong> ${esc(c.pheromoneTraps)}</p>`:''}
+      ${c.attractAndKill?`<p><strong>Attract & Kill:</strong> ${esc(c.attractAndKill)}</p>`:''}
+      ${c.pushPullStrategy?`<p><strong>Push-Pull Strategy:</strong> ${esc(c.pushPullStrategy)}</p>`:''}
+      ${c.insecticides?.length?`<p><span class="ipm-tag chem">Insecticides</span></p><ul>${c.insecticides.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
       ${c.chemical?.length?`<p><span class="ipm-tag chem">${t('tagChemical')}</span></p><ul>${c.chemical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
       ${c.chemicalActiveIngredients?.length?`<p><strong>Active Ingredients:</strong> ${c.chemicalActiveIngredients.map(v=>esc(v)).join(', ')}</p>`:''}
-      ${c.biopesticides?.length?`<p><strong>Biopesticides:</strong> ${c.biopesticides.map(v=>esc(v)).join(', ')}</p>`:''}
-      ${c.pheromoneTraps?`<p><strong>Pheromone Traps:</strong> ${esc(c.pheromoneTraps)}</p>`:''}
+      ${c.applicationRate?`<p><strong>Application Rate:</strong> ${esc(c.applicationRate)}</p>`:''}
+      ${c.applicationMethod?`<p><strong>Application Method:</strong> ${esc(c.applicationMethod)}</p>`:''}
+      ${c.applicationTiming?`<p><strong>Timing:</strong> ${esc(c.applicationTiming)}</p>`:''}
+      ${c.preHarvestInterval?`<p><strong>Pre-harvest Interval:</strong> ${esc(c.preHarvestInterval)}</p>`:''}
+      ${c.biopesticides?.length?`<p><strong>Biopesticides:</strong></p><ul>${c.biopesticides.map(v=>esc(v)).join(', ')}</ul>${c.biopesticideDetails?`<p style="font-size:0.78rem;color:#555;">${esc(c.biopesticideDetails)}</p>`:''}`:''}
+      ${c.resistanceManagement?`<p><strong>Resistance Management:</strong> ${esc(c.resistanceManagement)}</p>`:''}
+      ${c.rotationOfChemicals?`<p><strong>Chemical Rotation:</strong> ${esc(c.rotationOfChemicals)}</p>`:''}
+      ${c.integratedStrategy?`<p><strong>Integrated Strategy:</strong> ${esc(c.integratedStrategy)}</p>`:''}
+      ${c.seasonalManagementCalendar?`<p><strong>Seasonal Calendar:</strong> ${esc(c.seasonalManagementCalendar)}</p>`:''}
     </div>`;
     if (info.monitoringMethods?.length) html += `<div class="info-section-block pest-block"><h3>📡 Monitoring Methods</h3><ul>${info.monitoringMethods.map(m=>`<li>${esc(m)}</li>`).join('')}</ul></div>`;
     if (info.safetyNotes) html += `<div class="info-section-block pest-block"><h3>${t('secSafety')}</h3><p>${esc(info.safetyNotes)}</p></div>`;
@@ -1188,7 +1242,38 @@ Fill all fields with accurate, practical IPM information.`;
     return html;
   }
 
-    async function openInfoModal(query, type, title, subtitle) {
+  // ========================
+  // RERENDER CARDS (called on language switch)
+  // ========================
+  function rerenderDiseaseCard(d) {
+    const confDisp = (d.confidence != null) ? d.confidence + '%' : 'N/A';
+    const wrapper = document.createElement('div');
+    if (d.isHealthy) {
+      wrapper.innerHTML = `<div class="disease-card"><strong><i class="fas fa-seedling"></i> ${t('healthyStatus')}: ${esc(d.result)}</strong><div class="confidence">🎯 ${confDisp}</div><div class="treatment-section">${t('healthy')}</div></div>`;
+    } else {
+      const disTribal = tribalBadge(d.result);
+      wrapper.innerHTML = `<div class="disease-card"><strong><i class="fas fa-biohazard"></i> ${t('diseaseFound')}: ${esc(d.result)}</strong>${disTribal}<div class="confidence">🎯 ${confDisp}</div><div class="treatment-section"><strong>${t('suggestedAction')}:</strong><br>${t('diseaseAction')}</div></div>`;
+    }
+    wrapper.appendChild(makeSearchBtn(d.result, 'disease', `🦠 ${d.result}`, t('diseaseFound')));
+    wrapper.appendChild(makeWikiBtn(d.result, 'disease'));
+    aiOutput.innerHTML = ''; aiOutput.appendChild(wrapper);
+  }
+
+  function rerenderPestCard(d) {
+    const confDisp = (d.confidence != null) ? d.confidence + '%' : 'N/A';
+    const wrapper = document.createElement('div');
+    if (d.isNoPest) {
+      wrapper.innerHTML = `<div class="pest-card"><strong><i class="fas fa-check-circle"></i> ${t('noPestFound')} ${esc(d.result)}</strong><div class="confidence">🎯 ${confDisp}</div><div class="treatment-section">${t('noPest')}</div></div>`;
+    } else {
+      const pestTribal = tribalBadge(d.result);
+      wrapper.innerHTML = `<div class="pest-card"><strong><i class="fas fa-bug"></i> ${t('pestFound')}: ${esc(d.result)}</strong>${pestTribal}<div class="confidence">🎯 ${confDisp}</div><div class="treatment-section"><strong>${t('pestControlLabel')}:</strong> ${t('pestControl')}</div></div>`;
+    }
+    wrapper.appendChild(makeSearchBtn(d.result, 'pest', `🐛 ${d.result}`, t('pestFound')));
+    wrapper.appendChild(makeWikiBtn(d.result, 'pest'));
+    aiOutput.innerHTML = ''; aiOutput.appendChild(wrapper);
+  }
+
+  async function openInfoModal(query, type, title, subtitle) {
     // Save state so language switch can re-fetch
     lastInfoQuery = query; lastInfoType = type;
     lastInfoTitle = title; lastInfoSubtitle = subtitle;
@@ -1323,25 +1408,51 @@ Fill all fields with accurate, practical IPM information.`;
     try {
       const fd = new FormData(); fd.append("image", imageBlob);
       const r = await fetch(BACKEND_URL + "/disease", { method:"POST", body:fd });
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      if (!r.ok) throw new Error(`HTTP ${r.status} - Backend may be sleeping. Try again.`);
       const data = await r.json();
-      if (!data.success) return { error:true, rawData:data };
-      if (data.source === "Roboflow" && data.data?.predictions) {
-        const preds = data.data.predictions;
-        if (preds.length > 0) {
-          const top = preds.reduce((max,p) => p.confidence > max.confidence ? p : max, preds[0]);
-          const name = top.class || "Unknown disease";
-          const conf = Math.round(top.confidence * 100);
-          return { result: name, confidence: conf, isHealthy: name.toLowerCase().includes("healthy") || conf < 30, rawData: data };
-        }
-        return { result:"No disease detected", confidence:100, isHealthy:true, rawData:data };
-      } else if (data.source === "Plant.id (fallback)" && data.data?.health_assessment) {
-        const diseases = data.data.health_assessment.diseases;
-        if (diseases?.length > 0) return { result: diseases[0].name||"Unknown disease", confidence: Math.round((diseases[0].probability||0)*100), isHealthy:false, rawData:data };
-        return { result:"Healthy plant", confidence:85, isHealthy:true, rawData:data };
+      console.log('[Disease] Raw backend response:', JSON.stringify(data).substring(0, 500));
+
+      // helper: normalize confidence to 0-100
+      const toConf = (v) => v == null ? null : v > 1 ? Math.round(v) : Math.round(v * 100);
+      const isH = (name) => !name || name.toLowerCase().includes("healthy") || name.toLowerCase().includes("no disease");
+
+      // Format 1: predictions array (Roboflow style)
+      const preds = data?.data?.predictions ?? data?.predictions;
+      if (Array.isArray(preds)) {
+        if (preds.length === 0) return { result:"No disease detected", confidence:100, isHealthy:true, rawData:data };
+        const top = preds.reduce((a,b) => ((b.confidence||0)>(a.confidence||0)?b:a));
+        const name = top.class||top.className||top.label||"Unknown disease";
+        const conf = toConf(top.confidence);
+        return { result:name, confidence:conf, isHealthy:isH(name)||(conf!=null&&conf<20), rawData:data };
       }
+
+      // Format 2: Plant.id health_assessment
+      const health = data?.data?.health_assessment ?? data?.health_assessment;
+      if (health) {
+        const diseases = health.diseases||[];
+        if (diseases.length === 0 || health.is_healthy) return { result:"Healthy plant", confidence:90, isHealthy:true, rawData:data };
+        const top = diseases.sort((a,b)=>(b.probability||0)-(a.probability||0))[0];
+        return { result:top.name||"Unknown disease", confidence:toConf(top.probability), isHealthy:false, rawData:data };
+      }
+
+      // Format 3: top-level result/class/disease/label
+      const name3 = data?.result ?? data?.class ?? data?.disease ?? data?.label ?? data?.data?.result ?? data?.data?.class ?? data?.data?.disease;
+      if (name3) {
+        const conf3 = toConf(data?.confidence ?? data?.probability ?? data?.data?.confidence);
+        return { result:name3, confidence:conf3, isHealthy:isH(name3), rawData:data };
+      }
+
+      // Format 4: data.data is a string
+      if (typeof data?.data === 'string' && data.data.length > 0) {
+        return { result:data.data, confidence:null, isHealthy:isH(data.data), rawData:data };
+      }
+
+      // Nothing matched
       return { error:true, rawData:data };
-    } catch(err) { return { error:true, message:err.message }; }
+    } catch(err) {
+      console.error('[Disease] Error:', err.message);
+      return { error:true, message:err.message };
+    }
   }
 
   async function detectDisease() {
@@ -1350,9 +1461,15 @@ Fill all fields with accurate, practical IPM information.`;
     defaultMsg.classList.add('hidden');
     const diseaseData = await detectDiseaseWithBackend(currentImageBlob);
     if (!diseaseData || diseaseData.error) {
-      const raw = diseaseData?.rawData ? JSON.stringify(diseaseData.rawData, null, 2) : "No response";
-      aiOutput.innerHTML = `<div class="disease-card"><strong>⚠️ Disease detection failed</strong><div class="raw-json">${esc(raw)}</div></div>`;
-      setStatus("Disease API error", false); return;
+      const raw = diseaseData?.rawData ? JSON.stringify(diseaseData.rawData, null, 2) : (diseaseData?.message || "No response from backend");
+      aiOutput.innerHTML = `<div class="disease-card">
+        <strong>⚠️ Disease detection — Backend Response</strong>
+        <p style="font-size:0.8rem;margin:6px 0;color:#666;">Backend URL: <code>${BACKEND_URL}/disease</code></p>
+        <p style="font-size:0.8rem;color:#666;">The backend responded but the format was not recognized. Raw response:</p>
+        <div class="raw-json">${esc(raw)}</div>
+        <p style="font-size:0.75rem;margin-top:8px;color:#888;">💡 Share this with the developer to fix the format parser.</p>
+      </div>`;
+      setStatus("Disease API — check response format", false); return;
     }
     const diseaseResult = diseaseData.result;
     const confVal = diseaseData.confidence;
@@ -1375,10 +1492,31 @@ Fill all fields with accurate, practical IPM information.`;
     const fd = new FormData(); fd.append('image', currentImageBlob);
     try {
       const res = await fetch(BACKEND_URL + "/detect-pest", { method:'POST', body:fd });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      const pestResult = data.result || "No pest detected";
-      const confVal = data.confidence;
-      const isNoPest = confVal === 0 || pestResult.toLowerCase().includes("no pest");
+
+      // ── Try every known response format ──────────────────────────────────
+      let pestResult = null, confVal = null;
+
+      // Format 1: Roboflow predictions array
+      const preds = data.data?.predictions || data.predictions;
+      if (preds && Array.isArray(preds) && preds.length > 0) {
+        const top = preds.reduce((max,p) => (p.confidence||0) > (max.confidence||0) ? p : max, preds[0]);
+        pestResult = top.class || top.className || top.label || "Unknown pest";
+        confVal = Math.round((top.confidence||0) * (top.confidence > 1 ? 1 : 100));
+      } else if (preds && Array.isArray(preds) && preds.length === 0) {
+        pestResult = "No pest detected"; confVal = 0;
+      }
+
+      // Format 2: Direct result field
+      if (!pestResult) {
+        pestResult = data.result || data.class || data.pest || data.label ||
+                     data.data?.result || data.data?.class || data.data?.pest || "No pest detected";
+        confVal = Math.round(((data.confidence || data.data?.confidence || 0)) * (((data.confidence||0)) > 1 ? 1 : 100));
+      }
+
+      const isNoPest = confVal === 0 || !pestResult || pestResult.toLowerCase().includes("no pest") || pestResult.toLowerCase().includes("none");
+
       // Store for language re-render
       lastResultType = 'pest';
       lastResultData = { result: pestResult, confidence: confVal, isNoPest };
