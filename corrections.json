@@ -1,9 +1,75 @@
 {
-  "cowpea plant": {
-    "name": "cowpea",
-    "scientific": "Vigna unguiculata",
-    "family": "Fabaceae",
-    "description": "Legume crop, rich in protein, drought-tolerant.",
-    "ownerSure": true
+  "goathead": {
+    "name": "Goathead",
+    "type": "plant",
+    "scientific": "Tribulus terrestris",
+    "family": "—",
+    "importance": "",
+    "description": "",
+    "symptoms": [],
+    "control": {},
+    "phytochemicals": {},
+    "localNames": {},
+    "ownerNotes": "",
+    "ownerSure": true,
+    "savedAt": "2026-05-11T11:39:32.210Z"
+  },
+  "tribulus terrestris": {
+    "name": "Tribulus terrestris",
+    "type": "plant",
+    "scientific": "",
+    "family": "Zygophyllaceae",
+    "importance": "Medicinal; Food; Fodder",
+    "description": "Tribulus terrestris is a perennial, prostrate, herbaceous plant with a deep taproot. It has a spreading habit and can form dense mats. The plant is covered with fine hairs and has a yellowish-green color.",
+    "symptoms": [],
+    "control": {},
+    "phytochemicals": {
+      "primaryCompounds": [
+        "Saponins",
+        "Flavonoids",
+        "Alkaloids"
+      ],
+      "alkaloids": [
+        "Harmane",
+        "Norharmane"
+      ],
+      "flavonoids": [
+        "Quercetin",
+        "Kaempferol"
+      ],
+      "phenolicAcids": [
+        "Gallic acid",
+        "Caffeic acid"
+      ],
+      "terpenoids": [
+        "Tribuloside",
+        "Terrestrin"
+      ],
+      "saponins": [
+        "Tribuloside",
+        "Tribulogenin"
+      ],
+      "tannins": "Present",
+      "glycosides": [
+        "Tribuloside",
+        "Quercetin glycoside"
+      ],
+      "biologicalActivities": [
+        "Antioxidant",
+        "Anti-inflammatory",
+        "Antimicrobial",
+        "Antiviral"
+      ]
+    },
+    "localNames": {
+      "yoruba": "Egberi",
+      "hausa": "Karkashi",
+      "igbo": "Ogiri",
+      "fulani": "Biri",
+      "twi": "Nsaman"
+    },
+    "ownerNotes": "",
+    "ownerSure": false,
+    "savedAt": "2026-05-11T11:42:02.389Z"
   }
 }
