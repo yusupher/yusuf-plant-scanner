@@ -134,6 +134,56 @@
     .local-names span { display: inline-block; margin-right: 15px; font-size: 0.8rem; }
     .local-names i { margin-right: 4px; color: #4a6e3c; }
 
+
+    /* ===== OFFLINE KNOWLEDGE SYSTEM ===== */
+    .offline-panel { background: #1a3c2a; border-radius: 24px; margin: 10px 16px 16px; padding: 18px; color: white; }
+    .offline-panel h3 { font-size: 0.95rem; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .offline-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 14px; }
+    .offline-stat { background: rgba(255,255,255,0.1); border-radius: 14px; padding: 10px; text-align: center; }
+    .offline-stat .num { font-size: 1.4rem; font-weight: 800; color: #52b788; }
+    .offline-stat .lbl { font-size: 0.65rem; opacity: 0.8; margin-top: 2px; }
+    .offline-search-row { display: flex; gap: 8px; margin-bottom: 12px; }
+    .offline-search-row input { flex: 1; padding: 9px 14px; border-radius: 40px; border: none; font-size: 0.85rem; background: rgba(255,255,255,0.15); color: white; outline: none; }
+    .offline-search-row input::placeholder { color: rgba(255,255,255,0.5); }
+    .offline-search-row button { background: #52b788; color: #1a3c2a; border: none; padding: 9px 16px; border-radius: 40px; font-weight: 700; cursor: pointer; font-size: 0.82rem; }
+    .offline-entry { background: rgba(255,255,255,0.08); border-radius: 16px; padding: 12px 14px; margin-bottom: 8px; border-left: 3px solid #52b788; cursor: pointer; transition: background 0.15s; }
+    .offline-entry:hover { background: rgba(255,255,255,0.15); }
+    .offline-entry.disease { border-left-color: #f4a261; }
+    .offline-entry.pest { border-left-color: #e07a5f; }
+    .offline-entry .oe-name { font-weight: 700; font-size: 0.88rem; }
+    .offline-entry .oe-meta { font-size: 0.7rem; opacity: 0.7; margin-top: 3px; }
+    .offline-entry .oe-thumb { width: 42px; height: 42px; border-radius: 10px; object-fit: cover; float: right; margin-left: 10px; }
+    .offline-detail-modal { display: none; position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.85); z-index: 3000; align-items: center; justify-content: center; padding: 14px; }
+    .offline-detail-modal.open { display: flex; }
+    .offline-detail-box { background: white; border-radius: 28px; width: 100%; max-width: 680px; max-height: 93vh; overflow-y: auto; }
+    .offline-detail-header { background: #1a3c2a; color: white; padding: 18px 20px; border-radius: 28px 28px 0 0; display: flex; justify-content: space-between; align-items: center; }
+    .offline-detail-body { padding: 18px 20px 24px; }
+    .offline-detail-img { width: 100%; max-height: 200px; object-fit: cover; border-radius: 16px; margin-bottom: 14px; }
+    /* Owner fix button */
+    .owner-fix-btn { display: none; align-items: center; gap: 6px; background: #7c3aed; color: white; border: none; border-radius: 40px; padding: 8px 16px; font-size: 0.78rem; font-weight: 700; cursor: pointer; margin-top: 8px; margin-left: 6px; }
+    .owner-fix-btn:hover { background: #6d28d9; }
+    .fix-panel { background: #f5f3ff; border-radius: 20px; padding: 16px; margin-top: 12px; border: 2px solid #7c3aed; display: none; }
+    .fix-panel h4 { color: #5b21b6; font-size: 0.88rem; margin-bottom: 12px; }
+    .fix-row { margin-bottom: 10px; }
+    .fix-row label { display: block; font-size: 0.78rem; font-weight: 700; color: #4c1d95; margin-bottom: 4px; }
+    .fix-row input, .fix-row textarea, .fix-row select { width: 100%; padding: 8px 12px; border-radius: 40px; border: 1px solid #c4b5fd; font-size: 0.85rem; outline: none; }
+    .fix-row textarea { border-radius: 16px; resize: vertical; }
+    .fix-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .fix-actions button { border: none; padding: 9px 16px; border-radius: 40px; font-size: 0.82rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+    .fix-save-btn { background: #7c3aed; color: white; }
+    .fix-ai-btn  { background: #0369a1; color: white; }
+    .fix-status  { font-size: 0.75rem; color: #5b21b6; margin-top: 6px; min-height: 18px; }
+    .save-result-btn { display: inline-flex; align-items: center; gap: 6px; background: #1a3c2a; color: white; border: none; border-radius: 40px; padding: 8px 16px; font-size: 0.78rem; font-weight: 700; cursor: pointer; margin-top: 10px; }
+    .save-result-btn:hover { background: #2d6a4f; }
+    .save-result-btn.saved { background: #52b788; color: #1a3c2a; }
+    .owner-suggest-btn { background: #7c3aed; color: white; border: none; border-radius: 40px; padding: 5px 12px; font-size: 0.75rem; cursor: pointer; margin-left: 6px; }
+    .offline-tabs { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+    .offline-tab { background: rgba(255,255,255,0.12); border: none; color: white; padding: 5px 12px; border-radius: 40px; font-size: 0.72rem; cursor: pointer; }
+    .offline-tab.active { background: #52b788; color: #1a3c2a; font-weight: 700; }
+    .kb-badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 0.65rem; font-weight: 700; margin-left: 6px; }
+    .kb-plant { background: #d4edda; color: #1a5c2d; }
+    .kb-disease { background: #ffe0b2; color: #7c4300; }
+    .kb-pest { background: #fce4ec; color: #880e4f; }
     /* Fast loading dots */
     .typing-dots { display: inline-flex; gap: 5px; align-items: center; margin-top: 8px; }
     .typing-dots span { width: 8px; height: 8px; background: #2f6b47; border-radius: 50%; animation: dotBounce 1.2s infinite; }
@@ -254,6 +304,48 @@
     </div>
     <div id="intentResultContainer">
       <div class="intent-result" style="color:#888;font-size:0.82rem;"><i class="fas fa-lightbulb" style="margin-right:6px;color:#f59e0b;"></i>Ask any agricultural question in any language and get an instant AI answer.</div>
+    </div>
+  </div>
+
+
+  <!-- ===== OFFLINE KNOWLEDGE BASE PANEL ===== -->
+  <div class="offline-panel" id="offlineKBPanel" style="display:none;">
+    <h3><i class="fas fa-database"></i> 📴 Offline Knowledge Base</h3>
+    <div class="offline-stats">
+      <div class="offline-stat"><div class="num" id="kbPlantCount">0</div><div class="lbl">Plants</div></div>
+      <div class="offline-stat"><div class="num" id="kbDiseaseCount">0</div><div class="lbl">Diseases</div></div>
+      <div class="offline-stat"><div class="num" id="kbPestCount">0</div><div class="lbl">Pests</div></div>
+    </div>
+    <div class="offline-tabs">
+      <button class="offline-tab active" data-kbtab="all">All</button>
+      <button class="offline-tab" data-kbtab="plant">🌿 Plants</button>
+      <button class="offline-tab" data-kbtab="disease">🦠 Diseases</button>
+      <button class="offline-tab" data-kbtab="pest">🐛 Pests</button>
+    </div>
+    <div class="offline-search-row">
+      <input type="text" id="kbSearchInput" placeholder="Search knowledge base...">
+      <button id="kbSearchBtn"><i class="fas fa-search"></i> Search</button>
+    </div>
+    <div id="kbResultsList"></div>
+    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+      <button id="kbDownloadBtn" style="background:#f4a261;color:#1a3c2a;border:none;padding:8px 16px;border-radius:40px;font-size:0.78rem;font-weight:700;cursor:pointer;"><i class="fas fa-download"></i> Export corrections.json</button>
+      <button id="kbImportBtn" style="background:rgba(255,255,255,0.15);color:white;border:none;padding:8px 16px;border-radius:40px;font-size:0.78rem;font-weight:700;cursor:pointer;"><i class="fas fa-upload"></i> Import corrections.json</button>
+      <button id="kbClearBtn" style="background:#b1624b;color:white;border:none;padding:8px 16px;border-radius:40px;font-size:0.78rem;font-weight:700;cursor:pointer;display:none;"><i class="fas fa-trash"></i> Clear All</button>
+      <input type="file" id="kbImportFile" accept=".json" style="display:none">
+    </div>
+  </div>
+
+  <!-- OFFLINE DETAIL MODAL -->
+  <div class="offline-detail-modal" id="offlineDetailModal">
+    <div class="offline-detail-box">
+      <div class="offline-detail-header">
+        <div>
+          <div id="offlineDetailTitle" style="font-weight:800;font-size:1rem;"></div>
+          <div id="offlineDetailMeta" style="font-size:0.72rem;opacity:0.8;margin-top:3px;"></div>
+        </div>
+        <button id="offlineDetailClose" style="background:rgba(255,255,255,0.2);border:none;color:white;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1rem;"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="offline-detail-body" id="offlineDetailBody"></div>
     </div>
   </div>
 
@@ -1256,6 +1348,7 @@ Fill all fields with accurate, practical IPM information.`;
     }
     wrapper.appendChild(makeSearchBtn(d.result, 'disease', `🦠 ${d.result}`, t('diseaseFound')));
     wrapper.appendChild(makeWikiBtn(d.result, 'disease'));
+    wrapper.appendChild(makeSaveKBBtn(d.result, 'disease', { name: d.result, confidence: d.confidence }));
     aiOutput.innerHTML = ''; aiOutput.appendChild(wrapper);
   }
 
@@ -1270,6 +1363,7 @@ Fill all fields with accurate, practical IPM information.`;
     }
     wrapper.appendChild(makeSearchBtn(d.result, 'pest', `🐛 ${d.result}`, t('pestFound')));
     wrapper.appendChild(makeWikiBtn(d.result, 'pest'));
+    wrapper.appendChild(makeSaveKBBtn(d.result, 'pest', { name: d.result, confidence: d.confidence }));
     aiOutput.innerHTML = ''; aiOutput.appendChild(wrapper);
   }
 
@@ -1290,6 +1384,16 @@ Fill all fields with accurate, practical IPM information.`;
       else if (type === 'disease') html = renderDiseaseInfo(info);
       else if (type === 'pest') html = renderPestInfo(info);
       infoModalBody.innerHTML = html || '<p>No information returned.</p>';
+
+      // ── AUTO-SAVE full comprehensive info for offline use (all users) ─────
+      // Save quietly in background — no status message shown to user
+      const renderedHTML = infoModalBody.innerHTML;
+      kbAddEntry(type, query, info, null, 'auto_comprehensive', renderedHTML).catch(()=>{});
+
+      // ── Owner-only save + fix tools at bottom of modal ────────────────────
+      const ownerToolsDiv = makeOwnerTools(query, type, info);
+      ownerToolsDiv.style.margin = '14px 0 0 0';
+      infoModalBody.appendChild(ownerToolsDiv);
     } catch(err) {
       infoModalBody.innerHTML = `<div class="error-msg">
         <i class="fas fa-exclamation-triangle"></i><br>
@@ -1377,10 +1481,78 @@ Fill all fields with accurate, practical IPM information.`;
     setStatus(t('identifying'), true);
     defaultMsg.classList.add('hidden');
     let result = null;
-    if (currentMode === 'offline' && offlineReady) {
-      const img = await blobToImage(currentImageBlob);
-      result = await classifyOffline(img);
+    if (currentMode === 'offline') {
+      setStatus('📴 Searching offline knowledge base…', true);
+
+      // ── STEP 1: Match by image fingerprint (most accurate) ────────────────
+      const imgMatch = await kbMatchByImage(currentImageBlob, 'plant');
+      if (imgMatch) {
+        const e = imgMatch.entry;
+        const conf = Math.round(imgMatch.score * 100);
+        result = {
+          name: e.name,
+          scientific: e.data?.scientific || e.data?.scientificName || '—',
+          family: e.data?.family || '—',
+          importance: e.data?.importance || (e.data?.uses||[]).join('; ') || '',
+          confidence: conf,
+          correctionNote: e.correctedBy === 'owner'
+            ? `✏️ Owner verified · Image match ${conf}%`
+            : `📴 Offline KB · Image match ${conf}%`,
+          kbEntryId: e.id
+        };
+      }
+
+      // ── STEP 2: Try MobileNet if no image match ───────────────────────────
+      if (!result && offlineReady) {
+        const img = await blobToImage(currentImageBlob);
+        result = await classifyOffline(img);
+        // Enrich MobileNet result with KB data
+        if (result?.name) {
+          const kbEntry = kbOfflineLookup(result.name, 'plant');
+          if (kbEntry?.data) {
+            result.scientific  = result.scientific !== '—' ? result.scientific : (kbEntry.data.scientific || kbEntry.data.scientificName || '—');
+            result.family      = result.family !== 'Unknown' ? result.family : (kbEntry.data.family || '—');
+            result.importance  = kbEntry.data.importance || (kbEntry.data.uses||[]).join('; ') || result.importance || '';
+            result.correctionNote = kbEntry.correctedBy === 'owner' ? '✏️ Owner verified offline data' : '📴 From offline KB';
+            result.kbEntryId   = kbEntry.id;
+          }
+        }
+      }
+
+      // ── STEP 3: No match — show KB browser for manual selection ──────────
+      if (!result) {
+        const db = kbLoad();
+        const plantEntries = Object.values(db).filter(e => e.type === 'plant');
+        if (plantEntries.length > 0) {
+          // Show a picker so the user can manually select from saved plants
+          defaultMsg.classList.add('hidden');
+          let pickerHtml = `<div class="plant-card">
+            <strong>📴 Offline Mode — Image not recognized</strong>
+            <p style="font-size:0.82rem;margin:8px 0;color:#555;">Select from your saved offline plants:</p>`;
+          plantEntries.slice(0, 10).forEach(e => {
+            const img = kbGetImage(e.id);
+            pickerHtml += `<div onclick="offlinePickEntry('${e.id}')" style="display:flex;align-items:center;gap:10px;background:#f0f7eb;border-radius:14px;padding:8px 12px;margin-bottom:6px;cursor:pointer;border:1px solid #c8e0bc;">
+              ${img ? `<img src="${img}" style="width:40px;height:40px;border-radius:8px;object-fit:cover;">` : '<div style="width:40px;height:40px;border-radius:8px;background:#c8e0bc;display:flex;align-items:center;justify-content:center;">🌿</div>'}
+              <div><div style="font-weight:700;font-size:0.88rem;">${esc(e.name)}</div>
+              <div style="font-size:0.72rem;color:#666;">${esc(e.data?.scientific||'')} ${e.correctedBy==='owner'?'· ✏️':''}</div></div>
+            </div>`;
+          });
+          pickerHtml += `</div>`;
+          aiOutput.innerHTML = pickerHtml;
+          setStatus('📴 Offline: Select a plant from the list', false);
+          return;
+        }
+        // Truly nothing saved
+        aiOutput.innerHTML = `<div class="error-msg">
+          <strong>📴 Offline — No saved plants yet</strong><br>
+          <small>Go online, identify a plant, click <strong>Comprehensive Info</strong> to save it for offline use.</small>
+        </div>`;
+        setStatus('📴 No offline data. Go online to save plants first.', false);
+        return;
+      }
+
     } else result = await identifyPlantWithBackend(currentImageBlob);
+
     if (result?.error) {
       const rawJson = result.rawData ? JSON.stringify(result.rawData, null, 2) : (result.message || "No data");
       aiOutput.innerHTML = `<div class="plant-card"><strong>⚠️ Could not parse plant name</strong><div class="raw-json">${esc(rawJson)}</div></div>`;
@@ -1658,6 +1830,14 @@ Fill all fields with accurate, practical IPM information.`;
     const searchQuery = result.scientific || result.name;
     wrapper.appendChild(makeSearchBtn(searchQuery, 'plant', `🌿 ${result.name}`, result.scientific || ''));
     wrapper.appendChild(makeWikiBtn(result.name, 'plant'));
+    wrapper.appendChild(makeSaveKBBtn(result.name, 'plant', {
+      scientific: result.scientific, family: result.family,
+      importance: result.importance, description: result.importance,
+      uses: result.importance ? [result.importance] : []
+    }));
+    // Show "View Offline Info" if this plant is in KB
+    const kbOfflineBtn = makeViewOfflineBtn(result.name, 'plant');
+    if (kbOfflineBtn) wrapper.appendChild(kbOfflineBtn);
     if (ownerAuthenticated && predictedKey) {
       const editBtn = document.createElement('button');
       editBtn.className = 'primary'; editBtn.style.marginTop = '8px';
@@ -1685,8 +1865,22 @@ Fill all fields with accurate, practical IPM information.`;
   function hideModal() { modal.style.display = 'none'; }
   function setOwnerMode(active) {
     ownerAuthenticated = active;
-    if (active) { ownerPanel.classList.add('visible'); ownerLoginBtn.style.display = 'none'; logoutBtn.style.display = 'inline-block'; setStatus("🔓 Owner mode", false); }
-    else { ownerPanel.classList.remove('visible'); ownerLoginBtn.style.display = 'inline-block'; logoutBtn.style.display = 'none'; setStatus("User mode", false); }
+    if (active) {
+      ownerPanel.classList.add('visible');
+      ownerLoginBtn.style.display = 'none';
+      logoutBtn.style.display = 'inline-block';
+      setStatus("🔓 Owner mode — KB & Save features unlocked", false);
+    } else {
+      ownerPanel.classList.remove('visible');
+      ownerLoginBtn.style.display = 'inline-block';
+      logoutBtn.style.display = 'none';
+      setStatus("User mode", false);
+    }
+    kbUpdateStats();
+    // Re-render current result card to show/hide save buttons
+    if (lastResultType === 'plant' && lastResultData) displayPlantResult(lastResultData, lastPredictedKey);
+    else if (lastResultType === 'disease' && lastResultData) rerenderDiseaseCard(lastResultData);
+    else if (lastResultType === 'pest' && lastResultData) rerenderPestCard(lastResultData);
   }
   submitPassword.addEventListener('click', () => { if (passwordInput.value === OWNER_PASSWORD) { setOwnerMode(true); hideModal(); passwordInput.value = ''; } else alert("Wrong password"); });
   ownerLoginBtn.addEventListener('click', showPasswordModal);
@@ -1833,6 +2027,712 @@ Fill all fields with accurate, practical IPM information.`;
   document.getElementById('intentSearchBtn').addEventListener('click', runIntentSearch);
   document.getElementById('intentSearchInput').addEventListener('keypress', e => { if (e.key === 'Enter') runIntentSearch(); });
 
+
+  // ============================================================
+  // OFFLINE KNOWLEDGE BASE SYSTEM
+  // ============================================================
+  const KB_KEY = 'ysf_knowledge_base';
+  const KB_IMG_PREFIX = 'ysf_img_';
+
+  function kbLoad() {
+    try { return JSON.parse(localStorage.getItem(KB_KEY) || '{}'); }
+    catch { return {}; }
+  }
+  function kbSave(db) {
+    try { localStorage.setItem(KB_KEY, JSON.stringify(db)); }
+    catch(e) { alert('Storage full. Try exporting and clearing old entries.'); }
+  }
+  function kbSaveImage(id, dataUrl) {
+    try { localStorage.setItem(KB_IMG_PREFIX + id, dataUrl); } catch {}
+  }
+
+  // Generate a simple perceptual fingerprint from image (8x8 avg pixels → 64 values)
+  async function imgFingerprint(blob) {
+    try {
+      const img = await blobToImage(blob);
+      const canvas = document.createElement('canvas');
+      canvas.width = 8; canvas.height = 8;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, 8, 8);
+      const px = ctx.getImageData(0, 0, 8, 8).data;
+      const vals = [];
+      for (let i = 0; i < px.length; i += 4)
+        vals.push(Math.round((px[i] + px[i+1] + px[i+2]) / 3));
+      return vals;
+    } catch { return null; }
+  }
+
+  function fingerprintSimilarity(a, b) {
+    if (!a || !b || a.length !== b.length) return 0;
+    let diff = 0;
+    for (let i = 0; i < a.length; i++) diff += Math.abs(a[i] - b[i]);
+    return 1 - diff / (255 * a.length);
+  }
+
+  // Save fingerprint alongside entry
+  async function kbSaveFingerprint(id, blob) {
+    if (!blob) return;
+    const fp = await imgFingerprint(blob);
+    if (fp) {
+      try { localStorage.setItem('ysf_fp_' + id, JSON.stringify(fp)); } catch {}
+    }
+  }
+
+  function kbGetFingerprint(id) {
+    try { return JSON.parse(localStorage.getItem('ysf_fp_' + id) || 'null'); } catch { return null; }
+  }
+
+  // Find best KB match for a given image blob (returns entry or null)
+  async function kbMatchByImage(blob, type) {
+    const fp = await imgFingerprint(blob);
+    if (!fp) return null;
+    const db = kbLoad();
+    let bestEntry = null, bestScore = 0.82; // minimum 82% similarity threshold
+    for (const entry of Object.values(db)) {
+      if (type && entry.type !== type) continue;
+      if (!entry.hasImage) continue;
+      const savedFp = kbGetFingerprint(entry.id);
+      if (!savedFp) continue;
+      const score = fingerprintSimilarity(fp, savedFp);
+      if (score > bestScore) { bestScore = score; bestEntry = entry; }
+    }
+    return bestEntry ? { entry: bestEntry, score: bestScore } : null;
+  }
+  function kbGetImage(id) {
+    return localStorage.getItem(KB_IMG_PREFIX + id) || null;
+  }
+  function kbDeleteImage(id) {
+    localStorage.removeItem(KB_IMG_PREFIX + id);
+  }
+
+  // Convert blob/file to base64 data URL
+  function blobToDataUrl(blob) {
+    return new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onload = e => resolve(e.target.result);
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  // Save a result to offline KB
+  async function kbAddEntry(type, name, data, imageBlob, correctedBy, renderedHTML) {
+    const db = kbLoad();
+    // Use a stable key based on name+type so same item updates rather than duplicates
+    const stableKey = type + '_' + name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    // Find existing entry with same stable key to update, else create new
+    const existingId = Object.keys(db).find(k => k.startsWith(stableKey));
+    const id = existingId || (stableKey + '_' + Date.now());
+    const entry = {
+      id, type, name,
+      savedAt: new Date().toISOString(),
+      correctedBy: correctedBy || 'auto',
+      lang: currentLang,
+      data: data,
+      hasImage: !!imageBlob || (existingId && db[existingId]?.hasImage),
+      renderedHTML: renderedHTML || (existingId && db[existingId]?.renderedHTML) || ''
+    };
+    db[id] = entry;
+    kbSave(db);
+    if (imageBlob) {
+      const dataUrl = await blobToDataUrl(imageBlob);
+      kbSaveImage(id, dataUrl);
+      await kbSaveFingerprint(id, imageBlob); // save perceptual fingerprint
+    }
+    kbUpdateStats();
+    if (correctedBy !== 'auto_comprehensive') setStatus('✅ Saved to offline knowledge base!', false);
+    return id;
+  }
+
+  // Update entry (owner correction)
+  function kbUpdateEntry(id, updates) {
+    const db = kbLoad();
+    if (!db[id]) return false;
+    db[id] = { ...db[id], ...updates, updatedAt: new Date().toISOString(), correctedBy: 'owner' };
+    kbSave(db);
+    kbUpdateStats();
+    return true;
+  }
+
+  // Delete entry
+  function kbDeleteEntry(id) {
+    const db = kbLoad();
+    delete db[id];
+    kbSave(db);
+    kbDeleteImage(id);
+    kbUpdateStats();
+  }
+
+  // Search KB
+  function kbSearch(query, typeFilter) {
+    const db = kbLoad();
+    const q = query.toLowerCase().trim();
+    return Object.values(db).filter(e => {
+      if (typeFilter && typeFilter !== 'all' && e.type !== typeFilter) return false;
+      if (!q) return true;
+      return e.name.toLowerCase().includes(q) ||
+             JSON.stringify(e.data).toLowerCase().includes(q);
+    }).sort((a,b) => new Date(b.savedAt) - new Date(a.savedAt));
+  }
+
+  // Update stats counters
+  function kbUpdateStats() {
+    const db = kbLoad();
+    const entries = Object.values(db);
+    document.getElementById('kbPlantCount').textContent   = entries.filter(e=>e.type==='plant').length;
+    document.getElementById('kbDiseaseCount').textContent = entries.filter(e=>e.type==='disease').length;
+    document.getElementById('kbPestCount').textContent    = entries.filter(e=>e.type==='pest').length;
+    // Show entire KB panel only to owner
+    const panel = document.getElementById('offlineKBPanel');
+    if (panel) panel.style.display = ownerAuthenticated ? 'block' : 'none';
+    // Show clear button only to owner when entries exist
+    const clearBtn = document.getElementById('kbClearBtn');
+    if (clearBtn) clearBtn.style.display = ownerAuthenticated && entries.length > 0 ? 'inline-flex' : 'none';
+    // Show/hide all save-to-KB buttons based on owner status
+    document.querySelectorAll('[data-kb-owner-only]').forEach(el => {
+      el.style.display = ownerAuthenticated ? 'inline-flex' : 'none';
+    });
+  }
+
+  // Render KB list
+  let currentKBTab = 'all';
+  function kbRenderList(query) {
+    const list = document.getElementById('kbResultsList');
+    const results = kbSearch(query || '', currentKBTab);
+    if (results.length === 0) {
+      list.innerHTML = `<div style="color:rgba(255,255,255,0.5);font-size:0.82rem;text-align:center;padding:16px;">
+        ${query ? 'No results for "' + esc(query) + '"' : 'Knowledge base is empty. Save results online to use offline.'}
+      </div>`;
+      return;
+    }
+    list.innerHTML = results.slice(0, 30).map(e => {
+      const img = kbGetImage(e.id);
+      const badgeClass = e.type === 'plant' ? 'kb-plant' : e.type === 'disease' ? 'kb-disease' : 'kb-pest';
+      const emoji = e.type === 'plant' ? '🌿' : e.type === 'disease' ? '🦠' : '🐛';
+      return `<div class="offline-entry ${e.type}" onclick="kbShowDetail('${e.id}')">
+        ${img ? `<img src="${img}" class="oe-thumb" alt="">` : ''}
+        <div class="oe-name">${emoji} ${esc(e.name)} <span class="kb-badge ${badgeClass}">${e.type}</span></div>
+        <div class="oe-meta">${e.correctedBy==='owner'?'✏️ Owner verified · ':''} Saved: ${new Date(e.savedAt).toLocaleDateString()} · Lang: ${e.lang||'en'}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // Show detail modal for offline entry
+  function kbShowDetail(id) {
+    const db = kbLoad();
+    const entry = db[id];
+    if (!entry) return;
+    const modal = document.getElementById('offlineDetailModal');
+    const img = kbGetImage(id);
+
+    // Header
+    document.getElementById('offlineDetailTitle').textContent = entry.name;
+    const corrLabel = entry.correctedBy === 'owner' ? '✏️ Owner verified' :
+                      entry.correctedBy === 'auto_comprehensive' ? '📡 Full comprehensive data' : '💾 Auto-saved';
+    document.getElementById('offlineDetailMeta').textContent =
+      `${entry.type} · ${new Date(entry.savedAt).toLocaleDateString()} · ${corrLabel} · Lang: ${entry.lang||'en'}`;
+
+    let body = '';
+
+    // Show captured image if any
+    if (img) body += `<img src="${img}" class="offline-detail-img" alt="${esc(entry.name)}">`;
+
+    // ── If we have the full rendered HTML, show it directly ──────────────────
+    if (entry.renderedHTML && entry.renderedHTML.length > 100) {
+      body += `<div class="offline-comprehensive-content">${entry.renderedHTML}</div>`;
+    } else {
+      // ── Fallback: render from structured data ──────────────────────────────
+      const d = entry.data || {};
+      if (d.description) body += `<div class="info-section-block"><h3>📖 Description</h3><p>${esc(d.description)}</p></div>`;
+      if (d.family || d.scientific) {
+        body += `<div class="taxonomy-grid">
+          ${d.family?`<div class="taxonomy-item"><span>Family</span>${esc(d.family)}</div>`:''}
+          ${d.scientific||d.scientificName?`<div class="taxonomy-item"><span>Scientific</span><em>${esc(d.scientific||d.scientificName)}</em></div>`:''}
+          ${d.origin?`<div class="taxonomy-item"><span>Origin</span>${esc(d.origin)}</div>`:''}
+        </div>`;
+      }
+      // Phytochemicals
+      const p = d.phytochemicals;
+      if (p && Object.values(p).some(v=>v&&(Array.isArray(v)?v.length:true))) {
+        body += `<div class="info-section-block" style="background:#fdf4ff;border-left-color:#9333ea;">
+          <h3>🧪 Phytochemicals</h3>
+          ${p.primaryCompounds?.length?`<p><strong>Primary:</strong> ${p.primaryCompounds.map(v=>esc(v)).join(', ')}</p>`:''}
+          ${p.flavonoids?.length?`<p><strong>Flavonoids:</strong> ${p.flavonoids.map(v=>esc(v)).join(', ')}</p>`:''}
+          ${p.alkaloids?.length?`<p><strong>Alkaloids:</strong> ${p.alkaloids.map(v=>esc(v)).join(', ')}</p>`:''}
+          ${p.biologicalActivities?.length?`<p><strong>Activities:</strong> ${p.biologicalActivities.map(v=>esc(v)).join(', ')}</p>`:''}
+        </div>`;
+      }
+      if (d.uses?.length) body += `<div class="info-section-block"><h3>🔧 Uses</h3><ul>${d.uses.map(u=>`<li>${esc(u)}</li>`).join('')}</ul></div>`;
+      if (d.medicinalUses?.length) body += `<div class="info-section-block"><h3>💊 Medicinal Uses</h3><ul>${d.medicinalUses.map(u=>`<li>${esc(u)}</li>`).join('')}</ul></div>`;
+      if (d.symptoms?.length) body += `<div class="info-section-block disease-block"><h3>🔍 Symptoms</h3><ul>${d.symptoms.map(s=>`<li>${esc(s)}</li>`).join('')}</ul></div>`;
+      if (d.control) {
+        const c = d.control;
+        body += `<div class="info-section-block"><h3>🛡️ IPM Control</h3>
+          ${c.ipmSummary?`<p>${esc(c.ipmSummary)}</p>`:''}
+          ${c.cultural?.length?`<p><span class="ipm-tag cult">Cultural</span></p><ul>${c.cultural.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+          ${c.biological?.length?`<p><span class="ipm-tag bio">Biological</span></p><ul>${c.biological.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+          ${c.chemical?.length?`<p><span class="ipm-tag chem">Chemical</span></p><ul>${c.chemical.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+        </div>`;
+      }
+      if (d.interestingFacts?.length) body += `<div class="info-section-block"><h3>💡 Facts</h3><ul>${d.interestingFacts.map(f=>`<li>${esc(f)}</li>`).join('')}</ul></div>`;
+      if (d.ownerNotes) body += `<div class="tip-box"><strong>Owner Notes:</strong> ${esc(d.ownerNotes)}</div>`;
+    }
+
+    // ── Owner correction form ─────────────────────────────────────────────────
+    if (ownerAuthenticated) {
+      const d = entry.data || {};
+      body += `<div style="background:#f0ebe0;border-radius:20px;padding:16px;margin-top:18px;border:2px solid #7c3aed;">
+        <h4 style="margin-bottom:12px;color:#5b21b6;"><i class="fas fa-tools"></i> Owner Correction</h4>
+        <div style="margin-bottom:10px;">
+          <label style="font-size:0.8rem;font-weight:700;display:block;margin-bottom:4px;color:#4c1d95;">Correct Name:</label>
+          <input type="text" id="kbEditName_${id}" value="${esc(entry.name)}" style="width:100%;padding:8px 12px;border-radius:40px;border:1px solid #c4b5fd;font-size:0.85rem;">
+        </div>
+        <div style="margin-bottom:10px;">
+          <label style="font-size:0.8rem;font-weight:700;display:block;margin-bottom:4px;color:#4c1d95;">Scientific Name:</label>
+          <input type="text" id="kbEditSci_${id}" value="${esc(d.scientific||d.scientificName||'')}" style="width:100%;padding:8px 12px;border-radius:40px;border:1px solid #c4b5fd;font-size:0.85rem;">
+        </div>
+        <div style="margin-bottom:10px;">
+          <label style="font-size:0.8rem;font-weight:700;display:block;margin-bottom:4px;color:#4c1d95;">Local Names (Yoruba | Hausa | Igbo):</label>
+          <input type="text" id="kbEditLocal_${id}" value="${esc([d.localNamesWestAfrica?.yoruba||'',d.localNamesWestAfrica?.hausa||'',d.localNamesWestAfrica?.igbo||''].filter(v=>v).join(' | '))}" placeholder="e.g. Àgbàdo | Masara | Ọka" style="width:100%;padding:8px 12px;border-radius:40px;border:1px solid #c4b5fd;font-size:0.85rem;">
+        </div>
+        <div style="margin-bottom:10px;">
+          <label style="font-size:0.8rem;font-weight:700;display:block;margin-bottom:4px;color:#4c1d95;">Notes / Correction:</label>
+          <textarea id="kbEditNotes_${id}" rows="3" style="width:100%;padding:8px 12px;border-radius:16px;border:1px solid #c4b5fd;font-size:0.85rem;resize:vertical;">${esc(d.ownerNotes||'')}</textarea>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <button class="owner-suggest-btn" onclick="kbAISuggest('${id}')"><i class="fas fa-magic"></i> AI Suggest</button>
+          <button onclick="kbSaveOwnerCorrection('${id}')" style="background:#2f6b47;color:white;border:none;padding:9px 18px;border-radius:40px;font-size:0.82rem;cursor:pointer;font-weight:700;"><i class="fas fa-save"></i> Save Correction</button>
+          <button onclick="kbDeleteEntry('${id}');document.getElementById('offlineDetailModal').classList.remove('open');document.body.style.overflow='';kbRenderList();" style="background:#b1624b;color:white;border:none;padding:9px 14px;border-radius:40px;font-size:0.8rem;cursor:pointer;"><i class="fas fa-trash"></i> Delete</button>
+        </div>
+        <div id="kbEditStatus_${id}" style="font-size:0.75rem;color:#5b21b6;margin-top:8px;min-height:16px;"></div>
+      </div>`;
+    }
+
+    document.getElementById('offlineDetailBody').innerHTML = body;
+    modal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  // AI suggest name for correction
+  async function kbAISuggest(id) {
+    const db = kbLoad();
+    const entry = db[id];
+    if (!entry) return;
+    const btn = document.querySelector(`[onclick="kbAISuggest('${id}')"]`);
+    if (btn) { btn.innerHTML = '<span class="loader" style="display:inline-block;width:10px;height:10px;border-width:1px;"></span> Thinking...'; btn.disabled = true; }
+    try {
+      const prompt = `For an agricultural app, suggest the correct common name, scientific name, and family for: "${entry.name}" (type: ${entry.type}). Also give correct Yoruba, Hausa, and Igbo names. Return ONLY JSON: {"commonName":"","scientificName":"","family":"","yoruba":"","hausa":"","igbo":"","confidence":"high|medium|low","notes":""}`;
+      const res = await fetch(WORKER_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: entry.name, type: 'suggest', customPrompt: prompt })
+      });
+      const data = await res.json();
+      if (data.success && data.data?.commonName) {
+        const d = data.data;
+        const nameInput = document.getElementById(`kbEditName_${id}`);
+        const notesInput = document.getElementById(`kbEditNotes_${id}`);
+        if (nameInput) nameInput.value = d.commonName || entry.name;
+        if (notesInput) {
+          notesInput.value = `Scientific: ${d.scientificName||''} | Family: ${d.family||''}
+Yoruba: ${d.yoruba||''} | Hausa: ${d.hausa||''} | Igbo: ${d.igbo||''}
+Confidence: ${d.confidence||''}
+${d.notes||''}`.trim();
+        }
+        if (btn) { btn.innerHTML = '✅ Suggested!'; btn.disabled = false; }
+      }
+    } catch(e) {
+      if (btn) { btn.innerHTML = '<i class="fas fa-magic"></i> AI Suggest'; btn.disabled = false; }
+    }
+  }
+
+  // Save owner correction
+  function kbSaveOwnerCorrection(id) {
+    const nameInput  = document.getElementById('kbEditName_'  + id);
+    const sciInput   = document.getElementById('kbEditSci_'   + id);
+    const localInput = document.getElementById('kbEditLocal_' + id);
+    const notesInput = document.getElementById('kbEditNotes_' + id);
+    const statusDiv  = document.getElementById('kbEditStatus_'+ id);
+    const db = kbLoad();
+    if (!db[id]) return;
+
+    const newName  = nameInput?.value?.trim()  || db[id].name;
+    const newSci   = sciInput?.value?.trim()   || '';
+    const newLocal = localInput?.value?.trim() || '';
+    const notes    = notesInput?.value?.trim() || '';
+
+    // Parse local names
+    const localParts = newLocal.split('|').map(s=>s.trim());
+    const localNamesObj = { yoruba: localParts[0]||'', hausa: localParts[1]||'', igbo: localParts[2]||'' };
+
+    db[id].name = newName;
+    db[id].data = db[id].data || {};
+    db[id].data.scientific      = newSci;
+    db[id].data.scientificName  = newSci;
+    db[id].data.ownerNotes      = notes;
+    db[id].data.localNamesWestAfrica = localNamesObj;
+    db[id].correctedBy = 'owner';
+    db[id].updatedAt   = new Date().toISOString();
+    // Clear cached rendered HTML so next view re-renders with corrections
+    db[id].renderedHTML = '';
+    kbSave(db);
+
+    // Update localNamesDB in memory for immediate tribal badge effect
+    if (localNamesObj.yoruba || localNamesObj.hausa || localNamesObj.igbo) {
+      localNamesDB[newName.toLowerCase()] = {
+        yo: localNamesObj.yoruba, ha: localNamesObj.hausa, ig: localNamesObj.igbo
+      };
+    }
+    // Update pendingCorrections so live results reflect fix
+    pendingCorrections[db[id].name?.toLowerCase()?.trim()||''] = {
+      name: newName, scientific: newSci, family: db[id].data?.family||'',
+      importance: notes, ownerSure: true
+    };
+
+    kbUpdateStats();
+    kbRenderList(document.getElementById('kbSearchInput')?.value || '');
+    if (statusDiv) { statusDiv.textContent = '✅ Correction saved! Export to make permanent.'; }
+    setTimeout(() => { if (statusDiv) statusDiv.textContent = ''; }, 4000);
+  }
+
+  // Export KB as corrections.json
+  function kbExport() {
+    const db = kbLoad();
+    const out = {};
+    Object.values(db).forEach(e => {
+      const key = e.name.toLowerCase().trim();
+      out[key] = {
+        name: e.name, type: e.type,
+        scientific: e.data?.scientific || e.data?.scientificName || '',
+        family: e.data?.family || '',
+        importance: e.data?.importance || (e.data?.uses||[]).join('; ') || '',
+        description: e.data?.description || '',
+        symptoms: e.data?.symptoms || [],
+        control: e.data?.control || {},
+        phytochemicals: e.data?.phytochemicals || {},
+        localNames: e.data?.localNamesWestAfrica || {},
+        ownerNotes: e.data?.ownerNotes || '',
+        ownerSure: e.correctedBy === 'owner',
+        savedAt: e.savedAt
+      };
+    });
+    const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'corrections.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    setStatus('📥 corrections.json downloaded!', false);
+  }
+
+  // Import corrections.json into KB
+  function kbImport(file) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const imported = JSON.parse(e.target.result);
+        const db = kbLoad();
+        let count = 0;
+        Object.entries(imported).forEach(([key, val]) => {
+          const id = (val.type||'plant') + '_' + key.replace(/[^a-z0-9]/g, '_') + '_imported';
+          db[id] = {
+            id, name: val.name || key, type: val.type || 'plant',
+            savedAt: val.savedAt || new Date().toISOString(),
+            correctedBy: val.ownerSure ? 'owner' : 'imported',
+            lang: 'en', data: val
+          };
+          count++;
+        });
+        kbSave(db);
+        kbUpdateStats();
+        kbRenderList();
+        setStatus(`✅ Imported ${count} entries into offline KB!`, false);
+      } catch(err) {
+        alert('Invalid corrections.json file: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  // Lookup in KB for offline mode
+  function kbOfflineLookup(name, type) {
+    const db = kbLoad();
+    const q = name.toLowerCase().trim();
+    const entries = Object.values(db);
+    // Exact match first
+    let found = entries.find(e => e.name.toLowerCase() === q && (!type || e.type === type));
+    // Partial match
+    if (!found) found = entries.find(e => e.name.toLowerCase().includes(q) || q.includes(e.name.toLowerCase()));
+    return found || null;
+  }
+
+  // ── Make "Save to Offline KB" button appear on all result cards ────────────
+  // ── View offline info button (all users, if data exists in KB) ─────────────
+  function makeViewOfflineBtn(name, type) {
+    const entry = kbOfflineLookup(name, type);
+    if (!entry || (!entry.renderedHTML && !entry.data?.description)) return null;
+    const btn = document.createElement('button');
+    btn.style.cssText = 'display:inline-flex;align-items:center;gap:6px;background:#0369a1;color:white;border:none;border-radius:40px;padding:8px 16px;font-size:0.78rem;font-weight:700;cursor:pointer;margin-top:8px;margin-left:6px;';
+    btn.innerHTML = '<i class="fas fa-wifi-slash"></i> View Offline Info';
+    btn.title = 'View saved comprehensive information (no internet needed)';
+    btn.addEventListener('click', () => kbShowDetail(entry.id));
+    return btn;
+  }
+
+  // ── OWNER-ONLY: Save + Fix result ──────────────────────────────────────────
+  function makeSaveKBBtn(name, type, data) {
+    return makeOwnerTools(name, type, data);
+  }
+
+  function makeOwnerTools(name, type, data) {
+    const wrap = document.createElement('div');
+    wrap.dataset.kbOwnerOnly = '1';
+    wrap.style.display = ownerAuthenticated ? 'block' : 'none';
+
+    // ── Save button ──────────────────────────────────────────────────────────
+    const saveBtn = document.createElement('button');
+    saveBtn.className = 'save-result-btn';
+    saveBtn.innerHTML = '<i class="fas fa-database"></i> Save to Offline KB';
+
+    // ── Fix button ───────────────────────────────────────────────────────────
+    const fixBtn = document.createElement('button');
+    fixBtn.className = 'owner-fix-btn';
+    fixBtn.style.display = ownerAuthenticated ? 'inline-flex' : 'none';
+    fixBtn.innerHTML = '<i class="fas fa-edit"></i> Fix / Correct This';
+
+    // ── Fix panel ────────────────────────────────────────────────────────────
+    const fixPanel = document.createElement('div');
+    fixPanel.className = 'fix-panel';
+    const uid = 'fix_' + Math.random().toString(36).substr(2,8);
+    fixPanel.innerHTML = `
+      <h4><i class="fas fa-tools"></i> Owner Correction — Save to Offline KB</h4>
+      <div class="fix-row">
+        <label>Correct Name / Common Name</label>
+        <input type="text" id="${uid}_name" value="${esc(name)}" placeholder="e.g. Maize, Late Blight, Fall Armyworm">
+      </div>
+      <div class="fix-row">
+        <label>Scientific Name</label>
+        <input type="text" id="${uid}_sci" value="${esc(data?.scientific||data?.scientificName||'')}" placeholder="e.g. Zea mays">
+      </div>
+      <div class="fix-row">
+        <label>Family</label>
+        <input type="text" id="${uid}_fam" value="${esc(data?.family||'')}" placeholder="e.g. Poaceae">
+      </div>
+      <div class="fix-row">
+        <label>Type</label>
+        <select id="${uid}_type">
+          <option value="plant" ${type==='plant'?'selected':''}>🌿 Plant</option>
+          <option value="disease" ${type==='disease'?'selected':''}>🦠 Disease</option>
+          <option value="pest" ${type==='pest'?'selected':''}>🐛 Pest</option>
+        </select>
+      </div>
+      <div class="fix-row">
+        <label>Local Names (Yoruba | Hausa | Igbo)</label>
+        <input type="text" id="${uid}_local" placeholder="e.g. Àgbàdo | Masara | Ọka">
+      </div>
+      <div class="fix-row">
+        <label>Description / Importance / Notes</label>
+        <textarea id="${uid}_desc" rows="3" placeholder="Key facts, uses, symptoms, IPM tips...">${esc(data?.description||data?.importance||'')}</textarea>
+      </div>
+      <div class="fix-row">
+        <label><input type="checkbox" id="${uid}_sure" checked> ✅ I am sure — mark as owner verified</label>
+      </div>
+      <div class="fix-actions">
+        <button class="fix-ai-btn" id="${uid}_aibtn"><i class="fas fa-magic"></i> AI Auto-fill</button>
+        <button class="fix-save-btn" id="${uid}_savebtn"><i class="fas fa-save"></i> Save Correction to Offline KB</button>
+      </div>
+      <div class="fix-status" id="${uid}_status"></div>`;
+
+    // Toggle fix panel
+    fixBtn.addEventListener('click', () => {
+      const open = fixPanel.style.display === 'block';
+      fixPanel.style.display = open ? 'none' : 'block';
+      fixBtn.innerHTML = open ? '<i class="fas fa-edit"></i> Fix / Correct This' : '<i class="fas fa-times"></i> Cancel Fix';
+    });
+
+    // AI auto-fill
+    fixPanel.querySelector('#' + uid + '_aibtn').addEventListener('click', async () => {
+      const currentName = document.getElementById(uid + '_name').value.trim() || name;
+      const currentType = document.getElementById(uid + '_type').value;
+      const aibtn = document.getElementById(uid + '_aibtn');
+      const status = document.getElementById(uid + '_status');
+      aibtn.innerHTML = '<span class="loader" style="display:inline-block;width:10px;height:10px;border-width:1px;"></span> Asking AI...';
+      aibtn.disabled = true;
+      status.textContent = '';
+      try {
+        const prompt = `You are an expert agricultural scientist. For the ${currentType} named "${currentName}", provide the correct identification details. Return ONLY JSON: {"commonName":"","scientificName":"","family":"","yoruba":"","hausa":"","igbo":"","description":"","importance":"","confidence":"high|medium|low","correctionNote":"any important note about correct identification"}`;
+        const res = await fetch(WORKER_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: currentName, type: currentType, customPrompt: prompt })
+        });
+        const resp = await res.json();
+        if (resp.success && resp.data) {
+          const d = resp.data;
+          if (d.commonName) document.getElementById(uid + '_name').value = d.commonName;
+          if (d.scientificName) document.getElementById(uid + '_sci').value = d.scientificName;
+          if (d.family) document.getElementById(uid + '_fam').value = d.family;
+          const locals = [d.yoruba||'', d.hausa||'', d.igbo||''].filter(v=>v).join(' | ');
+          if (locals) document.getElementById(uid + '_local').value = locals;
+          const desc = [d.description||'', d.importance||'', d.correctionNote||''].filter(v=>v).join(' | ');
+          if (desc) document.getElementById(uid + '_desc').value = desc;
+          status.textContent = '✅ AI filled — review and save.';
+          status.style.color = '#5b21b6';
+        } else { status.textContent = '⚠️ AI could not suggest. Fill manually.'; }
+      } catch(e) { status.textContent = '❌ ' + e.message; }
+      aibtn.innerHTML = '<i class="fas fa-magic"></i> AI Auto-fill';
+      aibtn.disabled = false;
+    });
+
+    // Save correction
+    fixPanel.querySelector('#' + uid + '_savebtn').addEventListener('click', async () => {
+      const corrName  = document.getElementById(uid + '_name').value.trim();
+      const corrSci   = document.getElementById(uid + '_sci').value.trim();
+      const corrFam   = document.getElementById(uid + '_fam').value.trim();
+      const corrType  = document.getElementById(uid + '_type').value;
+      const corrLocal = document.getElementById(uid + '_local').value.trim();
+      const corrDesc  = document.getElementById(uid + '_desc').value.trim();
+      const corrSure  = document.getElementById(uid + '_sure').checked;
+      const status    = document.getElementById(uid + '_status');
+
+      if (!corrName) { status.textContent = '⚠️ Please enter a name.'; return; }
+
+      // Parse local names
+      const localParts = corrLocal.split('|').map(s=>s.trim());
+      const localNamesObj = { yoruba: localParts[0]||'', hausa: localParts[1]||'', igbo: localParts[2]||'' };
+
+      // Build full corrected data object
+      const corrData = {
+        ...data,
+        name: corrName,
+        scientific: corrSci,
+        scientificName: corrSci,
+        family: corrFam,
+        description: corrDesc,
+        importance: corrDesc,
+        ownerNotes: corrDesc,
+        localNamesWestAfrica: localNamesObj,
+        ownerVerified: corrSure,
+        correctedFrom: name  // remember original wrong name
+      };
+
+      const savebtn = document.getElementById(uid + '_savebtn');
+      savebtn.innerHTML = '<span class="loader" style="display:inline-block;width:10px;height:10px;border-width:1px;"></span> Saving...';
+      savebtn.disabled = true;
+
+      // Save to KB
+      const entryId = await kbAddEntry(corrType, corrName, corrData, currentImageBlob, 'owner');
+
+      // Also update globalCorrections so offline plant ID benefits immediately
+      const wrongKey = name.toLowerCase().trim();
+      pendingCorrections[wrongKey] = {
+        name: corrName, scientific: corrSci, family: corrFam,
+        importance: corrDesc, ownerSure: corrSure
+      };
+      // Also store in localNamesDB for immediate tribal badge use
+      if (localNamesObj.yoruba || localNamesObj.hausa || localNamesObj.igbo) {
+        localNamesDB[corrName.toLowerCase()] = {
+          yo: localNamesObj.yoruba, ha: localNamesObj.hausa, ig: localNamesObj.igbo
+        };
+      }
+
+      status.textContent = '✅ Correction saved! Export corrections.json to make it permanent.';
+      status.style.color = '#166534';
+      savebtn.innerHTML = '✅ Saved!';
+      savebtn.style.background = '#16a34a';
+
+      // Re-render the result card with the corrected name
+      if (corrType === 'plant' && lastResultData) {
+        lastResultData.name = corrName;
+        lastResultData.scientific = corrSci;
+        lastResultData.family = corrFam;
+        lastResultData.importance = corrDesc;
+        lastResultData.correctionNote = `✏️ Owner corrected: "${name}" → "${corrName}"`;
+        displayPlantResult(lastResultData, lastPredictedKey);
+      }
+
+      kbRenderList();
+      setTimeout(() => { savebtn.innerHTML = '<i class="fas fa-save"></i> Save Correction to Offline KB'; savebtn.disabled = false; savebtn.style.background = ''; }, 3000);
+    });
+
+    // Save button (without fix)
+    saveBtn.addEventListener('click', async () => {
+      if (!ownerAuthenticated) return;
+      saveBtn.innerHTML = '<span class="loader" style="display:inline-block;width:10px;height:10px;border-width:1px;vertical-align:middle;margin-right:4px;"></span> Saving...';
+      saveBtn.disabled = true;
+      await kbAddEntry(type, name, data, currentImageBlob, 'owner');
+      saveBtn.className = 'save-result-btn saved';
+      saveBtn.innerHTML = '✅ Saved to Offline KB';
+      saveBtn.disabled = false;
+      kbRenderList();
+    });
+
+    wrap.appendChild(saveBtn);
+    wrap.appendChild(fixBtn);
+    wrap.appendChild(fixPanel);
+    return wrap;
+  }
+
+  // ── KB Panel event listeners ───────────────────────────────────────────────
+  document.getElementById('kbSearchBtn').addEventListener('click', () => {
+    kbRenderList(document.getElementById('kbSearchInput').value);
+  });
+  document.getElementById('kbSearchInput').addEventListener('keypress', e => {
+    if (e.key === 'Enter') kbRenderList(document.getElementById('kbSearchInput').value);
+  });
+  document.getElementById('kbDownloadBtn').addEventListener('click', kbExport);
+  document.getElementById('kbImportBtn').addEventListener('click', () => document.getElementById('kbImportFile').click());
+  document.getElementById('kbImportFile').addEventListener('change', e => { if (e.target.files[0]) kbImport(e.target.files[0]); e.target.value=''; });
+  document.getElementById('kbClearBtn').addEventListener('click', () => {
+    if (!ownerAuthenticated) return;
+    if (!confirm('Clear ALL offline knowledge base entries? This cannot be undone.')) return;
+    const db = kbLoad();
+    Object.keys(db).forEach(id => { kbDeleteImage(id); });
+    localStorage.removeItem(KB_KEY);
+    kbUpdateStats(); kbRenderList();
+    setStatus('🗑️ Knowledge base cleared.', false);
+  });
+  document.getElementById('offlineDetailClose').addEventListener('click', () => {
+    document.getElementById('offlineDetailModal').classList.remove('open');
+    document.body.style.overflow = '';
+  });
+  document.querySelectorAll('.offline-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.offline-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      currentKBTab = tab.dataset.kbtab;
+      kbRenderList(document.getElementById('kbSearchInput').value);
+    });
+  });
+
+  // ── Show/hide KB clear button based on owner status ────────────────────────
+  const origSetOwnerMode = setOwnerMode;
+
+
+    // Called when user manually picks a plant in offline mode
+  window.offlinePickEntry = function(id) {
+    const db = kbLoad();
+    const entry = db[id];
+    if (!entry) return;
+    const d = entry.data || {};
+    const result = {
+      name: entry.name,
+      scientific: d.scientific || d.scientificName || '—',
+      family: d.family || '—',
+      importance: d.importance || (d.uses||[]).join('; ') || '',
+      confidence: entry.correctedBy === 'owner' ? 100 : 85,
+      correctionNote: entry.correctedBy === 'owner' ? '✏️ Owner verified' : '📴 Manually selected offline',
+      kbEntryId: id
+    };
+    lastPredictedKey = entry.name.toLowerCase();
+    result.originalPredictedLabel = lastPredictedKey;
+    lastPlantResult = result;
+    lastResultType = 'plant';
+    lastResultData = result;
+    displayPlantResult(result, lastPredictedKey);
+    manualSearchInput.value = result.name;
+    setStatus(`📴 ${result.name} (offline)`, false);
+  };
+
   // ========================
   // INIT
   // ========================
@@ -1840,6 +2740,9 @@ Fill all fields with accurate, practical IPM information.`;
   async function loadOfflineModel() { try { offlineModel = await mobilenet.load({ version:2, alpha:1.0 }); offlineReady = true; } catch(e) { offlineReady = false; } }
   loadOfflineModel();
   setStatus("✅ Ready. Take/upload a photo, then click Plant / Disease / Pest.", false);
+  // Init offline KB
+  kbUpdateStats();
+  kbRenderList();
 })();
 </script>
 </body>
