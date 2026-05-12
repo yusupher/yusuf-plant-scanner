@@ -328,6 +328,8 @@
     </div>
     <div id="kbResultsList"></div>
     <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+      <button id="kbSyncPushBtn" style="background:#16a34a;color:white;border:none;padding:8px 16px;border-radius:40px;font-size:0.78rem;font-weight:700;cursor:pointer;"><i class="fas fa-cloud-upload-alt"></i> Push to All Phones</button>
+      <button id="kbSyncPullBtn" style="background:#0369a1;color:white;border:none;padding:8px 16px;border-radius:40px;font-size:0.78rem;font-weight:700;cursor:pointer;"><i class="fas fa-cloud-download-alt"></i> Pull from Server</button>
       <button id="kbDownloadBtn" style="background:#f4a261;color:#1a3c2a;border:none;padding:8px 16px;border-radius:40px;font-size:0.78rem;font-weight:700;cursor:pointer;"><i class="fas fa-download"></i> Export corrections.json</button>
       <button id="kbImportBtn" style="background:rgba(255,255,255,0.15);color:white;border:none;padding:8px 16px;border-radius:40px;font-size:0.78rem;font-weight:700;cursor:pointer;"><i class="fas fa-upload"></i> Import corrections.json</button>
       <button id="kbClearBtn" style="background:#b1624b;color:white;border:none;padding:8px 16px;border-radius:40px;font-size:0.78rem;font-weight:700;cursor:pointer;display:none;"><i class="fas fa-trash"></i> Clear All</button>
@@ -2029,9 +2031,12 @@ Fill all fields with accurate, practical IPM information.`;
 
 
   // ============================================================
-  // OFFLINE KNOWLEDGE BASE SYSTEM
+  // OFFLINE KNOWLEDGE BASE SYSTEM — SERVER SYNCED
+  // Owner saves → pushed to Render → all phones download on start
   // ============================================================
-  const KB_KEY = 'ysf_knowledge_base';
+  const KB_KEY        = 'ysf_knowledge_base';
+  const KB_SYNC_KEY   = 'ysf_kb_last_sync';
+  const KB_SYNC_MINS  = 60; // re-download from server every 60 minutes
   const KB_IMG_PREFIX = 'ysf_img_';
 
   function kbLoad() {
@@ -2105,6 +2110,72 @@ Fill all fields with accurate, practical IPM information.`;
     localStorage.removeItem(KB_IMG_PREFIX + id);
   }
 
+  // ── SERVER SYNC FUNCTIONS ────────────────────────────────────────────────
+
+  // Download KB from server — runs on startup and every KB_SYNC_MINS minutes
+  async function kbSyncFromServer(force) {
+    try {
+      const lastSync = parseInt(localStorage.getItem(KB_SYNC_KEY) || '0');
+      const minsAgo  = (Date.now() - lastSync) / 60000;
+      if (!force && minsAgo < KB_SYNC_MINS) return; // not time yet
+
+      setStatus('📡 Syncing offline knowledge base...', true);
+      const res = await fetch(BACKEND_URL + '/kb', { cache: 'no-store' });
+      if (!res.ok) throw new Error('Server returned ' + res.status);
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'Sync failed');
+
+      if (data.count > 0) {
+        // Merge server data into local — server wins for shared entries
+        const local = kbLoad();
+        const merged = { ...local };
+        Object.entries(data.data).forEach(([id, entry]) => {
+          // Keep local renderedHTML if it exists (server strips it to save bandwidth)
+          if (local[id]?.renderedHTML) entry.renderedHTML = local[id].renderedHTML;
+          merged[id] = entry;
+        });
+        kbSave(merged);
+        localStorage.setItem(KB_SYNC_KEY, Date.now().toString());
+        kbUpdateStats();
+        kbRenderList();
+        setStatus(`✅ Offline KB synced — ${data.count} entries ready.`, false);
+      } else {
+        setStatus('✅ Ready. Offline KB empty (owner has not saved yet).', false);
+      }
+    } catch(e) {
+      // Silent fail — user might be offline already
+      console.log('[KB Sync]', e.message);
+      setStatus('✅ Ready (offline mode — using cached KB).', false);
+    }
+  }
+
+  // Push owner's KB to server so all phones get it
+  async function kbSyncToServer() {
+    if (!ownerAuthenticated) return;
+    const db = kbLoad();
+    if (!Object.keys(db).length) {
+      setStatus('⚠️ Nothing in KB to sync.', false); return;
+    }
+    setStatus('📤 Pushing KB to server...', true);
+    try {
+      const res = await fetch(BACKEND_URL + '/kb/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ownerKey: OWNER_PASSWORD, entries: db })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setStatus(`✅ KB pushed to server — ${data.count} entries. All phones will sync automatically.`, false);
+        // Reset sync timer so other phones re-download soon
+        localStorage.setItem(KB_SYNC_KEY, '0');
+      } else {
+        setStatus('❌ Push failed: ' + (data.error||'unknown'), false);
+      }
+    } catch(e) {
+      setStatus('❌ Could not reach server: ' + e.message, false);
+    }
+  }
+
   // Convert blob/file to base64 data URL
   function blobToDataUrl(blob) {
     return new Promise(resolve => {
@@ -2139,7 +2210,12 @@ Fill all fields with accurate, practical IPM information.`;
       await kbSaveFingerprint(id, imageBlob); // save perceptual fingerprint
     }
     kbUpdateStats();
-    if (correctedBy !== 'auto_comprehensive') setStatus('✅ Saved to offline knowledge base!', false);
+    if (correctedBy === 'owner') {
+      setStatus('✅ Saved! Pushing to server so all phones sync...', false);
+      kbSyncToServer(); // auto-push when owner saves
+    } else if (correctedBy !== 'auto_comprehensive') {
+      setStatus('✅ Saved to offline knowledge base!', false);
+    }
     return id;
   }
 
@@ -2390,7 +2466,8 @@ ${d.notes||''}`.trim();
 
     kbUpdateStats();
     kbRenderList(document.getElementById('kbSearchInput')?.value || '');
-    if (statusDiv) { statusDiv.textContent = '✅ Correction saved! Export to make permanent.'; }
+    if (statusDiv) { statusDiv.textContent = '✅ Saved! Pushing to all phones...'; }
+    kbSyncToServer(); // push correction to server immediately
     setTimeout(() => { if (statusDiv) statusDiv.textContent = ''; }, 4000);
   }
 
@@ -2679,6 +2756,8 @@ ${d.notes||''}`.trim();
   document.getElementById('kbSearchInput').addEventListener('keypress', e => {
     if (e.key === 'Enter') kbRenderList(document.getElementById('kbSearchInput').value);
   });
+  document.getElementById('kbSyncPushBtn').addEventListener('click', kbSyncToServer);
+  document.getElementById('kbSyncPullBtn').addEventListener('click', () => kbSyncFromServer(true));
   document.getElementById('kbDownloadBtn').addEventListener('click', kbExport);
   document.getElementById('kbImportBtn').addEventListener('click', () => document.getElementById('kbImportFile').click());
   document.getElementById('kbImportFile').addEventListener('change', e => { if (e.target.files[0]) kbImport(e.target.files[0]); e.target.value=''; });
@@ -2740,9 +2819,10 @@ ${d.notes||''}`.trim();
   async function loadOfflineModel() { try { offlineModel = await mobilenet.load({ version:2, alpha:1.0 }); offlineReady = true; } catch(e) { offlineReady = false; } }
   loadOfflineModel();
   setStatus("✅ Ready. Take/upload a photo, then click Plant / Disease / Pest.", false);
-  // Init offline KB
+  // Init offline KB — sync from server on startup so ALL phones get owner's data
   kbUpdateStats();
   kbRenderList();
+  kbSyncFromServer(false); // silent background sync (respects 60-min throttle)
 })();
 </script>
 </body>
