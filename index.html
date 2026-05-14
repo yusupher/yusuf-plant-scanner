@@ -2051,19 +2051,38 @@ Fill all fields with accurate, practical IPM information.`;
     try { localStorage.setItem(KB_IMG_PREFIX + id, dataUrl); } catch {}
   }
 
-  // Generate a simple perceptual fingerprint from image (8x8 avg pixels → 64 values)
+  // Perceptual fingerprint: 16x16 grid with R+G+B channels = 768 values
+  // Works across different phones, angles, lighting conditions
   async function imgFingerprint(blob) {
     try {
       const img = await blobToImage(blob);
+      const SIZE = 16;
       const canvas = document.createElement('canvas');
-      canvas.width = 8; canvas.height = 8;
+      canvas.width = SIZE; canvas.height = SIZE;
       const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, 8, 8);
-      const px = ctx.getImageData(0, 0, 8, 8).data;
+      // Draw with smoothing for better angle/lighting tolerance
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, 0, 0, SIZE, SIZE);
+      const px = ctx.getImageData(0, 0, SIZE, SIZE).data;
       const vals = [];
-      for (let i = 0; i < px.length; i += 4)
-        vals.push(Math.round((px[i] + px[i+1] + px[i+2]) / 3));
-      return vals;
+      // Store R, G, B separately — color fingerprint is far more discriminating
+      for (let i = 0; i < px.length; i += 4) {
+        vals.push(px[i]);       // R
+        vals.push(px[i+1]);     // G
+        vals.push(px[i+2]);     // B
+      }
+      // Also compute mean for each channel and store relative values (lighting invariant)
+      const meanR = vals.filter((_,i)=>i%3===0).reduce((a,b)=>a+b,0) / (SIZE*SIZE);
+      const meanG = vals.filter((_,i)=>i%3===1).reduce((a,b)=>a+b,0) / (SIZE*SIZE);
+      const meanB = vals.filter((_,i)=>i%3===2).reduce((a,b)=>a+b,0) / (SIZE*SIZE);
+      const normalized = [];
+      for (let i = 0; i < vals.length; i += 3) {
+        normalized.push(Math.round(vals[i]   - meanR + 128));
+        normalized.push(Math.round(vals[i+1] - meanG + 128));
+        normalized.push(Math.round(vals[i+2] - meanB + 128));
+      }
+      return normalized;
     } catch { return null; }
   }
 
@@ -2074,29 +2093,36 @@ Fill all fields with accurate, practical IPM information.`;
     return 1 - diff / (255 * a.length);
   }
 
-  // Save fingerprint alongside entry
+  // Save fingerprint INSIDE the entry so it syncs to all phones via server
   async function kbSaveFingerprint(id, blob) {
     if (!blob) return;
     const fp = await imgFingerprint(blob);
-    if (fp) {
-      try { localStorage.setItem('ysf_fp_' + id, JSON.stringify(fp)); } catch {}
+    if (!fp) return;
+    const db = kbLoad();
+    if (db[id]) {
+      db[id].fingerprint = fp; // stored IN the entry — travels with server sync
+      kbSave(db);
     }
+    // Also keep in localStorage for speed (fallback)
+    try { localStorage.setItem('ysf_fp_' + id, JSON.stringify(fp)); } catch {}
   }
 
-  function kbGetFingerprint(id) {
-    try { return JSON.parse(localStorage.getItem('ysf_fp_' + id) || 'null'); } catch { return null; }
+  function kbGetFingerprint(entry) {
+    // First check inside the entry object (works on all synced phones)
+    if (entry?.fingerprint) return entry.fingerprint;
+    // Fallback to localStorage (owner's device only)
+    try { return JSON.parse(localStorage.getItem('ysf_fp_' + entry?.id) || 'null'); } catch { return null; }
   }
 
-  // Find best KB match for a given image blob (returns entry or null)
+  // Find best KB match for a given image blob across ALL synced phones
   async function kbMatchByImage(blob, type) {
     const fp = await imgFingerprint(blob);
     if (!fp) return null;
     const db = kbLoad();
-    let bestEntry = null, bestScore = 0.82; // minimum 82% similarity threshold
-    for (const entry of Object.values(db)) {
-      if (type && entry.type !== type) continue;
-      if (!entry.hasImage) continue;
-      const savedFp = kbGetFingerprint(entry.id);
+    let bestEntry = null, bestScore = 0.75; // 75% threshold — more forgiving for different angles/lighting
+    const candidates = Object.values(db).filter(e => (!type || e.type === type) && (e.fingerprint || e.hasImage));
+    for (const entry of candidates) {
+      const savedFp = kbGetFingerprint(entry);
       if (!savedFp) continue;
       const score = fingerprintSimilarity(fp, savedFp);
       if (score > bestScore) { bestScore = score; bestEntry = entry; }
@@ -2130,23 +2156,56 @@ Fill all fields with accurate, practical IPM information.`;
         const local = kbLoad();
         const merged = { ...local };
         Object.entries(data.data).forEach(([id, entry]) => {
-          // Keep local renderedHTML if it exists (server strips it to save bandwidth)
+          // Keep local renderedHTML and image if they exist
           if (local[id]?.renderedHTML) entry.renderedHTML = local[id].renderedHTML;
+          // Keep local fingerprint if server entry has none
+          if (!entry.fingerprint && local[id]?.fingerprint) entry.fingerprint = local[id].fingerprint;
           merged[id] = entry;
         });
         kbSave(merged);
         localStorage.setItem(KB_SYNC_KEY, Date.now().toString());
         kbUpdateStats();
         kbRenderList();
-        setStatus(`✅ Offline KB synced — ${data.count} entries ready.`, false);
+        setStatus(`✅ Offline KB synced — ${data.count} entries ready for offline use.`, false);
+
+        // Also download saved images from server for visual matching
+        kbSyncImagesFromServer(data.data);
       } else {
-        setStatus('✅ Ready. Offline KB empty (owner has not saved yet).', false);
+        setStatus('✅ Ready. Offline KB empty (owner has not saved data yet).', false);
       }
     } catch(e) {
       // Silent fail — user might be offline already
       console.log('[KB Sync]', e.message);
       setStatus('✅ Ready (offline mode — using cached KB).', false);
     }
+  }
+
+  // Download images from server for entries that have no local fingerprint
+  async function kbSyncImagesFromServer(serverEntries) {
+    const db = kbLoad();
+    let updated = false;
+    for (const [id, entry] of Object.entries(serverEntries)) {
+      // If we already have fingerprint, skip
+      if (db[id]?.fingerprint) continue;
+      // Try fetching image from server
+      try {
+        const imgRes = await fetch(BACKEND_URL + '/kb/image/' + encodeURIComponent(id));
+        if (!imgRes.ok) continue;
+        const blob = await imgRes.blob();
+        if (!blob || blob.size < 100) continue;
+        // Compute and store fingerprint
+        const fp = await imgFingerprint(blob);
+        if (fp && db[id]) {
+          db[id].fingerprint = fp;
+          db[id].hasImage = true;
+          // Save image locally for display
+          const dataUrl = await blobToDataUrl(blob);
+          kbSaveImage(id, dataUrl);
+          updated = true;
+        }
+      } catch(e) { /* image might not be on server yet */ }
+    }
+    if (updated) { kbSave(db); kbUpdateStats(); }
   }
 
   // Push owner's KB to server so all phones get it
@@ -2156,21 +2215,34 @@ Fill all fields with accurate, practical IPM information.`;
     if (!Object.keys(db).length) {
       setStatus('⚠️ Nothing in KB to sync.', false); return;
     }
-    setStatus('📤 Pushing KB to server...', true);
+    setStatus('📤 Pushing KB to server…', true);
     try {
+      // Push metadata + fingerprints (fingerprints are key for visual matching)
       const res = await fetch(BACKEND_URL + '/kb/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ownerKey: OWNER_PASSWORD, entries: db })
       });
       const data = await res.json();
-      if (data.success) {
-        setStatus(`✅ KB pushed to server — ${data.count} entries. All phones will sync automatically.`, false);
-        // Reset sync timer so other phones re-download soon
-        localStorage.setItem(KB_SYNC_KEY, '0');
-      } else {
-        setStatus('❌ Push failed: ' + (data.error||'unknown'), false);
+      if (!data.success) throw new Error(data.error || 'Push failed');
+
+      // Also push images so other phones can download them for visual matching
+      let imgPushed = 0;
+      for (const [id, entry] of Object.entries(db)) {
+        const imgData = kbGetImage(id);
+        if (!imgData) continue;
+        try {
+          await fetch(BACKEND_URL + '/kb/image/' + encodeURIComponent(id), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ownerKey: OWNER_PASSWORD, imageData: imgData })
+          });
+          imgPushed++;
+        } catch(e) { /* continue even if one image fails */ }
       }
+
+      setStatus(`✅ Pushed ${data.count} entries + ${imgPushed} images. All phones will recognize your plants offline!`, false);
+      localStorage.setItem(KB_SYNC_KEY, '0'); // force other phones to re-sync
     } catch(e) {
       setStatus('❌ Could not reach server: ' + e.message, false);
     }
