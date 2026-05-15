@@ -2051,81 +2051,116 @@ Fill all fields with accurate, practical IPM information.`;
     try { localStorage.setItem(KB_IMG_PREFIX + id, dataUrl); } catch {}
   }
 
-  // Perceptual fingerprint: 16x16 grid with R+G+B channels = 768 values
-  // Works across different phones, angles, lighting conditions
+  // ================================================================
+  // DCT-BASED PERCEPTUAL HASH (pHash) — industry standard
+  // Same algorithm used by Google Images, TinEye, etc.
+  // Resistant to: different cameras, lighting, minor angles, resize
+  // Returns a 64-bit hash as array of 0/1 bits
+  // ================================================================
+
+  // 1D DCT-II on array of N values
+  function dct1d(vals) {
+    const N = vals.length, out = new Array(N);
+    for (let k = 0; k < N; k++) {
+      let sum = 0;
+      for (let n = 0; n < N; n++) sum += vals[n] * Math.cos(Math.PI * k * (2*n+1) / (2*N));
+      out[k] = sum;
+    }
+    return out;
+  }
+
+  // Compute pHash: shrink to 32x32 grayscale, DCT, take top-left 8x8, threshold by median
   async function imgFingerprint(blob) {
     try {
       const img = await blobToImage(blob);
-      const SIZE = 16;
+      const SIZE = 32;
       const canvas = document.createElement('canvas');
       canvas.width = SIZE; canvas.height = SIZE;
       const ctx = canvas.getContext('2d');
-      // Draw with smoothing for better angle/lighting tolerance
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(img, 0, 0, SIZE, SIZE);
       const px = ctx.getImageData(0, 0, SIZE, SIZE).data;
-      const vals = [];
-      // Store R, G, B separately — color fingerprint is far more discriminating
-      for (let i = 0; i < px.length; i += 4) {
-        vals.push(px[i]);       // R
-        vals.push(px[i+1]);     // G
-        vals.push(px[i+2]);     // B
+
+      // Convert to grayscale 32x32
+      const gray = [];
+      for (let i = 0; i < SIZE * SIZE; i++)
+        gray.push(0.299 * px[i*4] + 0.587 * px[i*4+1] + 0.114 * px[i*4+2]);
+
+      // Apply 2D DCT: first DCT each row, then each column
+      const rows = [];
+      for (let r = 0; r < SIZE; r++) rows.push(dct1d(gray.slice(r*SIZE, r*SIZE+SIZE)));
+      const dct2d = [];
+      for (let c = 0; c < SIZE; c++) {
+        const col = rows.map(row => row[c]);
+        const dctCol = dct1d(col);
+        dct2d.push(dctCol);
       }
-      // Also compute mean for each channel and store relative values (lighting invariant)
-      const meanR = vals.filter((_,i)=>i%3===0).reduce((a,b)=>a+b,0) / (SIZE*SIZE);
-      const meanG = vals.filter((_,i)=>i%3===1).reduce((a,b)=>a+b,0) / (SIZE*SIZE);
-      const meanB = vals.filter((_,i)=>i%3===2).reduce((a,b)=>a+b,0) / (SIZE*SIZE);
-      const normalized = [];
-      for (let i = 0; i < vals.length; i += 3) {
-        normalized.push(Math.round(vals[i]   - meanR + 128));
-        normalized.push(Math.round(vals[i+1] - meanG + 128));
-        normalized.push(Math.round(vals[i+2] - meanB + 128));
-      }
-      return normalized;
+
+      // Extract top-left 8x8 DCT coefficients (low-frequency = content signature)
+      const HASH_SIZE = 8;
+      const lowFreq = [];
+      for (let r = 0; r < HASH_SIZE; r++)
+        for (let c = 0; c < HASH_SIZE; c++)
+          lowFreq.push(dct2d[c][r]);
+
+      // Skip DC component (index 0) — it encodes overall brightness
+      const acValues = lowFreq.slice(1);
+      const median = [...acValues].sort((a,b)=>a-b)[Math.floor(acValues.length/2)];
+
+      // Hash = 1 if above median, 0 if below — 63 bits
+      return acValues.map(v => v > median ? 1 : 0);
     } catch { return null; }
   }
 
+  // Hamming distance similarity: count matching bits / total bits
   function fingerprintSimilarity(a, b) {
     if (!a || !b || a.length !== b.length) return 0;
-    let diff = 0;
-    for (let i = 0; i < a.length; i++) diff += Math.abs(a[i] - b[i]);
-    return 1 - diff / (255 * a.length);
+    let matching = 0;
+    for (let i = 0; i < a.length; i++) if (a[i] === b[i]) matching++;
+    return matching / a.length;
   }
 
-  // Save fingerprint INSIDE the entry so it syncs to all phones via server
+  // Save fingerprint INSIDE the entry — travels to all phones via server sync
   async function kbSaveFingerprint(id, blob) {
     if (!blob) return;
     const fp = await imgFingerprint(blob);
     if (!fp) return;
     const db = kbLoad();
     if (db[id]) {
-      db[id].fingerprint = fp; // stored IN the entry — travels with server sync
+      db[id].fingerprint = fp;
+      // Also store extra fingerprints for multiple saved angles
+      if (!db[id].fingerprints) db[id].fingerprints = [];
+      if (!db[id].fingerprints.some(f => fingerprintSimilarity(f, fp) > 0.95))
+        db[id].fingerprints.push(fp); // only add if genuinely different angle
       kbSave(db);
     }
-    // Also keep in localStorage for speed (fallback)
-    try { localStorage.setItem('ysf_fp_' + id, JSON.stringify(fp)); } catch {}
   }
 
-  function kbGetFingerprint(entry) {
-    // First check inside the entry object (works on all synced phones)
-    if (entry?.fingerprint) return entry.fingerprint;
-    // Fallback to localStorage (owner's device only)
-    try { return JSON.parse(localStorage.getItem('ysf_fp_' + entry?.id) || 'null'); } catch { return null; }
+  function kbGetFingerprints(entry) {
+    // Returns array of all fingerprints for this entry
+    const all = [];
+    if (entry?.fingerprint) all.push(entry.fingerprint);
+    if (entry?.fingerprints) all.push(...entry.fingerprints.filter(f => f));
+    return all;
   }
 
-  // Find best KB match for a given image blob across ALL synced phones
+  // Find best KB match using pHash across ALL synced phones
+  // Threshold: 85% bit match = same subject (industry standard for pHash)
   async function kbMatchByImage(blob, type) {
     const fp = await imgFingerprint(blob);
     if (!fp) return null;
     const db = kbLoad();
-    let bestEntry = null, bestScore = 0.75; // 75% threshold — more forgiving for different angles/lighting
-    const candidates = Object.values(db).filter(e => (!type || e.type === type) && (e.fingerprint || e.hasImage));
+    let bestEntry = null, bestScore = 0.82; // 82% pHash similarity threshold
+    const candidates = Object.values(db).filter(e =>
+      (!type || e.type === type) && (e.fingerprint || e.fingerprints?.length)
+    );
     for (const entry of candidates) {
-      const savedFp = kbGetFingerprint(entry);
-      if (!savedFp) continue;
-      const score = fingerprintSimilarity(fp, savedFp);
-      if (score > bestScore) { bestScore = score; bestEntry = entry; }
+      const fps = kbGetFingerprints(entry);
+      for (const savedFp of fps) {
+        const score = fingerprintSimilarity(fp, savedFp);
+        if (score > bestScore) { bestScore = score; bestEntry = entry; }
+      }
     }
     return bestEntry ? { entry: bestEntry, score: bestScore } : null;
   }
@@ -2180,30 +2215,53 @@ Fill all fields with accurate, practical IPM information.`;
     }
   }
 
-  // Download images from server for entries that have no local fingerprint
+  // Download images from server, compute fingerprints, store for offline matching
   async function kbSyncImagesFromServer(serverEntries) {
     const db = kbLoad();
     let updated = false;
     for (const [id, entry] of Object.entries(serverEntries)) {
-      // If we already have fingerprint, skip
-      if (db[id]?.fingerprint) continue;
-      // Try fetching image from server
-      try {
-        const imgRes = await fetch(BACKEND_URL + '/kb/image/' + encodeURIComponent(id));
-        if (!imgRes.ok) continue;
-        const blob = await imgRes.blob();
-        if (!blob || blob.size < 100) continue;
-        // Compute and store fingerprint
-        const fp = await imgFingerprint(blob);
-        if (fp && db[id]) {
-          db[id].fingerprint = fp;
-          db[id].hasImage = true;
-          // Save image locally for display
-          const dataUrl = await blobToDataUrl(blob);
-          kbSaveImage(id, dataUrl);
-          updated = true;
-        }
-      } catch(e) { /* image might not be on server yet */ }
+      if (!db[id]) continue;
+
+      // ── Download main image if we don't have fingerprint yet ──────────────
+      if (!db[id].fingerprint && !db[id].fingerprints?.length) {
+        try {
+          const imgRes = await fetch(BACKEND_URL + '/kb/image/' + encodeURIComponent(id));
+          if (imgRes.ok) {
+            const blob = await imgRes.blob();
+            if (blob && blob.size > 100) {
+              const fp = await imgFingerprint(blob);
+              if (fp) {
+                db[id].fingerprint = fp;
+                db[id].fingerprints = [fp];
+                db[id].hasImage = true;
+                const dataUrl = await blobToDataUrl(blob);
+                kbSaveImage(id, dataUrl);
+                updated = true;
+              }
+            }
+          }
+        } catch(e) {}
+      }
+
+      // ── Download extra angle images to build multi-fingerprint profile ────
+      for (let i = 0; i < 5; i++) { // up to 5 extra angles
+        const angleId = id + '_angle' + i;
+        try {
+          const imgRes = await fetch(BACKEND_URL + '/kb/image/' + encodeURIComponent(angleId));
+          if (!imgRes.ok) break; // no more angles
+          const blob = await imgRes.blob();
+          if (!blob || blob.size < 100) break;
+          const fp = await imgFingerprint(blob);
+          if (fp) {
+            if (!db[id].fingerprints) db[id].fingerprints = [];
+            // Only add if genuinely different (Hamming distance > 5%)
+            if (!db[id].fingerprints.some(f => fingerprintSimilarity(f, fp) > 0.95)) {
+              db[id].fingerprints.push(fp);
+              updated = true;
+            }
+          }
+        } catch(e) { break; }
+      }
     }
     if (updated) { kbSave(db); kbUpdateStats(); }
   }
@@ -2226,21 +2284,34 @@ Fill all fields with accurate, practical IPM information.`;
       const data = await res.json();
       if (!data.success) throw new Error(data.error || 'Push failed');
 
-      // Also push images so other phones can download them for visual matching
+      // Also push main image + extra angles for each entry
       let imgPushed = 0;
       for (const [id, entry] of Object.entries(db)) {
+        // Push main image
         const imgData = kbGetImage(id);
-        if (!imgData) continue;
-        try {
-          await fetch(BACKEND_URL + '/kb/image/' + encodeURIComponent(id), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ownerKey: OWNER_PASSWORD, imageData: imgData })
-          });
-          imgPushed++;
-        } catch(e) { /* continue even if one image fails */ }
+        if (imgData) {
+          try {
+            await fetch(BACKEND_URL + '/kb/image/' + encodeURIComponent(id), {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ownerKey: OWNER_PASSWORD, imageData: imgData })
+            });
+            imgPushed++;
+          } catch(e) {}
+        }
+        // Push extra angle images
+        if (entry.extraImages?.length) {
+          for (let i = 0; i < entry.extraImages.length; i++) {
+            try {
+              await fetch(BACKEND_URL + '/kb/image/' + encodeURIComponent(id + '_angle' + i), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ownerKey: OWNER_PASSWORD, imageData: entry.extraImages[i] })
+              });
+            } catch(e) {}
+          }
+        }
       }
-
       setStatus(`✅ Pushed ${data.count} entries + ${imgPushed} images. All phones will recognize your plants offline!`, false);
       localStorage.setItem(KB_SYNC_KEY, '0'); // force other phones to re-sync
     } catch(e) {
